@@ -1,0 +1,61 @@
+{
+    "name": "simply-extension-pack",
+    "displayName": "Simply Extension Pack",
+    "description": "Extensions for Salesforce Development",
+    "icon": "images/Simply_Logo.jpg",
+    "publisher": "simply",
+    "version": "1.3.0",
+    "engines": {
+        "vscode": "^1.48.0"
+    },
+    "categories": [
+        "Extension Packs"
+    ],
+    "extensionPack": [
+        "chuckjonas.apex-pmd",
+        "DavidAnson.vscode-markdownlint",
+        "dbaeumer.vscode-eslint",
+        "eamodio.gitlens",
+        "editorconfig.editorconfig",
+        "esbenp.prettier-vscode",
+        "financialforce.lana",
+        "mhutchie.git-graph",
+        "redhat.vscode-xml",
+        "rokoroku.vscode-theme-darcula",
+        "salesforce.apex-language-server-extension",
+        "salesforce.salesforce-vscode-slds",
+        "salesforce.salesforcedx-vscode-apex",
+        "salesforce.salesforcedx-vscode-apex-log",
+        "salesforce.salesforcedx-vscode-apex-replay-debugger",
+        "salesforce.salesforcedx-vscode-apex-testing",
+        "salesforce.salesforcedx-vscode-core",
+        "salesforce.salesforcedx-vscode-lightning",
+        "salesforce.salesforcedx-vscode-lwc",
+        "salesforce.salesforcedx-vscode-metadata",
+        "salesforce.salesforcedx-vscode-org",
+        "salesforce.salesforcedx-vscode-org-browser",
+        "salesforce.salesforcedx-vscode-services",
+        "salesforce.salesforcedx-vscode-soql",
+        "salesforce.salesforcedx-vscode-visualforce",
+        "tyriar.sort-lines",
+        "vscode-icons-team.vscode-icons",
+        "xyz.local-history"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SimplySF/simply-extension-pack.git"
+    },
+    "scripts": {
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^21.2.1",
+        "@commitlint/config-conventional": "^21.2.0",
+        "@semantic-release/changelog": "^7.0.0",
+        "@semantic-release/exec": "^7.1.0",
+        "@semantic-release/git": "^11.0.1",
+        "@vscode/vsce": "^3.9.2",
+        "husky": "^9.1.7",
+        "semantic-release": "^25.0.9"
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "branches": ["main"],
+    "tagFormat": "v${version}",
+    "plugins": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        [
+            "@semantic-release/changelog",
+            {
+                "changelogFile": "CHANGELOG.md"
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${nextRelease.version}';fs.writeFileSync('package.json', JSON.stringify(p, null, 4) + '\\n');\" && npx vsce package -o simply-extension-pack-${nextRelease.version}.vsix",
+                "publishCmd": "npx vsce publish -p $VSCE_PAT --packagePath simply-extension-pack-${nextRelease.version}.vsix"
+            }
+        ],
+        [
+            "@semantic-release/git",
+            {
+                "assets": ["package.json", "CHANGELOG.md"],
+                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+            }
+        ],
+        [
+            "@semantic-release/github",
+            {
+                "assets": [
+                    {
+                        "path": "simply-extension-pack-*.vsix",
+                        "label": "VS Code Extension (.vsix)"
+                    }
+                ]
+            }
+        ]
+    ]
+}

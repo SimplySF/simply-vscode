@@ -1,0 +1,4 @@
+.history
+.claude/settings.local.json
+*.vsix
+node_modules/

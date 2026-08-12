@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+.claude/**
+.github/**
+.husky/**
+node_modules/**
+.gitignore
+.releaserc.json
+commitlint.config.cjs
+package-lock.json
+vsc-extension-quickstart.md
