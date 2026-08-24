@@ -1,3 +1,10 @@
+# [simply-extension-pack-v1.0.1](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.0...simply-extension-pack-v1.0.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* revert to Entra ID publish auth now that publisher name is correct ([ac94b19](https://github.com/SimplySF/simply-vscode/commit/ac94b19dc2d59294f1abb51e3ecedff5b71fab2d))
+
 # simply-extension-pack-v1.0.0 (2026-08-24)
 
 
