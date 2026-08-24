@@ -1,0 +1,81 @@
+# Design Documents
+
+Every new extension — or any feature that changes what an existing extension does — gets a design
+document here **before** it gets code. The point isn't ceremony — it's that a year from now, the
+"why" behind an extension's shape (why a webview instead of a tree view, why it shells out instead of
+reimplementing, what we rejected) is recoverable without archaeology through git history and PR
+threads. This mirrors the process the companion `simply` CLI repo already uses for its own
+`docs/design/` — see
+[SimplySF/simply-node's docs/design/README.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/README.md) —
+adapted here for `extensions/*` instead of `packages/*`.
+
+## Process
+
+1. **Write the design doc first.** Copy the [template](#template) into
+   `docs/design/NNNN-short-slug.md`, using the next free four-digit number.
+2. **Get agreement on it** — on the doc, not on the diff. Decisions are cheapest to change here.
+3. **Implement**, then update the doc if the implementation taught you something the design got
+   wrong. A design doc that quietly diverges from the shipped behavior is worse than none.
+4. **Set the status line** to `Implemented` (with the PR link) when it lands.
+
+A design doc is not a substitute for user-facing docs. What a command does, how to invoke it, and
+setup requirements still live in each extension's own `README.md` and `CHANGELOG.md`. The design doc
+records the reasoning; the extension's `README.md` records the behavior.
+
+## When a design doc is required
+
+- Any new extension under `extensions/`.
+- Any new command an existing extension contributes, or a change to an existing command's behavior,
+  UI, or data source that users would notice.
+- Any change to how an extension gets its data (e.g. switching from shelling out to a CLI to reading
+  metadata directly), or to shared release/packaging conventions (see `RELEASING.md`).
+
+Not required for: bug fixes that restore documented behavior, dependency bumps, copy/wording tweaks,
+refactors that keep the observable behavior identical.
+
+## Index
+
+| #                                                                          | Title                                    | Status |
+| --------------------------------------------------------------------------- | ----------------------------------------- | ------ |
+| [0001](0001-at4dx-domain-process-binding-explorer.md) | AT4DX Domain Process Binding Explorer | Draft  |
+
+## Template
+
+```markdown
+# NNNN — Title
+
+**Status:** Draft | Planned | Implemented (PR #N) | Superseded by NNNN
+**Extension:** the `extensions/*` this lands in
+**Date:** YYYY-MM-DD
+
+## Problem
+
+What the user can't do today, and why that hurts.
+
+## Decision
+
+The one-paragraph answer: what we're building and where it lives.
+
+## Behavior
+
+The user-visible contract — command name(s), UI flow, what's shown, what happens on error. Tables
+and short flow sketches beat prose for lookup.
+
+## Alternatives considered
+
+Each option we rejected and the specific reason. This section is the one future readers come back
+for.
+
+## Implementation plan
+
+Files added/changed, in the order they'd be written.
+
+## Testing
+
+What's automated (compile checks, unit tests if any), what's manual (e.g. F5 in the Extension
+Development Host), and what each covers.
+
+## Open questions
+
+Anything deliberately left undecided, and who decides it.
+```
