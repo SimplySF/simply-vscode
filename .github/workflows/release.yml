@@ -36,6 +36,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Verify VSCE_PAT is set
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "::error::VSCE_PAT secret is empty or not set (Settings -> Secrets and variables -> Actions -> Secrets)."
+            exit 1
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
       - run: npx semantic-release
         working-directory: extensions/${{ matrix.extension }}
         env:
