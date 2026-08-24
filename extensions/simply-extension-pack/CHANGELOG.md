@@ -1,3 +1,10 @@
+# [simply-extension-pack-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.1...simply-extension-pack-v1.1.0) (2026-08-24)
+
+
+### Features
+
+* force release ([2f308a4](https://github.com/SimplySF/simply-vscode/commit/2f308a45ca9681215baed24d7da0d051c8d5ff7a))
+
 # [simply-extension-pack-v1.0.1](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.0...simply-extension-pack-v1.0.1) (2026-08-24)
 
 
