@@ -1,0 +1,50 @@
+{
+    "name": "simply-at4dx",
+    "displayName": "Simply AT4DX",
+    "description": "Explore AT4DX Trigger Action Framework bindings for an SObject — execution order, criteria, and actions — without leaving VS Code.",
+    "icon": "images/Simply_Logo.png",
+    "publisher": "simplysf",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "keywords": [
+        "salesforce",
+        "at4dx",
+        "apex",
+        "trigger",
+        "sfdx"
+    ],
+    "activationEvents": [
+        "onCommand:simply-at4dx.showDomainProcessBindings"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "simply-at4dx.showDomainProcessBindings",
+                "title": "AT4DX: Show Domain Process Bindings"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "node esbuild.js --production && tsc --noEmit -p .",
+        "watch": "node esbuild.js --watch",
+        "package": "vsce package --no-dependencies"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "@types/vscode": "^1.85.0",
+        "esbuild": "^0.24.0",
+        "typescript": "^5.6.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SimplySF/simply-vscode.git",
+        "directory": "extensions/simply-at4dx"
+    }
+}

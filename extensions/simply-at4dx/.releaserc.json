@@ -1,0 +1,40 @@
+{
+    "extends": "semantic-release-monorepo",
+    "branches": ["main"],
+    "tagFormat": "simply-at4dx-v${version}",
+    "plugins": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        [
+            "@semantic-release/changelog",
+            {
+                "changelogFile": "CHANGELOG.md"
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${nextRelease.version}';fs.writeFileSync('package.json', JSON.stringify(p, null, 4) + '\\n');\" && npx vsce package --no-dependencies -o simply-at4dx-${nextRelease.version}.vsix",
+                "publishCmd": "npx vsce publish --azure-credential --packagePath simply-at4dx-${nextRelease.version}.vsix"
+            }
+        ],
+        [
+            "@semantic-release/git",
+            {
+                "assets": ["package.json", "CHANGELOG.md"],
+                "message": "chore(release): simply-at4dx ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+            }
+        ],
+        [
+            "@semantic-release/github",
+            {
+                "assets": [
+                    {
+                        "path": "simply-at4dx-*.vsix",
+                        "label": "VS Code Extension (.vsix)"
+                    }
+                ]
+            }
+        ]
+    ]
+}
