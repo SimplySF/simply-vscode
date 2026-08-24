@@ -13,6 +13,19 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}/extensions/simply-extension-pack"
             ]
+        },
+        {
+            "name": "Simply AT4DX",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/extensions/simply-at4dx"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/extensions/simply-at4dx/dist/**/*.js"
+            ],
+            "preLaunchTask": "npm: watch - extensions/simply-at4dx"
         }
     ]
 }

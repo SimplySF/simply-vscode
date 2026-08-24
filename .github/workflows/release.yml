@@ -23,6 +23,7 @@ jobs:
       matrix:
         extension:
           - simply-extension-pack
+          - simply-at4dx
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
