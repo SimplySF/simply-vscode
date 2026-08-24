@@ -1,3 +1,16 @@
+# simply-extension-pack-v1.0.0 (2026-08-24)
+
+
+### Bug Fixes
+
+* bad icon image ([72cf6b3](https://github.com/SimplySF/simply-vscode/commit/72cf6b324e3db3128f202f26d3813a345430fcc9))
+* release config ([9238498](https://github.com/SimplySF/simply-vscode/commit/92384984595ccb0f8186dce493faa3df20795b81))
+
+
+### Features
+
+* setup automated release ([46c31a7](https://github.com/SimplySF/simply-vscode/commit/46c31a746f52348edf667f499638d984eaf7f2f6))
+
 # Change Log
 
 All notable changes to the "simply-extension-pack" extension pack will be documented in this file.
