@@ -1,3 +1,10 @@
+# [simply-extension-pack-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.1...simply-extension-pack-v1.1.0) (2026-08-24)
+
+
+### Features
+
+* remove darcula theme ([eeee06f](https://github.com/SimplySF/simply-vscode/commit/eeee06f5a32fb66126fc079f438cc284e2a4f87d))
+
 # [simply-extension-pack-v1.0.1](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.0...simply-extension-pack-v1.0.1) (2026-08-24)
 
 
