@@ -4,7 +4,7 @@
     "description": "Extensions for Salesforce Development",
     "icon": "images/Simply_Logo.png",
     "publisher": "simply",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "engines": {
         "vscode": "^1.48.0"
     },

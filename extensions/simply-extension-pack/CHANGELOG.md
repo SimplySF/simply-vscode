@@ -1,3 +1,10 @@
+# [simply-extension-pack-v1.0.1](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.0...simply-extension-pack-v1.0.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* revert publish auth to PAT pending vsce Entra ID bug ([363f621](https://github.com/SimplySF/simply-vscode/commit/363f621ac575d71b988f9c745753e75f6f0f29f4))
+
 # simply-extension-pack-v1.0.0 (2026-08-24)
 
 
