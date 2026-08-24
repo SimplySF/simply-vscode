@@ -1,6 +1,7 @@
 {
+    "extends": "semantic-release-monorepo",
     "branches": ["main"],
-    "tagFormat": "v${version}",
+    "tagFormat": "simply-extension-pack-v${version}",
     "plugins": [
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
@@ -14,14 +15,14 @@
             "@semantic-release/exec",
             {
                 "prepareCmd": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${nextRelease.version}';fs.writeFileSync('package.json', JSON.stringify(p, null, 4) + '\\n');\" && npx vsce package -o simply-extension-pack-${nextRelease.version}.vsix",
-                "publishCmd": "npx vsce publish -p $VSCE_PAT --packagePath simply-extension-pack-${nextRelease.version}.vsix"
+                "publishCmd": "npx vsce publish --azure-credential --packagePath simply-extension-pack-${nextRelease.version}.vsix"
             }
         ],
         [
             "@semantic-release/git",
             {
                 "assets": ["package.json", "CHANGELOG.md"],
-                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+                "message": "chore(release): simply-extension-pack ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
             }
         ],
         [
