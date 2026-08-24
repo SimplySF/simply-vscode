@@ -3,7 +3,7 @@
     "displayName": "Simply Extension Pack",
     "description": "Extensions for Salesforce Development",
     "icon": "images/Simply_Logo.png",
-    "publisher": "simply",
+    "publisher": "simplysf",
     "version": "1.0.0",
     "engines": {
         "vscode": "^1.48.0"
