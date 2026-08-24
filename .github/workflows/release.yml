@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -36,17 +37,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Verify VSCE_PAT is set
-        run: |
-          if [ -z "$VSCE_PAT" ]; then
-            echo "::error::VSCE_PAT secret is empty or not set (Settings -> Secrets and variables -> Actions -> Secrets)."
-            exit 1
-          fi
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
 
       - run: npx semantic-release
         working-directory: extensions/${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}

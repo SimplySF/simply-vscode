@@ -1,16 +1,17 @@
 # Releasing & Marketplace Publishing
 
-> **Current status (2026-08-24): running on a classic PAT, not Entra ID.**
-> `vsce publish --azure-credential` was fully wired up (managed identity, federated
-> credential, publisher membership) and *reported* success, but the extension never
-> actually appeared on the Marketplace — confirmed via the public gallery API and a 404 on
-> the publisher hub page, even after verbose `AZURE_LOG_LEVEL=info` logging showed the
-> correct identity/token/scope being used. This looks like an upstream bug in `vsce`'s
-> Entra ID publish path with no client-side diagnosable cause. We reverted to a PAT
-> (`VSCE_PAT` secret) to unblock publishing; the Entra ID Azure setup below is left intact
-> so it can be re-enabled once the bug is understood/fixed. See "Reverting to a PAT" below
-> for exactly what changed, and swap it back once `--azure-credential` is trustworthy again
-> (before PATs retire on 2026-12-01).
+> **Resolved (2026-08-24): the "publish reports success but nothing appears" issue was a
+> wrong publisher name, not a vsce/Entra ID bug.** `extensions/simply-extension-pack/package.json`
+> had `"publisher": "simply"`, but the actual Marketplace publisher is **`simplysf`**. Every
+> earlier symptom is consistent with this: the Azure setup was correctly authenticating a
+> real managed identity that really was a member of a publisher — just the wrong one (or one
+> that doesn't publicly resolve), so `createExtension` calls didn't throw but never produced
+> anything queryable under `simply.simply-extension-pack`. Confirmed fixed: a PAT-based
+> publish immediately after correcting the publisher field succeeded and is live at
+> `https://marketplace.visualstudio.com/items?itemName=simplysf.simply-extension-pack`.
+> We're now back on `--azure-credential`, targeting the correct publisher. If it still
+> silently no-ops with the publisher name definitely correct, *then* treat it as a real
+> upstream issue — see "Falling back to a PAT" below.
 
 This is a monorepo: each VS Code extension lives under `extensions/<name>/` with its own
 `package.json` and `.releaserc.json`, and is versioned, packaged, and published to the
@@ -18,9 +19,9 @@ Marketplace independently of the others.
 
 `.github/workflows/release.yml` runs on every push to `main`. It uses a build matrix —
 one job per entry in `matrix.extension` — and runs `semantic-release` with
-`working-directory: extensions/<name>` for each. The sections below describe the intended
-**Microsoft Entra ID** setup (a user-assigned managed identity + GitHub OIDC federation) —
-see the status note above for why the workflow currently uses a PAT instead.
+`working-directory: extensions/<name>` for each. Publishing authenticates with
+**Microsoft Entra ID** (a user-assigned managed identity + GitHub OIDC federation), not a
+Personal Access Token — Azure DevOps is retiring global PATs on 2026-12-01.
 
 ## Why Entra ID instead of a PAT
 
@@ -71,7 +72,7 @@ repo root.
 ## One-time Azure setup
 
 One managed identity is enough for every extension in this repo **as long as they all
-publish under the same Marketplace publisher** (`simply`) — the identity is a member of
+publish under the same Marketplace publisher** (`simplysf`) — the identity is a member of
 the publisher account, not tied to a single extension. If a future extension needs to
 publish under a different publisher, give it its own managed identity and its own
 `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`, then reference them per-extension via a
@@ -199,16 +200,21 @@ Run it via **Actions → Determine Marketplace Identity → Run workflow**, then
 
 ### 2. Add the identity as a publisher member
 
-Go to `https://marketplace.visualstudio.com/manage/publishers/simply` → **Members → Add**,
+Go to `https://marketplace.visualstudio.com/manage/publishers/simplysf` → **Members → Add**,
 paste the `id` from step 1, and assign it the **Creator** role (sufficient to publish;
 use Contributor only if it also needs to manage existing listings).
+
+> If you previously added the identity to a publisher named `simply` (an earlier, incorrect
+> publisher reference), that membership is harmless to leave in place but doesn't grant
+> access to `simplysf` — add it here too. Double-check the identity actually appears under
+> `simplysf`'s Members list, not just `simply`'s.
 
 ## Verifying
 
 Push a conventional-commit change under `extensions/simply-extension-pack/` to `main` and
 watch the `release` workflow's `simply-extension-pack` matrix job run. On success, the new
 version appears at
-`https://marketplace.visualstudio.com/items?itemName=simply.simply-extension-pack`.
+`https://marketplace.visualstudio.com/items?itemName=simplysf.simply-extension-pack`.
 
 ### Troubleshooting
 
@@ -219,29 +225,31 @@ version appears at
 | `403 Forbidden` from Marketplace | Identity isn't a publisher member yet, or lacks the `Reader` role in Azure |
 | `--azure-credential is not a valid option` | `@vscode/vsce` too old (needs >= 2.26.1) |
 | Extension released even though only another extension's files changed | `.releaserc.json` is missing `"extends": "semantic-release-monorepo"`, or the workflow isn't setting `working-directory` for that job |
-| `vsce publish --azure-credential` logs "Published" with no error, but the extension never appears on the Marketplace (confirm via the gallery API below, or a 404 on the Hub URL) | Unresolved upstream issue as of 2026-08-24 — see "Current status" at the top of this file. Verified NOT caused by a permission/membership/wrong-credential problem (checked with `AZURE_LOG_LEVEL=info`: `AzureCliCredential` wins with the correct scope). Fall back to a PAT (below) rather than re-debugging this from scratch. |
+| `vsce publish --azure-credential` logs "Published" with no error, but the extension never appears on the Marketplace (confirm via the gallery API below, or a 404 on the Hub URL) | Double-check `manifest.publisher` in `package.json` matches the *actual* Marketplace publisher slug exactly — this was the root cause on 2026-08-24 (see the note at the top of this file) and produces exactly this symptom. If the publisher name is confirmed correct and this still happens, that would indicate a genuine upstream issue; fall back to a PAT (below) to unblock rather than re-debugging from scratch. |
+| Extension published under the wrong/unexpected publisher | `manifest.publisher` in the extension's `package.json` doesn't match the Marketplace publisher you intended — this field is case-sensitive and isn't validated against your Azure setup at all. |
 
-To check the Marketplace's actual state directly (bypasses any browser/CDN caching):
+To check the Marketplace's actual state directly (bypasses any browser/CDN caching) —
+substitute the real publisher name, not `simply`:
 
 ```bash
 curl -s -X POST "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json;api-version=3.0-preview.1" \
-  -d '{"filters":[{"criteria":[{"filterType":7,"value":"simply.simply-extension-pack"}]}],"flags":914}'
+  -d '{"filters":[{"criteria":[{"filterType":7,"value":"simplysf.simply-extension-pack"}]}],"flags":914}'
 ```
 
 `"TotalCount":0` means the Marketplace genuinely has no record of it, regardless of what `vsce` printed.
 
-## Reverting to a PAT
+## Falling back to a PAT
 
-If `--azure-credential` is unreliable (see "Current status" above), fall back to a classic
-Personal Access Token. This does **not** require undoing the Azure managed identity setup —
-that stays in place for when Entra ID publishing is trustworthy again.
+If `--azure-credential` is ever unreliable again, fall back to a classic Personal Access
+Token. This does **not** require undoing the Azure managed identity setup — that stays in
+place for when Entra ID publishing is working.
 
 ### 1. Generate a PAT
 
-1. Go to `https://dev.azure.com/` → sign in with the account that's a member of the
-   `simply` publisher → **User settings (top right) → Personal access tokens → New Token**.
+1. Go to `https://dev.azure.com/` → sign in with an account that's a member of the
+   `simplysf` publisher → **User settings (top right) → Personal access tokens → New Token**.
 2. Organization: **All accessible organizations**.
 3. Scopes: **Custom defined** → **Marketplace** → check **Manage**.
 4. Set an expiration (PATs max out around 1 year; note Azure DevOps retires *global* PATs
@@ -253,25 +261,28 @@ that stays in place for when Entra ID publishing is trustworthy again.
 
 Repo → **Settings → Secrets and variables → Actions → Secrets tab → New repository
 secret** → name `VSCE_PAT`, value the token from step 1. Unlike the Client/Tenant IDs,
-this genuinely is a secret — use the **Secrets** tab, not Variables.
+this genuinely is a secret — use the **Secrets** tab, not Variables. Double check the value
+actually saved — an empty/missing `VSCE_PAT` doesn't fail cleanly; it gets silently dropped
+by bash word-splitting in `publishCmd` and produces a confusing `Invalid version ...vsix`
+error instead.
 
-### 3. Confirm the code is already wired for it
+### 3. Switch the code back to PAT mode
 
-`.github/workflows/release.yml` should pass `VSCE_PAT: ${{ secrets.VSCE_PAT }}` in the
-`env:` block of the `npx semantic-release` step, and
-`extensions/simply-extension-pack/.releaserc.json`'s `publishCmd` should be
-`npx vsce publish -p $VSCE_PAT --packagePath ...` — both already reflect this as of
-2026-08-24.
+- `.github/workflows/release.yml`: remove the `azure/login` step and the `id-token: write`
+  permission; add `VSCE_PAT: ${{ secrets.VSCE_PAT }}` to the `npx semantic-release` step's
+  `env:` block.
+- `extensions/simply-extension-pack/.releaserc.json`: change `publishCmd` to
+  `npx vsce publish -p $VSCE_PAT --packagePath simply-extension-pack-${nextRelease.version}.vsix`.
 
-### 4. Clear the stuck tag and retry
+### 4. Clear any stuck tag and retry
 
-Because previous `--azure-credential` runs pushed a release commit and tag
-(`simply-extension-pack-v1.0.0`) without actually publishing, semantic-release will think
-that version already shipped. Clear it before retrying:
+If a previous run pushed a release commit/tag without actually publishing, semantic-release
+will think that version already shipped. Find the latest `simply-extension-pack-v*` tag and
+clear it before retrying:
 
 ```bash
-git tag -d simply-extension-pack-v1.0.0
-git push origin :refs/tags/simply-extension-pack-v1.0.0
+git tag -d simply-extension-pack-v<version>
+git push origin :refs/tags/simply-extension-pack-v<version>
 ```
 
 Then trigger the workflow (**Actions → release → Run workflow**, or push a commit). Verify
@@ -289,7 +300,7 @@ with the `curl` gallery-API check above, not just the `vsce` CLI output.
    filename references to `<name>`.
 3. Add `<name>` to the `matrix.extension` list in `.github/workflows/release.yml`.
 4. Add a debug configuration for it in `.vscode/launch.json`.
-5. If it publishes under a different Marketplace publisher than `simply`, set up a
+5. If it publishes under a different Marketplace publisher than `simplysf`, set up a
    separate managed identity (see "One-time Azure setup" above) and wire its
    client/tenant IDs into the workflow via `matrix.include` instead of the shared
    `vars.AZURE_CLIENT_ID`.
