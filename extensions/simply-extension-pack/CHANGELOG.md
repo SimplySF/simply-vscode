@@ -1,3 +1,18 @@
+# simply-extension-pack-v1.0.0 (2026-08-24)
+
+
+### Bug Fixes
+
+* bad icon image ([72cf6b3](https://github.com/SimplySF/simply-vscode/commit/72cf6b324e3db3128f202f26d3813a345430fcc9))
+* release config ([9238498](https://github.com/SimplySF/simply-vscode/commit/92384984595ccb0f8186dce493faa3df20795b81))
+* revert publish auth to PAT pending vsce Entra ID bug ([363f621](https://github.com/SimplySF/simply-vscode/commit/363f621ac575d71b988f9c745753e75f6f0f29f4))
+
+
+### Features
+
+* force release ([2f308a4](https://github.com/SimplySF/simply-vscode/commit/2f308a45ca9681215baed24d7da0d051c8d5ff7a))
+* setup automated release ([46c31a7](https://github.com/SimplySF/simply-vscode/commit/46c31a746f52348edf667f499638d984eaf7f2f6))
+
 # [simply-extension-pack-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.1...simply-extension-pack-v1.1.0) (2026-08-24)
 
 
