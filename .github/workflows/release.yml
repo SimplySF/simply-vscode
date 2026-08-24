@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -37,14 +36,8 @@ jobs:
 
       - run: npm ci
 
-      - uses: azure/login@v3
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
-
       - run: npx semantic-release
         working-directory: extensions/${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AZURE_LOG_LEVEL: info
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

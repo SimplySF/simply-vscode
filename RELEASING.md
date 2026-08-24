@@ -1,14 +1,26 @@
 # Releasing & Marketplace Publishing
 
+> **Current status (2026-08-24): running on a classic PAT, not Entra ID.**
+> `vsce publish --azure-credential` was fully wired up (managed identity, federated
+> credential, publisher membership) and *reported* success, but the extension never
+> actually appeared on the Marketplace — confirmed via the public gallery API and a 404 on
+> the publisher hub page, even after verbose `AZURE_LOG_LEVEL=info` logging showed the
+> correct identity/token/scope being used. This looks like an upstream bug in `vsce`'s
+> Entra ID publish path with no client-side diagnosable cause. We reverted to a PAT
+> (`VSCE_PAT` secret) to unblock publishing; the Entra ID Azure setup below is left intact
+> so it can be re-enabled once the bug is understood/fixed. See "Reverting to a PAT" below
+> for exactly what changed, and swap it back once `--azure-credential` is trustworthy again
+> (before PATs retire on 2026-12-01).
+
 This is a monorepo: each VS Code extension lives under `extensions/<name>/` with its own
 `package.json` and `.releaserc.json`, and is versioned, packaged, and published to the
 Marketplace independently of the others.
 
 `.github/workflows/release.yml` runs on every push to `main`. It uses a build matrix —
 one job per entry in `matrix.extension` — and runs `semantic-release` with
-`working-directory: extensions/<name>` for each. Publishing authenticates with
-**Microsoft Entra ID** (a user-assigned managed identity + GitHub OIDC federation), not a
-Personal Access Token — Azure DevOps is retiring global PATs on 2026-12-01.
+`working-directory: extensions/<name>` for each. The sections below describe the intended
+**Microsoft Entra ID** setup (a user-assigned managed identity + GitHub OIDC federation) —
+see the status note above for why the workflow currently uses a PAT instead.
 
 ## Why Entra ID instead of a PAT
 
@@ -207,6 +219,63 @@ version appears at
 | `403 Forbidden` from Marketplace | Identity isn't a publisher member yet, or lacks the `Reader` role in Azure |
 | `--azure-credential is not a valid option` | `@vscode/vsce` too old (needs >= 2.26.1) |
 | Extension released even though only another extension's files changed | `.releaserc.json` is missing `"extends": "semantic-release-monorepo"`, or the workflow isn't setting `working-directory` for that job |
+| `vsce publish --azure-credential` logs "Published" with no error, but the extension never appears on the Marketplace (confirm via the gallery API below, or a 404 on the Hub URL) | Unresolved upstream issue as of 2026-08-24 — see "Current status" at the top of this file. Verified NOT caused by a permission/membership/wrong-credential problem (checked with `AZURE_LOG_LEVEL=info`: `AzureCliCredential` wins with the correct scope). Fall back to a PAT (below) rather than re-debugging this from scratch. |
+
+To check the Marketplace's actual state directly (bypasses any browser/CDN caching):
+
+```bash
+curl -s -X POST "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json;api-version=3.0-preview.1" \
+  -d '{"filters":[{"criteria":[{"filterType":7,"value":"simply.simply-extension-pack"}]}],"flags":914}'
+```
+
+`"TotalCount":0` means the Marketplace genuinely has no record of it, regardless of what `vsce` printed.
+
+## Reverting to a PAT
+
+If `--azure-credential` is unreliable (see "Current status" above), fall back to a classic
+Personal Access Token. This does **not** require undoing the Azure managed identity setup —
+that stays in place for when Entra ID publishing is trustworthy again.
+
+### 1. Generate a PAT
+
+1. Go to `https://dev.azure.com/` → sign in with the account that's a member of the
+   `simply` publisher → **User settings (top right) → Personal access tokens → New Token**.
+2. Organization: **All accessible organizations**.
+3. Scopes: **Custom defined** → **Marketplace** → check **Manage**.
+4. Set an expiration (PATs max out around 1 year; note Azure DevOps retires *global* PATs
+   entirely on 2026-12-01 regardless of what you set here — this is a stop-gap, not a
+   long-term fix).
+5. Copy the generated token — it's shown only once.
+
+### 2. Add it to GitHub
+
+Repo → **Settings → Secrets and variables → Actions → Secrets tab → New repository
+secret** → name `VSCE_PAT`, value the token from step 1. Unlike the Client/Tenant IDs,
+this genuinely is a secret — use the **Secrets** tab, not Variables.
+
+### 3. Confirm the code is already wired for it
+
+`.github/workflows/release.yml` should pass `VSCE_PAT: ${{ secrets.VSCE_PAT }}` in the
+`env:` block of the `npx semantic-release` step, and
+`extensions/simply-extension-pack/.releaserc.json`'s `publishCmd` should be
+`npx vsce publish -p $VSCE_PAT --packagePath ...` — both already reflect this as of
+2026-08-24.
+
+### 4. Clear the stuck tag and retry
+
+Because previous `--azure-credential` runs pushed a release commit and tag
+(`simply-extension-pack-v1.0.0`) without actually publishing, semantic-release will think
+that version already shipped. Clear it before retrying:
+
+```bash
+git tag -d simply-extension-pack-v1.0.0
+git push origin :refs/tags/simply-extension-pack-v1.0.0
+```
+
+Then trigger the workflow (**Actions → release → Run workflow**, or push a commit). Verify
+with the `curl` gallery-API check above, not just the `vsce` CLI output.
 
 ## Adding a new extension
 
