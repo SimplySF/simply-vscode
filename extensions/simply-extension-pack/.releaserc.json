@@ -14,7 +14,7 @@
         [
             "@semantic-release/exec",
             {
-                "prepareCmd": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${nextRelease.version}';fs.writeFileSync('package.json', JSON.stringify(p, null, 4) + '\\n');\" && npx vsce package -o simply-extension-pack-${nextRelease.version}.vsix",
+                "prepareCmd": "node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${nextRelease.version}';fs.writeFileSync('package.json', JSON.stringify(p, null, 4) + '\\n');\" && npx vsce package --no-dependencies -o simply-extension-pack-${nextRelease.version}.vsix",
                 "publishCmd": "npx vsce publish --azure-credential --packagePath simply-extension-pack-${nextRelease.version}.vsix"
             }
         ],
