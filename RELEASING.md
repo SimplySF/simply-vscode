@@ -201,8 +201,15 @@ Run it via **Actions → Determine Marketplace Identity → Run workflow**, then
 ### 2. Add the identity as a publisher member
 
 Go to `https://marketplace.visualstudio.com/manage/publishers/simplysf` → **Members → Add**,
-paste the `id` from step 1, and assign it the **Creator** role (sufficient to publish;
-use Contributor only if it also needs to manage existing listings).
+paste the `id` from step 1, and assign it the **Contributor** role.
+
+> **Creator is not enough if the extension already exists.** We initially used Creator and
+> hit `Access Denied: ... needs the following permission(s) on the resource
+> /simplysf/simply-extension-pack to perform this action: Make changes to, share, or view
+> certificate of an existing extension` when publishing a version update. Creator appears to
+> only cover extensions the identity itself originates; publishing new versions of an
+> extension that already existed before the identity was added (e.g. one first published via
+> a human's PAT) needs Contributor.
 
 > If you previously added the identity to a publisher named `simply` (an earlier, incorrect
 > publisher reference), that membership is harmless to leave in place but doesn't grant
@@ -223,6 +230,7 @@ version appears at
 | `AADSTS70021: No matching federated identity record found` | Federated credential subject doesn't match — check org/repo/branch spelling |
 | `Error: Could not get OIDC token` | Missing `id-token: write` permission on the job |
 | `403 Forbidden` from Marketplace | Identity isn't a publisher member yet, or lacks the `Reader` role in Azure |
+| `Access Denied: ... needs the following permission(s) ... Make changes to, share, or view certificate of an existing extension` | Identity's publisher role is `Creator`, which doesn't cover updating an extension it didn't originate. Change it to `Contributor`. |
 | `--azure-credential is not a valid option` | `@vscode/vsce` too old (needs >= 2.26.1) |
 | Extension released even though only another extension's files changed | `.releaserc.json` is missing `"extends": "semantic-release-monorepo"`, or the workflow isn't setting `working-directory` for that job |
 | `vsce publish --azure-credential` logs "Published" with no error, but the extension never appears on the Marketplace (confirm via the gallery API below, or a 404 on the Hub URL) | Double-check `manifest.publisher` in `package.json` matches the *actual* Marketplace publisher slug exactly — this was the root cause on 2026-08-24 (see the note at the top of this file) and produces exactly this symptom. If the publisher name is confirmed correct and this still happens, that would indicate a genuine upstream issue; fall back to a PAT (below) to unblock rather than re-debugging from scratch. |
