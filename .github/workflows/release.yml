@@ -47,3 +47,4 @@ jobs:
         working-directory: extensions/${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_LOG_LEVEL: info
