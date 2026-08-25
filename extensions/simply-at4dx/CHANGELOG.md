@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.0.3](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.2...simply-at4dx-v1.0.3) (2026-08-25)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** don't block the binding-source picker on sf org list ([#6](https://github.com/SimplySF/simply-vscode/issues/6)) ([3c22ee1](https://github.com/SimplySF/simply-vscode/commit/3c22ee1f06037dabe299f14664327a2e44ffd856))
+
 # [simply-at4dx-v1.0.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.1...simply-at4dx-v1.0.2) (2026-08-25)
 
 
