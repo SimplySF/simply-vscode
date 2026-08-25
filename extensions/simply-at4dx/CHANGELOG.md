@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.3.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.2.0...simply-at4dx-v1.3.0) (2026-08-25)
+
+
+### Features
+
+* **simply-at4dx:** let the user browse to a specific source folder ([#9](https://github.com/SimplySF/simply-vscode/issues/9)) ([09e6dd7](https://github.com/SimplySF/simply-vscode/commit/09e6dd711855c60c92647077947f6cd14604681b))
+
 # [simply-at4dx-v1.2.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.1.0...simply-at4dx-v1.2.0) (2026-08-25)
 
 
