@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.0.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.1...simply-at4dx-v1.0.2) (2026-08-25)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** stop sf invocations from hanging with no TTY to prompt ([#4](https://github.com/SimplySF/simply-vscode/issues/4)) ([73e64c4](https://github.com/SimplySF/simply-vscode/commit/73e64c4cc60e11f8e8691c2adbd6da44fa493636)), closes [#2](https://github.com/SimplySF/simply-vscode/issues/2)
+
 # [simply-at4dx-v1.0.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.0...simply-at4dx-v1.0.1) (2026-08-25)
 
 
