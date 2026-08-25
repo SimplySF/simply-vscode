@@ -93,9 +93,10 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
     // Local Source is always instant; org lookup shells out to `sf` and can be slow, so it only runs
     // (and only makes the user wait) once they've actually asked for it — the picker itself never
     // blocks on `sf org list`.
-    type SourceKindItem = vscode.QuickPickItem & { sourceKind: 'local' | 'org' };
+    type SourceKindItem = vscode.QuickPickItem & { sourceKind: 'local' | 'localFolder' | 'org' };
     const sourceKindItems: SourceKindItem[] = [
         { label: '$(folder) Local Source', description: workspaceFolder.uri.fsPath, sourceKind: 'local' },
+        { label: '$(folder-opened) Choose Source Folder…', sourceKind: 'localFolder' },
         { label: '$(cloud) Connected Org…', sourceKind: 'org' },
     ];
 
@@ -107,6 +108,16 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
     }
     if (pickedKind.sourceKind === 'local') {
         return { kind: 'source', dirs: [workspaceFolder.uri.fsPath] };
+    }
+    if (pickedKind.sourceKind === 'localFolder') {
+        const picked = await vscode.window.showOpenDialog({
+            canSelectFolders: true,
+            canSelectFiles: false,
+            canSelectMany: false,
+            defaultUri: workspaceFolder.uri,
+            openLabel: 'Select Source Directory',
+        });
+        return picked && picked.length > 0 ? { kind: 'source', dirs: [picked[0].fsPath] } : undefined;
     }
 
     const orgs = await vscode.window.withProgress(
