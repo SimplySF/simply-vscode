@@ -78,7 +78,14 @@ async function listOrgs(cwd: string): Promise<OrgSummary[]> {
     try {
         // `execa` is ESM-only; imported dynamically since this extension is bundled as CommonJS.
         const { execa } = await import('execa');
-        const { stdout } = await execa('sf', ['org', 'list', '--json'], { cwd });
+        const { stdout } = await execa('sf', ['org', 'list', '--json'], {
+            cwd,
+            // See the matching comment in at4dxCli.ts: no TTY here to answer a stray prompt, so close
+            // stdin and cap the wait rather than risk hanging silently.
+            stdin: 'ignore',
+            timeout: 30_000,
+            env: { SF_AUTOUPDATE_DISABLE: 'true', SF_DISABLE_TELEMETRY: 'true' },
+        });
         const parsed = JSON.parse(stdout as string) as {
             result?: { nonScratchOrgs?: OrgSummary[]; scratchOrgs?: OrgSummary[] };
         };
