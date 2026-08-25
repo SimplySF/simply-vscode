@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { At4dxCliError, getDomainProcessBindings, type BindingSource, type DomainProcessBindingRow } from './at4dxCli';
-import { DomainProcessBindingPanel, type OperationFamily } from './domainProcessBindingPanel';
+import { At4dxCliError, getDomainProcessBindings, type BindingSource } from './at4dxCli';
+import { DomainProcessBindingPanel } from './domainProcessBindingPanel';
 
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -25,35 +25,21 @@ async function showDomainProcessBindings(): Promise<void> {
         return;
     }
 
-    let allRows: DomainProcessBindingRow[];
+    // SObject and trigger-event selection live inside the panel itself from here — it opens showing
+    // its loading state (disabled dropdowns double as the "still working" indicator) and is the
+    // single place every outcome (data, error, or zero bindings) renders to.
+    DomainProcessBindingPanel.open();
+
     try {
-        allRows = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: 'Reading AT4DX Domain Process Bindings…' },
-            () => getDomainProcessBindings(workspaceFolder.uri.fsPath, target),
-        );
+        const allRows = await getDomainProcessBindings(workspaceFolder.uri.fsPath, target);
+        if (allRows.length === 0) {
+            DomainProcessBindingPanel.showEmpty();
+            return;
+        }
+        DomainProcessBindingPanel.setRows(allRows);
     } catch (error) {
-        reportError(error);
-        return;
+        DomainProcessBindingPanel.showError(errorMessage(error));
     }
-
-    if (allRows.length === 0) {
-        void vscode.window.showInformationMessage('No AT4DX Trigger Action Framework bindings found.');
-        return;
-    }
-
-    const sobject = await pickSObject(allRows);
-    if (!sobject) {
-        return;
-    }
-
-    const sobjectRows = allRows.filter((row) => row.sobject === sobject);
-
-    const family = await pickOperationFamily(sobjectRows);
-    if (!family) {
-        return;
-    }
-
-    DomainProcessBindingPanel.show(sobject, family, sobjectRows);
 }
 
 async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
@@ -134,68 +120,9 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder): Promi
     return pickedOrg ? { kind: 'org', username: pickedOrg.username } : undefined;
 }
 
-async function pickSObject(rows: DomainProcessBindingRow[]): Promise<string | undefined> {
-    const sobjects = [...new Set(rows.map((row) => row.sobject))].sort((a, b) => a.localeCompare(b));
-    if (sobjects.length === 1) {
-        return sobjects[0];
-    }
-    return vscode.window.showQuickPick(sobjects, { placeHolder: 'Select an SObject' });
-}
-
-const FAMILY_ITEMS: Array<{ label: string; family: OperationFamily }> = [
-    { label: 'Created', family: 'Created' },
-    { label: 'Updated', family: 'Updated' },
-    { label: 'Deleted', family: 'Deleted' },
-    { label: 'Undeleted', family: 'Undeleted' },
-    { label: 'Domain Method Execution', family: 'DomainMethod' },
-];
-
-/** @returns Which of `FAMILY_ITEMS` `sobjectRows` actually has bindings for, so the QuickPick only offers real choices. */
-function availableFamilies(sobjectRows: DomainProcessBindingRow[]): Set<OperationFamily> {
-    const available = new Set<OperationFamily>();
-    for (const row of sobjectRows) {
-        if (row.processContext === 'DomainMethodExecution') {
-            available.add('DomainMethod');
-            continue;
-        }
-        switch (row.triggerOperation) {
-            case 'Before_Insert':
-            case 'After_Insert':
-                available.add('Created');
-                break;
-            case 'Before_Update':
-            case 'After_Update':
-                available.add('Updated');
-                break;
-            case 'Before_Delete':
-            case 'After_Delete':
-                available.add('Deleted');
-                break;
-            case 'After_Undelete':
-                available.add('Undeleted');
-                break;
-            case undefined:
-                break;
-        }
-    }
-    return available;
-}
-
-async function pickOperationFamily(sobjectRows: DomainProcessBindingRow[]): Promise<OperationFamily | undefined> {
-    const available = availableFamilies(sobjectRows);
-    const items = FAMILY_ITEMS.filter((item) => available.has(item.family));
-
-    if (items.length === 1) {
-        return items[0].family;
-    }
-    const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Select a trigger event' });
-    return picked?.family;
-}
-
-function reportError(error: unknown): void {
+function errorMessage(error: unknown): string {
     if (error instanceof At4dxCliError) {
-        void vscode.window.showErrorMessage(error.message);
-        return;
+        return error.message;
     }
-    void vscode.window.showErrorMessage(`Unexpected error reading AT4DX bindings: ${(error as Error).message}`);
+    return `Unexpected error reading AT4DX bindings: ${(error as Error).message}`;
 }
