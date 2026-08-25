@@ -1,7 +1,7 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFileAsync = promisify(execFile);
+// `execa` ships as an ESM-only package; this extension is bundled/loaded as CommonJS, so the value is
+// imported dynamically (which `tsc` rejects as a static require of ESM), and the type needs an
+// explicit resolution-mode since it can't be inferred from a (nonexistent) static import.
+import type { ExecaError } from 'execa' with { 'resolution-mode': 'import' };
 
 /** Mirrors `DomainProcessType` from `@simplysf/simply-aep`'s `at4dxDomainProcessBindingTypes.ts`. */
 export type DomainProcessType = 'Action' | 'Criteria';
@@ -96,9 +96,10 @@ export async function getDomainProcessBindings(
 
     let stdout: string;
     try {
-        ({ stdout } = await execFileAsync('sf', args, { cwd, maxBuffer: 10 * 1024 * 1024 }));
+        const { execa } = await import('execa');
+        stdout = (await execa('sf', args, { cwd, maxBuffer: 10 * 1024 * 1024 })).stdout as string;
     } catch (error) {
-        const execError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+        const execError = error as ExecaError;
         if (execError.code === 'ENOENT') {
             throw new At4dxCliError(
                 'The Salesforce CLI (`sf`) was not found on your PATH. Install it from https://developer.salesforce.com/tools/salesforcecli.',
@@ -108,9 +109,9 @@ export async function getDomainProcessBindings(
         // oclif commands still print the --json envelope to stdout on a thrown CLI error; only fall
         // back to stderr when there's no parseable envelope to read the real message from.
         if (!execError.stdout) {
-            throw new At4dxCliError(describeCliFailure(execError.stderr ?? execError.message), error);
+            throw new At4dxCliError(describeCliFailure((execError.stderr as string | undefined) ?? execError.message ?? ''), error);
         }
-        stdout = execError.stdout;
+        stdout = execError.stdout as string;
     }
 
     let envelope: OclifJsonResult<{ source: string; bindings: DomainProcessBindingRow[] }>;
