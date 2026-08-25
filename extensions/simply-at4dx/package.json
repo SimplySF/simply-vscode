@@ -28,7 +28,17 @@
                 "command": "simply-at4dx.showDomainProcessBindings",
                 "title": "AT4DX: Show Domain Process Bindings"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Simply AT4DX",
+            "properties": {
+                "simply-at4dx.debug": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Log detailed sf command-line invocations — including working directory, arguments, and captured output — to the \"AT4DX Domain Process Bindings\" output channel. Turn this on when troubleshooting, reproduce the problem, then share the channel's contents in a bug report. Off by default since arguments and output can include org usernames and local file paths."
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",

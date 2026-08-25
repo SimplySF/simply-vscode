@@ -2,6 +2,7 @@
 // imported dynamically (which `tsc` rejects as a static require of ESM), and the type needs an
 // explicit resolution-mode since it can't be inferred from a (nonexistent) static import.
 import type { ExecaError } from 'execa' with { 'resolution-mode': 'import' };
+import { baseCommand, redactProxyUrl, truncate, type Logger } from './logger';
 
 /** Mirrors `DomainProcessType` from `@simplysf/simply-aep`'s `at4dxDomainProcessBindingTypes.ts`. */
 export type DomainProcessType = 'Action' | 'Criteria';
@@ -74,6 +75,8 @@ function describeCliFailure(stderr: string): string {
  * @param cwd - The directory to run `sf` from (a workspace folder).
  * @param target - Whether to read from a connected org or local DX source directories.
  * @param sobjects - Optional SObject API name filter.
+ * @param logger - Optional sink for the "AT4DX Domain Process Bindings" output channel (see 0002)
+ *   — a summary line is always logged; full args/env/output only when `simply-at4dx.debug` is on.
  * @returns The resolved bindings.
  * @throws {At4dxCliError} With a message safe to show the user directly.
  */
@@ -81,6 +84,7 @@ export async function getDomainProcessBindings(
     cwd: string,
     target: BindingSource,
     sobjects?: string[],
+    logger?: Logger,
 ): Promise<DomainProcessBindingRow[]> {
     const args = ['simply', 'aep', 'at4dx', 'domain-process-binding', 'list', '--json'];
     if (target.kind === 'org') {
@@ -93,6 +97,13 @@ export async function getDomainProcessBindings(
     for (const sobject of sobjects ?? []) {
         args.push('--sobject', sobject);
     }
+
+    const start = Date.now();
+    const summary = (outcome: string): void => logger?.log(`${new Date().toISOString()} ${baseCommand(args)} — ${Date.now() - start}ms — ${outcome}`);
+    logger?.log(`spawning: sf ${args.join(' ')} (cwd=${cwd})`, { verbose: true });
+    logger?.log(`env: HTTPS_PROXY=${presence(process.env.HTTPS_PROXY)} HTTP_PROXY=${presence(process.env.HTTP_PROXY)} NO_PROXY=${presence(process.env.NO_PROXY)}`, {
+        verbose: true,
+    });
 
     let stdout: string;
     try {
@@ -109,15 +120,21 @@ export async function getDomainProcessBindings(
                 env: { SF_AUTOUPDATE_DISABLE: 'true', SF_DISABLE_TELEMETRY: 'true' },
             })
         ).stdout as string;
+        logger?.log(`stdout: ${truncate(stdout)}`, { verbose: true });
     } catch (error) {
         const execError = error as ExecaError;
+        logger?.log(`stdout: ${truncate((execError.stdout as string | undefined) ?? '')}`, { verbose: true });
+        logger?.log(`stderr: ${truncate((execError.stderr as string | undefined) ?? '')}`, { verbose: true });
+
         if (execError.code === 'ENOENT') {
+            summary('sf not found');
             throw new At4dxCliError(
                 'The Salesforce CLI (`sf`) was not found on your PATH. Install it from https://developer.salesforce.com/tools/salesforcecli.',
                 error,
             );
         }
         if (execError.timedOut) {
+            summary('timed out');
             throw new At4dxCliError(
                 'The `sf` command timed out after 30s. It may be waiting on a first-run prompt — try running `sf simply aep at4dx domain-process-binding list --json` directly in a terminal once, then retry.',
                 error,
@@ -126,6 +143,7 @@ export async function getDomainProcessBindings(
         // oclif commands still print the --json envelope to stdout on a thrown CLI error; only fall
         // back to stderr when there's no parseable envelope to read the real message from.
         if (!execError.stdout) {
+            summary(`exited ${execError.exitCode ?? '?'}`);
             throw new At4dxCliError(describeCliFailure((execError.stderr as string | undefined) ?? execError.message ?? ''), error);
         }
         stdout = execError.stdout as string;
@@ -135,12 +153,26 @@ export async function getDomainProcessBindings(
     try {
         envelope = JSON.parse(stdout) as typeof envelope;
     } catch (error) {
+        summary('bad JSON');
         throw new At4dxCliError('Could not parse `sf` command output as JSON.', error);
     }
 
     if (envelope.status !== 0 || !envelope.result) {
+        summary('cli error');
         throw new At4dxCliError(envelope.message ?? 'The `sf` command failed with no error message.');
     }
 
+    summary('ok');
     return envelope.result.bindings;
+}
+
+function presence(value: string | undefined): string {
+    if (!value) {
+        return 'not set';
+    }
+    try {
+        return redactProxyUrl(value);
+    } catch {
+        return 'set';
+    }
 }
