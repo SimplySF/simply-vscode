@@ -1,6 +1,6 @@
 # 0002 — AT4DX Debug Output Channel
 
-**Status:** Draft
+**Status:** Implemented (PR #8)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-25
 
