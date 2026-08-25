@@ -1,6 +1,6 @@
 # 0005 — AT4DX Org List via `@salesforce/core`
 
-**Status:** Draft
+**Status:** Implemented (PR #10)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-25
 
@@ -150,8 +150,13 @@ break on any future auth-file format change `@salesforce/core` absorbs internall
   confirming the above; the `package.json`/`package-lock.json` dependency addition was left in place
   since it's the actual change this doc calls for, not spike-only scaffolding.
 
-**Not done yet:** the real `listOrgs` implementation (Implementation plan above) and the manual
-Extension Development Host smoke test against a real workspace with connected orgs.
+**Done, as the actual implementation (PR #10):** `listOrgs` in `extension.ts` now calls
+`AuthInfo.listAllAuthorizations()` per Decision above; `npm run compile` passes clean, and the real
+bundled `dist/extension.js` (with `vscode` stubbed) was loaded directly to confirm the module
+initializes and the `SF_DISABLE_LOG_FILE` fix takes effect against this machine's real auth files.
+
+**Not done yet:** a manual Extension Development Host smoke test (F5) of the "Connected Org…" picker
+against a real workspace — tracked in the PR's test plan checklist.
 
 ## Open questions
 
