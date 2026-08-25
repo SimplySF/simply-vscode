@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.3...simply-at4dx-v1.1.0) (2026-08-25)
+
+
+### Features
+
+* **simply-at4dx:** move SObject/trigger-event selection into the panel ([#7](https://github.com/SimplySF/simply-vscode/issues/7)) ([9f7c12e](https://github.com/SimplySF/simply-vscode/commit/9f7c12e49746e2d1ad84b206f8783cb36dd96bc9))
+
 # [simply-at4dx-v1.0.3](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.2...simply-at4dx-v1.0.3) (2026-08-25)
 
 
