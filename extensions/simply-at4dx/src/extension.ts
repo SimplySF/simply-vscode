@@ -96,37 +96,42 @@ async function listOrgs(cwd: string): Promise<OrgSummary[]> {
 }
 
 async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder): Promise<BindingSource | undefined> {
-    // Note: the discriminant is named `sourceKind`, not `kind` — `vscode.QuickPickItem` already
-    // declares its own `kind?: QuickPickItemKind`, and reusing that name would intersect our string
-    // literal with that enum type, collapsing the whole item type to `never`.
-    type SourceItem =
-        | (vscode.QuickPickItem & { sourceKind: 'local' })
-        | (vscode.QuickPickItem & { sourceKind: 'org'; username: string });
+    // Local Source is always instant; org lookup shells out to `sf` and can be slow, so it only runs
+    // (and only makes the user wait) once they've actually asked for it — the picker itself never
+    // blocks on `sf org list`.
+    type SourceKindItem = vscode.QuickPickItem & { sourceKind: 'local' | 'org' };
+    const sourceKindItems: SourceKindItem[] = [
+        { label: '$(folder) Local Source', description: workspaceFolder.uri.fsPath, sourceKind: 'local' },
+        { label: '$(cloud) Connected Org…', sourceKind: 'org' },
+    ];
 
-    const localItem: SourceItem = {
-        label: '$(folder) Local Source',
-        description: workspaceFolder.uri.fsPath,
-        sourceKind: 'local',
-    };
-
-    const orgs = await listOrgs(workspaceFolder.uri.fsPath);
-    const orgItems: SourceItem[] = orgs.map((org) => ({
-        label: `$(cloud) ${org.alias ?? org.username}`,
-        description: org.alias ? org.username : undefined,
-        sourceKind: 'org',
-        username: org.username,
-    }));
-
-    const picked = await vscode.window.showQuickPick([localItem, ...orgItems], {
+    const pickedKind = await vscode.window.showQuickPick(sourceKindItems, {
         placeHolder: 'Read AT4DX bindings from…',
     });
-    if (!picked) {
+    if (!pickedKind) {
+        return undefined;
+    }
+    if (pickedKind.sourceKind === 'local') {
+        return { kind: 'source', dirs: [workspaceFolder.uri.fsPath] };
+    }
+
+    const orgs = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Looking up connected orgs…' },
+        () => listOrgs(workspaceFolder.uri.fsPath),
+    );
+    if (orgs.length === 0) {
+        void vscode.window.showInformationMessage('No connected orgs found.');
         return undefined;
     }
 
-    return picked.sourceKind === 'local'
-        ? { kind: 'source', dirs: [workspaceFolder.uri.fsPath] }
-        : { kind: 'org', username: picked.username };
+    type OrgItem = vscode.QuickPickItem & { username: string };
+    const orgItems: OrgItem[] = orgs.map((org) => ({
+        label: `$(cloud) ${org.alias ?? org.username}`,
+        description: org.alias ? org.username : undefined,
+        username: org.username,
+    }));
+    const pickedOrg = await vscode.window.showQuickPick(orgItems, { placeHolder: 'Select a connected org' });
+    return pickedOrg ? { kind: 'org', username: pickedOrg.username } : undefined;
 }
 
 async function pickSObject(rows: DomainProcessBindingRow[]): Promise<string | undefined> {
