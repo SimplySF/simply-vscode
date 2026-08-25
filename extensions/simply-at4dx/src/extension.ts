@@ -1,7 +1,13 @@
+import { AuthInfo } from '@salesforce/core';
 import * as vscode from 'vscode';
 import { At4dxCliError, getDomainProcessBindings, type BindingSource } from './at4dxCli';
 import { DomainProcessBindingPanel } from './domainProcessBindingPanel';
 import { createOutputChannelLogger, type Logger } from './logger';
+
+// `@salesforce/core` builds its `Logger` singleton with a worker-thread file transport unless this
+// is set, and that transport doesn't survive esbuild bundling this extension into a single file (see
+// docs/design/0005-at4dx-org-list-via-core.md) — must be set before any `@salesforce/core` API runs.
+process.env.SF_DISABLE_LOG_FILE = 'true';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = vscode.window.createOutputChannel('AT4DX Domain Process Bindings');
@@ -64,24 +70,15 @@ async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined
 
 type OrgSummary = { username: string; alias?: string };
 
-async function listOrgs(cwd: string, logger: Logger): Promise<OrgSummary[]> {
+async function listOrgs(logger: Logger): Promise<OrgSummary[]> {
     const start = Date.now();
     try {
-        // `execa` is ESM-only; imported dynamically since this extension is bundled as CommonJS.
-        const { execa } = await import('execa');
-        const { stdout } = await execa('sf', ['org', 'list', '--json'], {
-            cwd,
-            // See the matching comment in at4dxCli.ts: no TTY here to answer a stray prompt, so close
-            // stdin and cap the wait rather than risk hanging silently.
-            stdin: 'ignore',
-            timeout: 30_000,
-            env: { SF_AUTOUPDATE_DISABLE: 'true', SF_DISABLE_TELEMETRY: 'true' },
-        });
+        // Reads the same local auth files `sf org list` does, in-process — no `sf` on PATH needed.
+        // Orgs whose auth file failed to parse (`error` set) aren't usable picks, so they're filtered
+        // here; expired orgs are left in, matching `sf org list`'s own behavior.
+        const orgs = await AuthInfo.listAllAuthorizations((org) => !org.error);
         logger.log(`${new Date().toISOString()} org list — ${Date.now() - start}ms — ok`);
-        const parsed = JSON.parse(stdout as string) as {
-            result?: { nonScratchOrgs?: OrgSummary[]; scratchOrgs?: OrgSummary[] };
-        };
-        return [...(parsed.result?.nonScratchOrgs ?? []), ...(parsed.result?.scratchOrgs ?? [])];
+        return orgs.map((org) => ({ username: org.username, alias: org.aliases?.[0] }));
     } catch (error) {
         logger.log(`${new Date().toISOString()} org list — ${Date.now() - start}ms — failed`);
         logger.log(`org list error: ${(error as Error).message ?? error}`, { verbose: true });
@@ -90,9 +87,9 @@ async function listOrgs(cwd: string, logger: Logger): Promise<OrgSummary[]> {
 }
 
 async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger: Logger): Promise<BindingSource | undefined> {
-    // Local Source is always instant; org lookup shells out to `sf` and can be slow, so it only runs
-    // (and only makes the user wait) once they've actually asked for it — the picker itself never
-    // blocks on `sf org list`.
+    // Local Source is always instant; org lookup reads local Salesforce CLI auth files, so it only
+    // runs (and only makes the user wait) once they've actually asked for it — the picker itself
+    // never blocks on it.
     type SourceKindItem = vscode.QuickPickItem & { sourceKind: 'local' | 'localFolder' | 'org' };
     const sourceKindItems: SourceKindItem[] = [
         { label: '$(folder) Local Source', description: workspaceFolder.uri.fsPath, sourceKind: 'local' },
@@ -122,7 +119,7 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
 
     const orgs = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Looking up connected orgs…' },
-        () => listOrgs(workspaceFolder.uri.fsPath, logger),
+        () => listOrgs(logger),
     );
     if (orgs.length === 0) {
         void vscode.window.showInformationMessage('No connected orgs found.');
