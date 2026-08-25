@@ -1,6 +1,6 @@
 # 0003 — AT4DX In-Panel Selection & Loading State
 
-**Status:** Draft
+**Status:** Implemented (PR #7)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-25
 
