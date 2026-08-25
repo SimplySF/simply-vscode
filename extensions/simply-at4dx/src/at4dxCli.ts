@@ -97,12 +97,29 @@ export async function getDomainProcessBindings(
     let stdout: string;
     try {
         const { execa } = await import('execa');
-        stdout = (await execa('sf', args, { cwd, maxBuffer: 10 * 1024 * 1024 })).stdout as string;
+        stdout = (
+            await execa('sf', args, {
+                cwd,
+                maxBuffer: 10 * 1024 * 1024,
+                // `sf` should never need input; closing stdin turns a stray interactive prompt (e.g. a
+                // CLI first-run prompt) into an immediate EOF instead of a silent, indefinite hang —
+                // there's no TTY in the extension host for anyone to answer it.
+                stdin: 'ignore',
+                timeout: 30_000,
+                env: { SF_AUTOUPDATE_DISABLE: 'true', SF_DISABLE_TELEMETRY: 'true' },
+            })
+        ).stdout as string;
     } catch (error) {
         const execError = error as ExecaError;
         if (execError.code === 'ENOENT') {
             throw new At4dxCliError(
                 'The Salesforce CLI (`sf`) was not found on your PATH. Install it from https://developer.salesforce.com/tools/salesforcecli.',
+                error,
+            );
+        }
+        if (execError.timedOut) {
+            throw new At4dxCliError(
+                'The `sf` command timed out after 30s. It may be waiting on a first-run prompt — try running `sf simply aep at4dx domain-process-binding list --json` directly in a terminal once, then retry.',
                 error,
             );
         }
