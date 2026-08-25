@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.3.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.3.0...simply-at4dx-v1.3.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** read connected orgs via @salesforce/core instead of sf org list ([#10](https://github.com/SimplySF/simply-vscode/issues/10)) ([5158db2](https://github.com/SimplySF/simply-vscode/commit/5158db2e794802428b9cac97945076d569beb70d))
+
 # [simply-at4dx-v1.3.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.2.0...simply-at4dx-v1.3.0) (2026-08-25)
 
 
