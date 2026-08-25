@@ -38,6 +38,7 @@ refactors that keep the observable behavior identical.
 | #                                                                          | Title                                    | Status |
 | --------------------------------------------------------------------------- | ----------------------------------------- | ------ |
 | [0001](0001-at4dx-domain-process-binding-explorer.md) | AT4DX Domain Process Binding Explorer | Draft  |
+| [0003](0003-at4dx-panel-loading-state.md) | AT4DX In-Panel Selection & Loading State | Implemented |
 
 ## Template
 

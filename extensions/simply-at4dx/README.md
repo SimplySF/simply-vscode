@@ -19,10 +19,11 @@ Run **AT4DX: Show Domain Process Bindings** from the Command Palette. You'll be 
 
 1. Pick a workspace folder (if more than one is open).
 2. Pick where to read bindings from — local source, or a connected org.
-3. Pick an SObject.
-4. Pick a trigger event (Created/Updated/Deleted/Undeleted) or Domain Method Execution.
 
-The resulting panel groups bindings into Before/After sections in execution order. Click a row to
-open its class. A binding is data straight from
+The panel then opens right away, with its SObject and Trigger Event dropdowns disabled while it
+scans. Once the scan completes, the dropdowns populate and enable — pick an SObject, then a trigger
+event (Created/Updated/Deleted/Undeleted) or Domain Method Execution, and the panel groups that
+SObject's bindings into Before/After sections in execution order. Switching either dropdown re-renders
+instantly, with no re-scan. Click a row to open its class. A binding is data straight from
 `sf simply aep at4dx domain-process-binding list --json` — this extension doesn't read or write
 Salesforce metadata itself.
