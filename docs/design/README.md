@@ -41,6 +41,7 @@ refactors that keep the observable behavior identical.
 | [0002](0002-at4dx-debug-output-channel.md) | AT4DX Debug Output Channel | Implemented |
 | [0003](0003-at4dx-panel-loading-state.md) | AT4DX In-Panel Selection & Loading State | Implemented |
 | [0004](0004-at4dx-choose-source-folder.md) | AT4DX Choose Source Folder | Implemented |
+| [0005](0005-at4dx-org-list-via-core.md) | AT4DX Org List via `@salesforce/core` | Draft |
 
 ## Template
 
