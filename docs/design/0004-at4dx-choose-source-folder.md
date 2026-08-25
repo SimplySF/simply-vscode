@@ -1,6 +1,6 @@
 # 0004 — AT4DX Choose Source Folder
 
-**Status:** Draft
+**Status:** Implemented (PR #9)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-25
 
