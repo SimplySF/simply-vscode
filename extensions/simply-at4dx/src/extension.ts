@@ -1,10 +1,6 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { At4dxCliError, getDomainProcessBindings, type BindingSource, type DomainProcessBindingRow } from './at4dxCli';
 import { DomainProcessBindingPanel, type OperationFamily } from './domainProcessBindingPanel';
-
-const execFileAsync = promisify(execFile);
 
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -80,8 +76,10 @@ type OrgSummary = { username: string; alias?: string };
 
 async function listOrgs(cwd: string): Promise<OrgSummary[]> {
     try {
-        const { stdout } = await execFileAsync('sf', ['org', 'list', '--json'], { cwd });
-        const parsed = JSON.parse(stdout) as {
+        // `execa` is ESM-only; imported dynamically since this extension is bundled as CommonJS.
+        const { execa } = await import('execa');
+        const { stdout } = await execa('sf', ['org', 'list', '--json'], { cwd });
+        const parsed = JSON.parse(stdout as string) as {
             result?: { nonScratchOrgs?: OrgSummary[]; scratchOrgs?: OrgSummary[] };
         };
         return [...(parsed.result?.nonScratchOrgs ?? []), ...(parsed.result?.scratchOrgs ?? [])];
