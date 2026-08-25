@@ -1,3 +1,10 @@
+# [simply-at4dx-v1.2.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.1.0...simply-at4dx-v1.2.0) (2026-08-25)
+
+
+### Features
+
+* **simply-at4dx:** add a debug output channel for troubleshooting sf ([#8](https://github.com/SimplySF/simply-vscode/issues/8)) ([38f6faf](https://github.com/SimplySF/simply-vscode/commit/38f6faff644ff5aa20388bc8811e75a5d086a1fd))
+
 # [simply-at4dx-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.0.3...simply-at4dx-v1.1.0) (2026-08-25)
 
 
