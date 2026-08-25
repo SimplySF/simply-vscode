@@ -327,7 +327,7 @@ function buildInitialContentHtml(state: PanelState): string {
         case 'loading':
             return '<p class="status">Scanning workspace for AT4DX bindings…</p>';
         case 'error':
-            return `<p class="status error">${escapeHtml(state.message)}</p>`;
+            return `<p class="status error">${escapeHtml(state.message).replace(/\n/g, '<br>')}</p>`;
         case 'empty':
             return '<p class="status">No AT4DX Trigger Action Framework bindings found.</p>';
         case 'data':

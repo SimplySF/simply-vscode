@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { At4dxCliError, getDomainProcessBindings, type BindingSource } from './at4dxCli';
 import { DomainProcessBindingPanel } from './domainProcessBindingPanel';
+import { createOutputChannelLogger, type Logger } from './logger';
 
 export function activate(context: vscode.ExtensionContext): void {
+    const outputChannel = vscode.window.createOutputChannel('AT4DX Domain Process Bindings');
+    const logger = createOutputChannelLogger(outputChannel);
     context.subscriptions.push(
+        outputChannel,
         vscode.commands.registerCommand('simply-at4dx.showDomainProcessBindings', () => {
-            void showDomainProcessBindings();
+            void showDomainProcessBindings(logger);
         }),
     );
 }
@@ -14,13 +18,13 @@ export function deactivate(): void {
     // Nothing to clean up: DomainProcessBindingPanel disposes itself via its own onDidDispose handler.
 }
 
-async function showDomainProcessBindings(): Promise<void> {
+async function showDomainProcessBindings(logger: Logger): Promise<void> {
     const workspaceFolder = await pickWorkspaceFolder();
     if (!workspaceFolder) {
         return;
     }
 
-    const target = await pickBindingSource(workspaceFolder);
+    const target = await pickBindingSource(workspaceFolder, logger);
     if (!target) {
         return;
     }
@@ -31,7 +35,7 @@ async function showDomainProcessBindings(): Promise<void> {
     DomainProcessBindingPanel.open();
 
     try {
-        const allRows = await getDomainProcessBindings(workspaceFolder.uri.fsPath, target);
+        const allRows = await getDomainProcessBindings(workspaceFolder.uri.fsPath, target, undefined, logger);
         if (allRows.length === 0) {
             DomainProcessBindingPanel.showEmpty();
             return;
@@ -60,7 +64,8 @@ async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined
 
 type OrgSummary = { username: string; alias?: string };
 
-async function listOrgs(cwd: string): Promise<OrgSummary[]> {
+async function listOrgs(cwd: string, logger: Logger): Promise<OrgSummary[]> {
+    const start = Date.now();
     try {
         // `execa` is ESM-only; imported dynamically since this extension is bundled as CommonJS.
         const { execa } = await import('execa');
@@ -72,16 +77,19 @@ async function listOrgs(cwd: string): Promise<OrgSummary[]> {
             timeout: 30_000,
             env: { SF_AUTOUPDATE_DISABLE: 'true', SF_DISABLE_TELEMETRY: 'true' },
         });
+        logger.log(`${new Date().toISOString()} org list — ${Date.now() - start}ms — ok`);
         const parsed = JSON.parse(stdout as string) as {
             result?: { nonScratchOrgs?: OrgSummary[]; scratchOrgs?: OrgSummary[] };
         };
         return [...(parsed.result?.nonScratchOrgs ?? []), ...(parsed.result?.scratchOrgs ?? [])];
-    } catch {
+    } catch (error) {
+        logger.log(`${new Date().toISOString()} org list — ${Date.now() - start}ms — failed`);
+        logger.log(`org list error: ${(error as Error).message ?? error}`, { verbose: true });
         return [];
     }
 }
 
-async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder): Promise<BindingSource | undefined> {
+async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger: Logger): Promise<BindingSource | undefined> {
     // Local Source is always instant; org lookup shells out to `sf` and can be slow, so it only runs
     // (and only makes the user wait) once they've actually asked for it — the picker itself never
     // blocks on `sf org list`.
@@ -103,7 +111,7 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder): Promi
 
     const orgs = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Looking up connected orgs…' },
-        () => listOrgs(workspaceFolder.uri.fsPath),
+        () => listOrgs(workspaceFolder.uri.fsPath, logger),
     );
     if (orgs.length === 0) {
         void vscode.window.showInformationMessage('No connected orgs found.');
@@ -121,8 +129,10 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder): Promi
 }
 
 function errorMessage(error: unknown): string {
-    if (error instanceof At4dxCliError) {
-        return error.message;
-    }
-    return `Unexpected error reading AT4DX bindings: ${(error as Error).message}`;
+    const message =
+        error instanceof At4dxCliError ? error.message : `Unexpected error reading AT4DX bindings: ${(error as Error).message}`;
+    const debugHint = vscode.workspace.getConfiguration('simply-at4dx').get<boolean>('debug', false)
+        ? 'See the "AT4DX Domain Process Bindings" output channel for the full command and captured output.'
+        : 'See the "AT4DX Domain Process Bindings" output channel for details, or enable the simply-at4dx.debug setting and retry for the full command and captured output.';
+    return `${message}\n\n${debugHint}`;
 }
