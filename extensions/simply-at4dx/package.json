@@ -58,6 +58,7 @@
         "directory": "extensions/simply-at4dx"
     },
     "dependencies": {
+        "@salesforce/core": "^9.1.7",
         "execa": "^9.6.1"
     }
 }
