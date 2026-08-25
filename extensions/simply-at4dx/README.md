@@ -18,7 +18,8 @@ VS Code.
 Run **AT4DX: Show Domain Process Bindings** from the Command Palette. You'll be prompted to:
 
 1. Pick a workspace folder (if more than one is open).
-2. Pick where to read bindings from — local source, or a connected org.
+2. Pick where to read bindings from — the whole workspace, a specific folder you browse to (handy
+   for a multi-package-directory project), or a connected org.
 
 The panel then opens right away, with its SObject and Trigger Event dropdowns disabled while it
 scans. Once the scan completes, the dropdowns populate and enable — pick an SObject, then a trigger
