@@ -171,3 +171,8 @@ against a real workspace — tracked in the PR's test plan checklist.
 - **Filtering `isExpired` orgs from the picker.** Left unfiltered to match today's behavior (see
   Behavior); could be revisited as a small UX improvement (grey out or annotate expired orgs) once
   someone actually hits it, but out of scope for this doc.
+- **Node.js version floor** — not identified as a risk when this doc was written; found and resolved
+  in [0006](0006-at4dx-direct-library-imports.md#open-questions) once a second `@salesforce/*`-derived
+  dependency made it worth checking. `@salesforce/core` itself already declared `engines.node
+  >=22.0.0` at the time this PR shipped, unnoticed. Resolved retroactively by 0006's `engines.vscode`
+  bump to `^1.119.0`, which applies to this extension as a whole, not just the code 0006 added.

@@ -197,21 +197,18 @@ in the PR's test plan checklist.
 
 ## Open questions
 
-- **Node.js version floor.** Both `@salesforce/core` and `@simplysf/simply-aep-core` declare
-  `"engines": { "node": ">=22.0.0" }`. Checked against VS Code's own bundled Node.js version history:
-  VS Code only started shipping Node 22 as of **1.119.0 (2026-05-05)** — every earlier version,
-  including everything back through this extension's declared minimum (`engines.vscode: ^1.85.0`,
-  November 2023), bundles Node 20 or older. `engines.node` in a `package.json` is advisory, not
-  enforced by `npm install` or by Node itself, so nothing fails loudly — but if either package's
-  compiled output actually calls a Node-22-only runtime API, it would break silently on an older
-  extension host, surfacing as some unrelated-looking runtime error rather than a clear version
-  message. **This risk already exists today, unverified, in the already-shipped 0005 change** (which
-  added the `@salesforce/core` dependency) — this doc's addition of `simply-aep-core` doesn't introduce
-  the risk, it deepens exposure to the same one. Needs an explicit test under an older Node (e.g. 20.x,
-  matching VS Code ≤1.118.x) before either change should be considered safe at the extension's current
-  `engines.vscode` floor; if it isn't, the fix is either bumping `engines.vscode` to something recent
-  enough to guarantee Node 22 (a breaking change worth its own decision, not a side effect of this doc)
-  or finding that in practice nothing actually requires Node 22 at runtime despite the declared engine.
+- ~~**Node.js version floor.**~~ **Resolved (2026-08-26):** both `@salesforce/core` and
+  `@simplysf/simply-aep-core` declare `"engines": { "node": ">=22.0.0" }`, and VS Code only started
+  bundling Node 22 as of **1.119.0 (2026-05-05)**. Rather than verify whether the compiled output
+  actually calls a Node-22-only runtime API on older hosts, the decision made was to require it
+  outright: `extensions/simply-at4dx/package.json`'s `engines.vscode` is bumped from `^1.85.0` to
+  `^1.119.0` (and `@types/vscode` to match), so the Marketplace itself refuses to install this
+  extension on a VS Code build that predates guaranteed Node 22 — turning a silent, unverified risk
+  into an explicit, enforced compatibility floor. This is a real compatibility break for anyone on an
+  older VS Code (worth its own conventional-commit `BREAKING CHANGE` footer), accepted as the
+  trade-off for not having to chase down every Node-22-only API surface across two third-party
+  dependency trees. Applies retroactively in spirit to 0005 as well, even though that PR already
+  shipped under the old floor.
 - **No timeout on the org-query path.** The old shell-out had `execa`'s `timeout: 30_000` as a safety
   net against a hung `sf` process. A direct `connection.autoFetchQuery` call has no equivalent — a
   hung network/proxy could block indefinitely. Worth an `AbortController`-based wrapper, but not
