@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.2.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.1.0...simply-at4dx-v2.2.0) (2026-08-26)
+
+
+### Features
+
+* **simply-at4dx:** default source-folder dialog to the sfdx package directory ([#15](https://github.com/SimplySF/simply-vscode/issues/15)) ([3b58fa4](https://github.com/SimplySF/simply-vscode/commit/3b58fa4eacb65514c266fa3c3277d86708a3e4c5))
+
 # [simply-at4dx-v2.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.0.0...simply-at4dx-v2.1.0) (2026-08-26)
 
 
