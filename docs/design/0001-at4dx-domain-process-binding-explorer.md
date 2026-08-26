@@ -89,6 +89,12 @@ trade-off accepted instead: this extension requires the Salesforce CLI and `simp
 and a shell-out has more latency and failure modes (CLI not found, plugin not installed) than an
 in-process call — judged worth it for a single source of truth.
 
+**Update (2026-08-25):** this trade-off held only as long as no importable library existed. Once
+`simply-node` split that logic out into `@simplysf/simply-aep-core` specifically for this extension to
+consume, the premise above no longer applied — there's still exactly one implementation of the
+resolution rules, just imported directly instead of shelled out to. See
+[0006](0006-at4dx-direct-library-imports.md), which supersedes this section.
+
 **A persistent sidebar tree view instead of an on-demand Command Palette + webview.** Rejected for
 v1: there's no cheap incremental data source yet (every refresh is a full `sf` process spawn), so a
 tree view that auto-refreshes on file save or selection change would either be slow or stale. An

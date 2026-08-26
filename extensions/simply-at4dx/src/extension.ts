@@ -41,7 +41,7 @@ async function showDomainProcessBindings(logger: Logger): Promise<void> {
     DomainProcessBindingPanel.open();
 
     try {
-        const allRows = await getDomainProcessBindings(workspaceFolder.uri.fsPath, target, undefined, logger);
+        const allRows = await getDomainProcessBindings(target, undefined, logger);
         if (allRows.length === 0) {
             DomainProcessBindingPanel.showEmpty();
             return;
