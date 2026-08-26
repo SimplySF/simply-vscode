@@ -1,4 +1,6 @@
-import { AuthInfo } from '@salesforce/core';
+import { AuthInfo, SfProject } from '@salesforce/core';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { At4dxCliError, getDomainProcessBindings, type BindingSource } from './at4dxCli';
 import { DomainProcessBindingPanel } from './domainProcessBindingPanel';
@@ -86,6 +88,32 @@ async function listOrgs(logger: Logger): Promise<OrgSummary[]> {
     }
 }
 
+// Best-guess starting directory for the "Choose Source Folder…" browse dialog — see
+// docs/design/0008-at4dx-default-source-folder.md. Any resolution failure (no sfdx-project.json, no
+// packageDirectories, resolved path missing on disk) is a silent fallthrough to the next rule; this is
+// a UX nicety, not something worth surfacing to the user.
+async function resolveDefaultSourceDir(workspaceFolder: vscode.WorkspaceFolder): Promise<vscode.Uri> {
+    const workspacePath = workspaceFolder.uri.fsPath;
+    try {
+        const project = await SfProject.resolve(workspacePath);
+        const defaultPackage = project.getDefaultPackage();
+        if (fs.existsSync(defaultPackage.fullPath)) {
+            return vscode.Uri.file(defaultPackage.fullPath);
+        }
+    } catch {
+        // No sfdx-project.json above workspacePath, or it has no packageDirectories — fall through.
+    }
+
+    for (const candidate of ['sfdx-source', 'force-app']) {
+        const candidatePath = path.join(workspacePath, candidate);
+        if (fs.existsSync(candidatePath)) {
+            return vscode.Uri.file(candidatePath);
+        }
+    }
+
+    return workspaceFolder.uri;
+}
+
 async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger: Logger): Promise<BindingSource | undefined> {
     // Local Source is always instant; org lookup reads local Salesforce CLI auth files, so it only
     // runs (and only makes the user wait) once they've actually asked for it — the picker itself
@@ -111,7 +139,7 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
             canSelectFolders: true,
             canSelectFiles: false,
             canSelectMany: false,
-            defaultUri: workspaceFolder.uri,
+            defaultUri: await resolveDefaultSourceDir(workspaceFolder),
             openLabel: 'Select Source Directory',
         });
         return picked && picked.length > 0 ? { kind: 'source', dirs: [picked[0].fsPath] } : undefined;
