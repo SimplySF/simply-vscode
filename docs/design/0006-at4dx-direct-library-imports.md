@@ -1,6 +1,6 @@
 # 0006 — AT4DX Domain Process Bindings via Direct Library Imports
 
-**Status:** Draft
+**Status:** Implemented (PR #11)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-25
 
@@ -71,6 +71,7 @@ sourced differently:
 | Connected org | `sf ... --target-org <user> ...` | `AuthInfo.create` → `Connection.create` → `scanOrgDomainProcessBindings(connection)` → filter → `resolveDomainProcessBindings` |
 | AT4DX not configured | CLI's `error.at4dxNotDetected`, passed through | Same message, thrown directly when local scan returns zero records or org scan reports `missing: true` |
 | Local scan threw | CLI's `error.localScanFailed`, passed through | Same message shape: `` Failed to scan the project directory: ${error.message} `` |
+| Org connection/auth failed (e.g. bad username) | Opaque — handled by `sf-plugins-core`'s flag parsing before the CLI's own command code ever ran | New, extension-specific: `` Failed to connect to the org: ${error.message} ``, kept distinct from the query failure below since it's a different step |
 | Org query threw | CLI's `error.orgQueryFailed`, passed through | Same message shape: `` Failed to query bindings from the org: ${error.message} `` |
 | `sf` not on PATH / plugin not installed / CLI timeout | Distinct `At4dxCliError` messages | **Gone** — no subprocess, so these failure modes no longer exist |
 
@@ -181,7 +182,18 @@ is a strictly better position than either forking or shelling out.
   nothing from this spike is committed; the actual dependency addition happens in Implementation plan
   step 1.
 
-**Not done yet:** the real `at4dxCli.ts` rewrite, and the manual F5 smoke test.
+**Done, as the actual implementation (PR #11):** `at4dxCli.ts` rewritten per Decision/Implementation
+plan above. `npm run compile` passes clean. Beyond the spike, the real rewrite was bundled standalone
+and exercised against real local/org data for all four outcomes: local scan with no AT4DX metadata
+(`at4dxNotDetected`), local scan against a nonexistent directory (`localScanFailed`, with the
+underlying `TypeInferenceError` message threaded through), org scan against a real org that doesn't
+have the CMDT type configured (`missing: true` → `at4dxNotDetected`), and org scan against a bogus
+username (a new failure mode this doc's table didn't originally list: `AuthInfo.create` itself
+throwing `NamedOrgNotFoundError`, wrapped as `` Failed to connect to the org: ${message} `` — kept
+distinct from `orgQueryFailed` since it's a different failure, connection setup vs. the query itself).
+
+**Not done yet:** a manual Extension Development Host smoke test (F5) of the full panel flow — tracked
+in the PR's test plan checklist.
 
 ## Open questions
 
