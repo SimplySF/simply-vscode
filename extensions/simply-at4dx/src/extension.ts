@@ -88,10 +88,10 @@ async function listOrgs(logger: Logger): Promise<OrgSummary[]> {
     }
 }
 
-// Best-guess starting directory for the "Choose Source Folder…" browse dialog — see
-// docs/design/0008-at4dx-default-source-folder.md. Any resolution failure (no sfdx-project.json, no
-// packageDirectories, resolved path missing on disk) is a silent fallthrough to the next rule; this is
-// a UX nicety, not something worth surfacing to the user.
+// Best-guess directory for "Local Source" to scan — see docs/design/0008-at4dx-default-source-folder.md.
+// Any resolution failure (no sfdx-project.json, no packageDirectories, resolved path missing on disk)
+// is a silent fallthrough to the next rule; this is a UX nicety, not something worth surfacing to the
+// user.
 async function resolveDefaultSourceDir(workspaceFolder: vscode.WorkspaceFolder): Promise<vscode.Uri> {
     const workspacePath = workspaceFolder.uri.fsPath;
     try {
@@ -118,9 +118,11 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
     // Local Source is always instant; org lookup reads local Salesforce CLI auth files, so it only
     // runs (and only makes the user wait) once they've actually asked for it — the picker itself
     // never blocks on it.
+    const defaultSourceDir = await resolveDefaultSourceDir(workspaceFolder);
+
     type SourceKindItem = vscode.QuickPickItem & { sourceKind: 'local' | 'localFolder' | 'org' };
     const sourceKindItems: SourceKindItem[] = [
-        { label: '$(folder) Local Source', description: workspaceFolder.uri.fsPath, sourceKind: 'local' },
+        { label: '$(folder) Local Source', description: defaultSourceDir.fsPath, sourceKind: 'local' },
         { label: '$(folder-opened) Choose Source Folder…', sourceKind: 'localFolder' },
         { label: '$(cloud) Connected Org…', sourceKind: 'org' },
     ];
@@ -132,14 +134,14 @@ async function pickBindingSource(workspaceFolder: vscode.WorkspaceFolder, logger
         return undefined;
     }
     if (pickedKind.sourceKind === 'local') {
-        return { kind: 'source', dirs: [workspaceFolder.uri.fsPath] };
+        return { kind: 'source', dirs: [defaultSourceDir.fsPath] };
     }
     if (pickedKind.sourceKind === 'localFolder') {
         const picked = await vscode.window.showOpenDialog({
             canSelectFolders: true,
             canSelectFiles: false,
             canSelectMany: false,
-            defaultUri: await resolveDefaultSourceDir(workspaceFolder),
+            defaultUri: workspaceFolder.uri,
             openLabel: 'Select Source Directory',
         });
         return picked && picked.length > 0 ? { kind: 'source', dirs: [picked[0].fsPath] } : undefined;
