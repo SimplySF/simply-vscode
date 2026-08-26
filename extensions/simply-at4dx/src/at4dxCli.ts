@@ -4,12 +4,25 @@ import { AuthInfo, Connection } from '@salesforce/core';
 // and the types need an explicit resolution-mode since they can't be inferred from a (nonexistent)
 // static import. Same pattern this file previously used for `execa` — see docs/design/0006.
 import type {
+    DomainProcessBindingIssue,
+    DomainProcessBindingIssueRule,
     DomainProcessBindingRow,
-    RawDomainProcessBindingRecord,
+    DomainProcessBindingRuleInfo,
+    DomainProcessLocalScanResult,
 } from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
 import { redactProxyUrl, truncate, type Logger } from './logger';
 
-export type { DomainProcessBindingRow };
+export type { DomainProcessBindingIssue, DomainProcessBindingRow };
+
+export type DomainProcessBindingScan = {
+    rows: DomainProcessBindingRow[];
+    issues: DomainProcessBindingIssue[];
+    /** `DOMAIN_PROCESS_BINDING_RULES`, forwarded so the panel needs no import of an ESM-only package. */
+    rules: Record<DomainProcessBindingIssueRule, DomainProcessBindingRuleInfo>;
+};
+
+/** Alias for `DomainProcessBindingScan`'s `rules` shape, so callers need no second `resolution-mode` import. */
+export type DomainProcessBindingRules = DomainProcessBindingScan['rules'];
 
 export type BindingSource = { kind: 'org'; username: string } | { kind: 'source'; dirs: string[] };
 
@@ -37,11 +50,22 @@ const AT4DX_NOT_DETECTED_MESSAGE =
  * @param sobjects - Optional SObject API name filter, applied before resolution.
  * @param logger - Optional sink for the "AT4DX Domain Process Bindings" output channel (see 0002)
  *   — a summary line is always logged; verbose detail only when `simply-at4dx.debug` is on.
- * @returns The resolved bindings.
+ * @returns The resolved bindings, plus the issues `validateDomainProcessBindings` found and the rule
+ *   metadata that explains them.
  * @throws {At4dxCliError} With a message safe to show the user directly.
  */
-export async function getDomainProcessBindings(target: BindingSource, sobjects?: string[], logger?: Logger): Promise<DomainProcessBindingRow[]> {
-    const { scanLocalDomainProcessBindings, scanOrgDomainProcessBindings, resolveDomainProcessBindings } = await import('@simplysf/simply-aep-core');
+export async function getDomainProcessBindings(
+    target: BindingSource,
+    sobjects?: string[],
+    logger?: Logger,
+): Promise<DomainProcessBindingScan> {
+    const {
+        scanLocalDomainProcessBindings,
+        scanOrgDomainProcessBindings,
+        resolveDomainProcessBindings,
+        validateDomainProcessBindings,
+        DOMAIN_PROCESS_BINDING_RULES,
+    } = await import('@simplysf/simply-aep-core');
 
     const start = Date.now();
     const label = target.kind === 'org' ? `org ${target.username}` : `source ${target.dirs.join(', ')}`;
@@ -54,7 +78,7 @@ export async function getDomainProcessBindings(target: BindingSource, sobjects?:
         logger?.log(`error: ${truncate(err.stack ?? err.message ?? String(error))}`, { verbose: true });
     };
 
-    let records: RawDomainProcessBindingRecord[];
+    let scan: DomainProcessLocalScanResult; // DomainProcessOrgScanResult structurally satisfies this
     if (target.kind === 'org') {
         logger?.log(
             `env: HTTPS_PROXY=${presence(process.env.HTTPS_PROXY)} HTTP_PROXY=${presence(process.env.HTTP_PROXY)} NO_PROXY=${presence(process.env.NO_PROXY)}`,
@@ -84,27 +108,31 @@ export async function getDomainProcessBindings(target: BindingSource, sobjects?:
             summary('at4dx not detected');
             throw new At4dxCliError(AT4DX_NOT_DETECTED_MESSAGE);
         }
-        records = scanResult.records;
+        scan = scanResult;
     } else {
         try {
-            records = scanLocalDomainProcessBindings(target.dirs);
+            scan = scanLocalDomainProcessBindings(target.dirs);
         } catch (error) {
             logError(error);
             summary('local scan failed');
             throw new At4dxCliError(`Failed to scan the project directory: ${(error as Error).message}`, error);
         }
 
-        if (records.length === 0) {
+        if (scan.records.length === 0 && scan.malformed.length === 0) {
             summary('at4dx not detected');
             throw new At4dxCliError(AT4DX_NOT_DETECTED_MESSAGE);
         }
     }
 
-    const sobjectFilter = sobjects?.length ? new Set(sobjects) : undefined;
-    const filteredRecords = sobjectFilter ? records.filter((record) => sobjectFilter.has(record.sobject)) : records;
+    // Validate before filtering — a scan-scoped rule (e.g. duplicate-developer-name) gives wrong
+    // answers if computed from an already-filtered slice. See docs/design/0011.
+    const issues = validateDomainProcessBindings(scan);
 
-    summary('ok');
-    return resolveDomainProcessBindings(filteredRecords);
+    const sobjectFilter = sobjects?.length ? new Set(sobjects) : undefined;
+    const filteredRecords = sobjectFilter ? scan.records.filter((record) => sobjectFilter.has(record.sobject)) : scan.records;
+
+    summary(`ok, ${issues.length} issue(s)`);
+    return { rows: resolveDomainProcessBindings(filteredRecords), issues, rules: DOMAIN_PROCESS_BINDING_RULES };
 }
 
 function presence(value: string | undefined): string {

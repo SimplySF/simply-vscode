@@ -34,6 +34,19 @@ instantly, with no re-scan. Click a row to open its class. Bindings are read via
 scan/resolve logic `sf simply aep at4dx domain-process-binding list` itself uses, imported directly
 rather than shelling out to that command.
 
+### Validation
+
+Every scan is also validated, automatically — there's no separate command and nothing to turn on.
+A summary bar above the dropdowns reads `✓ No problems found`, or `⚠ N errors · M warnings` split
+into "in this SObject" and "elsewhere in this scan" so a clean-looking selection is never masking a
+problem under a different SObject; clicking it scrolls to the Issues section. Any row with a problem
+gets a colored badge naming it. Below the binding sections, an Issues section lists every problem
+found, including ones that can't appear as a row at all — a binding with no SObject reference, for
+example, is dropped from the SObject list entirely and only ever shows up here. Clicking a local
+issue opens its `.md-meta.xml` beside the panel; org-sourced issues aren't clickable, since there's
+no local file to open. See `docs/design/0007-at4dx-validate-viewed-bindings.md` for the full design,
+and `testfixtures/` for a source tree exercising every rule.
+
 ## Troubleshooting
 
 Every binding lookup logs a one-line summary (source, duration, outcome) to the
