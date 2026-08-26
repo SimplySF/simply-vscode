@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" label="Opportunity Criteria After Update" protected="false">
+    <values>
+        <field>ClassToInject__c</field>
+        <value xsi:type="xsd:string">OpportunityAfterUpdateCriteria</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">Clean binding, and the only one under Opportunity — selecting Opportunity should show zero issues "in this SObject" while every other fixture issue is still reported "elsewhere in this scan".</value>
+    </values>
+    <values>
+        <field>ExecuteAsynchronous__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsActive__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>LogicalInverse__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>OrderOfExecution__c</field>
+        <value xsi:type="xsd:double">10.0</value>
+    </values>
+    <values>
+        <field>PreventRecursive__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>ProcessContext__c</field>
+        <value xsi:type="xsd:string">TriggerExecution</value>
+    </values>
+    <values>
+        <field>RelatedDomainBindingSObject__c</field>
+        <value xsi:type="xsd:string">Opportunity</value>
+    </values>
+    <values>
+        <field>TriggerOperation__c</field>
+        <value xsi:type="xsd:string">After_Update</value>
+    </values>
+    <values>
+        <field>Type__c</field>
+        <value xsi:type="xsd:string">Criteria</value>
+    </values>
+</CustomMetadata>

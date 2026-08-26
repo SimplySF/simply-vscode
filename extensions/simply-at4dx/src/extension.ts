@@ -41,12 +41,12 @@ async function showDomainProcessBindings(logger: Logger): Promise<void> {
     DomainProcessBindingPanel.open();
 
     try {
-        const allRows = await getDomainProcessBindings(target, undefined, logger);
-        if (allRows.length === 0) {
+        const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, logger);
+        if (rows.length === 0 && issues.length === 0) {
             DomainProcessBindingPanel.showEmpty();
             return;
         }
-        DomainProcessBindingPanel.setRows(allRows);
+        DomainProcessBindingPanel.setData(rows, issues, rules, target.kind);
     } catch (error) {
         DomainProcessBindingPanel.showError(errorMessage(error));
     }

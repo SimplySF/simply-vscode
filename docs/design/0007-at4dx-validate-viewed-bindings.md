@@ -1,6 +1,6 @@
 # 0007 — Validating the Bindings You're Viewing
 
-**Status:** Draft
+**Status:** Implemented ([PR #14](https://github.com/SimplySF/simply-vscode/pull/14))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-26
 

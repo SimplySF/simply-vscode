@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" label="Dup Binding (pkg1)" protected="false">
+    <values>
+        <field>ClassToInject__c</field>
+        <value xsi:type="xsd:string">AccountDupCriteria</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">duplicate-developer-name fixture, half 1 of 2: same DeveloperName (Dup_Binding) and same derived source ("default") as pkg2's copy, different SObject.</value>
+    </values>
+    <values>
+        <field>ExecuteAsynchronous__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>IsActive__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>LogicalInverse__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>OrderOfExecution__c</field>
+        <value xsi:type="xsd:double">40.0</value>
+    </values>
+    <values>
+        <field>PreventRecursive__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>ProcessContext__c</field>
+        <value xsi:type="xsd:string">TriggerExecution</value>
+    </values>
+    <values>
+        <field>RelatedDomainBindingSObject__c</field>
+        <value xsi:type="xsd:string">Account</value>
+    </values>
+    <values>
+        <field>TriggerOperation__c</field>
+        <value xsi:type="xsd:string">Before_Insert</value>
+    </values>
+    <values>
+        <field>Type__c</field>
+        <value xsi:type="xsd:string">Criteria</value>
+    </values>
+</CustomMetadata>
