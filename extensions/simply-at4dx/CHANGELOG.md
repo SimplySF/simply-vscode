@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.0.0...simply-at4dx-v2.1.0) (2026-08-26)
+
+
+### Features
+
+* **simply-at4dx:** validate every scan and render issues in the panel ([#14](https://github.com/SimplySF/simply-vscode/issues/14)) ([89c8e58](https://github.com/SimplySF/simply-vscode/commit/89c8e58d01fce688acd14741720db73abbf714c0))
+
 # [simply-at4dx-v2.0.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.3.1...simply-at4dx-v2.0.0) (2026-08-26)
 
 
