@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.2.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.2.0...simply-at4dx-v2.2.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** default Local Source to the sfdx package directory ([#16](https://github.com/SimplySF/simply-vscode/issues/16)) ([b69f5f3](https://github.com/SimplySF/simply-vscode/commit/b69f5f303fd02dc29bbf18f636a6bf0c75c5c962)), closes [#15](https://github.com/SimplySF/simply-vscode/issues/15)
+
 # [simply-at4dx-v2.2.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.1.0...simply-at4dx-v2.2.0) (2026-08-26)
 
 
