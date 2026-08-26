@@ -9,7 +9,7 @@ VS Code.
 
 - VS Code 1.119.0 or later. This extension depends on `@salesforce/core` and
   `@simplysf/simply-aep-core`, both of which require Node.js 22+ at runtime — VS Code has only bundled
-  Node 22 since 1.119.0 (see `docs/design/0006`'s Open questions).
+  Node 22 since 1.119.0 (see `docs/design/0006`).
 - A Salesforce DX project open as a workspace folder, containing AT4DX's Trigger Action Framework
   metadata locally, or an authenticated org connection to read it from. Authenticating an org is
   still done with the [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli)

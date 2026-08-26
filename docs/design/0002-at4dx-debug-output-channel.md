@@ -34,11 +34,15 @@ contents into a bug report — no debugger, no source checkout, no F5.
 an `OutputChannel` directly, preserving the existing separation between the CLI-shelling logic and
 extension-host glue (see 0001's Alternatives, which made the same call for testability/reuse reasons).
 
+**Note (post-[0006](0006-at4dx-direct-library-imports.md)):** "CLI-shelling logic" is now a misnomer —
+`at4dxCli.ts` calls `@simplysf/simply-aep-core` in-process — but the `Logger` seam itself, and the
+reason for keeping it (no direct `vscode` import in that file), is unchanged.
+
 ## Behavior
 
 ### Setting
 
-`simply-at4dx.debug` (boolean, default `false`):
+`simply-at4dx.debug` (boolean, default `false`), original wording (see Note below for current text):
 
 > Log detailed `sf` command-line invocations — including working directory, arguments, and captured
 > output — to the "AT4DX Domain Process Bindings" output channel. Turn this on when troubleshooting,
@@ -61,6 +65,19 @@ One channel, created once in `activate()` and disposed via `context.subscription
   is often what's actually needed to diagnose a proxy issue), and captured stdout/stderr truncated to
   20 KB each.
 
+**Note (post-[0005](0005-at4dx-org-list-via-core.md)/[0006](0006-at4dx-direct-library-imports.md)):**
+both the setting's description and the channel's content changed once neither code path spawns a
+subprocess. Current setting text: "Log detailed binding lookups — including the org/source detail and
+captured error output — to the ... output channel." (see `package.json`, the source of truth). The
+"Always" summary line now reads `domain-process-binding list (<org/source>) — <ms> — <outcome>` /
+`org list — <ms> — <outcome>`, with outcomes `ok`, `at4dx not detected`, `local scan failed`,
+`auth failed`, `org query failed` (domain-process bindings) or `ok`/`failed` (org list) — the
+subprocess-specific outcomes above (`sf not found`, `timed out`, `exited N`, `bad JSON`) no longer
+occur. Debug-mode detail is now the org username or source directories, any SObject filter, and the
+thrown error's message/stack (truncated) — there's no argument list, `cwd`, or stdout/stderr to show
+since neither path spawns a process. The proxy-env logging and its redaction (see Security below) are
+unchanged, still logged for the org path.
+
 ### Error UX
 
 Superseded by 0003, landed after this doc was first drafted: errors no longer go through a separate
@@ -73,8 +90,9 @@ summary line; flip the setting and retry for full detail).
 
 `HTTPS_PROXY`/`HTTP_PROXY` values can embed credentials (`http://user:pass@proxy:8080`). Even in debug
 mode, only presence/host is logged, never the raw value — a small `redactProxyUrl()` helper strips
-`user:pass@` before anything derived from these variables is ever written to the channel. Command
-`args` and `stdout`/`stderr` are logged as-is in debug mode (org usernames and workspace paths can
+`user:pass@` before anything derived from these variables is ever written to the channel. Org
+usernames, source directory paths, and thrown-error messages/stacks (formerly: command `args` and
+`stdout`/`stderr`; see the post-0005/0006 Note above) are logged as-is in debug mode (they can
 legitimately appear there and are needed to diagnose the problem); this is called out explicitly in
 the setting's description so a user knows what they're opting into before sharing a log publicly.
 
