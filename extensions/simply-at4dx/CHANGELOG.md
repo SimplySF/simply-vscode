@@ -1,3 +1,15 @@
+# [simply-at4dx-v2.0.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.3.1...simply-at4dx-v2.0.0) (2026-08-26)
+
+
+### Features
+
+* **simply-at4dx:** read domain-process bindings via @simplysf/simply-aep-core ([#11](https://github.com/SimplySF/simply-vscode/issues/11)) ([ea7de64](https://github.com/SimplySF/simply-vscode/commit/ea7de64e1b1202a75a2285a1a5a252bfbdfb7378))
+
+
+### BREAKING CHANGES
+
+* **simply-at4dx:** simply-at4dx now requires VS Code 1.119.0 or later.
+
 # [simply-at4dx-v1.3.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v1.3.0...simply-at4dx-v1.3.1) (2026-08-25)
 
 
