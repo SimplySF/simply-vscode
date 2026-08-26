@@ -25,12 +25,6 @@ export function redactProxyUrl(value: string): string {
     return value.replace(/^(https?:\/\/)[^@/]+@/i, '$1');
 }
 
-/** The subcommand path (e.g. `simply aep at4dx domain-process-binding list`), excluding flags/values — safe to always log, unlike the full argument list. */
-export function baseCommand(args: string[]): string {
-    const flagIndex = args.findIndex((arg) => arg.startsWith('--'));
-    return (flagIndex === -1 ? args : args.slice(0, flagIndex)).join(' ');
-}
-
 export function createOutputChannelLogger(channel: vscode.OutputChannel): Logger {
     return {
         log(message, opts) {
