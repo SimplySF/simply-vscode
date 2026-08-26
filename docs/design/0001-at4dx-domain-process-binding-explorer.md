@@ -28,15 +28,18 @@ Build `extensions/simply-at4dx`, a VS Code extension whose one command,
 (workspace folder → local source or connected org → SObject → trigger event) and renders the result
 in a themed webview panel grouped and ordered like the mockup.
 
-The extension does not read or parse Salesforce metadata itself. It shells out to
-`sf simply aep at4dx domain-process-binding list --json` — a new command built in the companion
-`simply` CLI repo specifically as this extension's data layer (see
+The extension does not read or parse Salesforce metadata itself. At the time this doc was written, it
+shelled out to `sf simply aep at4dx domain-process-binding list --json` — a new command built in the
+companion `simply` CLI repo specifically as this extension's data layer (see
 [SimplySF/simply-node's docs/design/0008-at4dx-domain-process-binding-list.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/0008-at4dx-domain-process-binding-list.md),
 which documents the CMDT scan/resolve logic, and its sibling
 [0007-at4dx-binding-list.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/0007-at4dx-binding-list.md)
 for the Application Factory binding command that came first). Keeping the metadata-reading logic in
 `simply-aep` — not duplicated here — means both the CLI and this extension stay correct against the
 same, single implementation of AT4DX's resolution rules; this extension's only job is presentation.
+**As of [0006](0006-at4dx-direct-library-imports.md), that single implementation is imported directly
+from `@simplysf/simply-aep-core` rather than shelled out to** — the "one implementation, one job"
+property this paragraph describes still holds, just via a different mechanism. See 0006 for why.
 
 ## Behavior
 
@@ -56,6 +59,12 @@ user can still pick Local Source. The bindings query itself always runs through
 `sf simply aep at4dx domain-process-binding list --json`, invoked via `child_process.execFile` with
 array arguments — never a shell string — so org usernames or SObject names can't be interpreted as
 shell syntax.
+
+**Superseded by [0005](0005-at4dx-org-list-via-core.md) and [0006](0006-at4dx-direct-library-imports.md):**
+neither of the above shells out anymore. The org-choices list comes from `@salesforce/core`'s
+`AuthInfo.listAllAuthorizations()` (0005), and the bindings query from `@simplysf/simply-aep-core`'s
+scan/resolve functions called in-process (0006) — no `sf` process, no `execFile`, no shell-argument
+concern (there was never a shell string here to begin with, but there's now no subprocess at all).
 
 ### Panel layout
 
@@ -79,6 +88,12 @@ shell syntax.
 `simply-aep` not installed (with the `sf plugins install @simplysf/simply-aep` fix), the CLI's own
 `error.at4dxNotDetected`/`error.*Failed` messages passed through verbatim, and unparseable/non-zero
 `--json` output.
+
+**Superseded by [0006](0006-at4dx-direct-library-imports.md):** with no subprocess left, `sf`-missing/
+plugin-not-installed/bad-JSON are no longer possible failure modes. What remains: `at4dxNotDetected`
+and the `localScanFailed`/`orgQueryFailed` messages (still ported from the same source, now called
+directly), plus a new org-connection-failure message 0006 added. See that doc's Behavior table for
+the current, complete list.
 
 ## Alternatives considered
 

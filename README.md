@@ -9,6 +9,7 @@ Marketplace independently.
 | Extension | Path | Marketplace |
 |---|---|---|
 | Simply Extension Pack | [`extensions/simply-extension-pack`](extensions/simply-extension-pack) | [simply.simply-extension-pack](https://marketplace.visualstudio.com/items?itemName=simply.simply-extension-pack) |
+| Simply AT4DX | [`extensions/simply-at4dx`](extensions/simply-at4dx) | [simplysf.simply-at4dx](https://marketplace.visualstudio.com/items?itemName=simplysf.simply-at4dx) |
 
 ## Development
 
