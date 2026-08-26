@@ -43,7 +43,7 @@ refactors that keep the observable behavior identical.
 | [0004](0004-at4dx-choose-source-folder.md) | AT4DX Choose Source Folder | Implemented |
 | [0005](0005-at4dx-org-list-via-core.md) | AT4DX Org List via `@salesforce/core` | Implemented |
 | [0006](0006-at4dx-direct-library-imports.md) | AT4DX Domain Process Bindings via Direct Library Imports | Implemented |
-| [0007](0007-at4dx-validate-viewed-bindings.md) | Validating the Bindings You're Viewing | Draft |
+| [0007](0007-at4dx-validate-viewed-bindings.md) | Validating the Bindings You're Viewing | Implemented |
 
 ## Template
 
