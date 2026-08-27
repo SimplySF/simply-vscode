@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.3.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.2.1...simply-at4dx-v2.3.0) (2026-08-27)
+
+
+### Features
+
+* **simply-at4dx:** create and edit domain process bindings ([#17](https://github.com/SimplySF/simply-vscode/issues/17)) ([9ad323f](https://github.com/SimplySF/simply-vscode/commit/9ad323f15aaa9f6a79c6a861c5d8891d2a4d6853))
+
 # [simply-at4dx-v2.2.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.2.0...simply-at4dx-v2.2.1) (2026-08-26)
 
 
