@@ -251,7 +251,9 @@ exists to substitute for it. Not yet run — this is what's blocking this doc's 
 
 ## Open questions
 
-- **No automated test harness**, still — same standing gap as every prior doc in this extension.
+- **No automated test harness**, still — same standing gap as every prior doc in this extension. Tracked
+  in [0010](0010-automated-test-harness.md), which also formalizes this doc's own ad hoc `jsdom`
+  verification (see its Testing section) into a real, checked-in test.
 - **"Both at once" local + org write** — deferred per Alternatives considered; revisit once there's a
   concrete request.
 - **Suggesting the next `order` value** for a new binding in the currently-selected group (e.g. highest

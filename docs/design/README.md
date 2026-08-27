@@ -46,6 +46,7 @@ refactors that keep the observable behavior identical.
 | [0007](0007-at4dx-validate-viewed-bindings.md) | Validating the Bindings You're Viewing | Implemented |
 | [0008](0008-at4dx-default-source-folder.md) | AT4DX Default Source Folder | Draft |
 | [0009](0009-at4dx-create-edit-domain-process-bindings.md) | Create & Edit Domain Process Bindings | Draft |
+| [0010](0010-automated-test-harness.md) | Automated Test Harness | Draft |
 
 ## Template
 
