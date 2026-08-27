@@ -269,3 +269,54 @@ the corresponding test fails with a clear diff, revert, confirm green again.
 - **`simply-extension-pack` has no source and nothing to test** — this doc's file layout/CI wiring is
   written so a future extension that does have source can copy it directly (see the `RELEASING.md`
   checklist addition), not so `simply-extension-pack` specifically needs anything today.
+- **Coverage attribution for `domainProcessBindingPanel.ts` stays near-zero** even with
+  `domainProcessBindingClientScript.test.ts` exercising `CLIENT_SCRIPT` thoroughly — `@vitest/coverage-v8`
+  only instruments code the Node/vitest process itself executes, and `CLIENT_SCRIPT`'s text runs inside a
+  separately-constructed `jsdom` document, not as instrumented code in that process. Another data point for
+  "promoting `CLIENT_SCRIPT` to a real file" above, not a new problem.
+
+## Implementation notes (post-implementation)
+
+A few places where implementing this taught something the design above didn't anticipate:
+
+- **The spike (step 1) confirmed the assumption and was folded directly into the real suite** rather than
+  written as a separate throwaway file first — `vi.mock('@simplysf/simply-aep-core', ...)` intercepts
+  `at4dxCli.ts`'s dynamic `await import(...)` the same as a static import, with no special handling
+  needed. `test/at4dxCli.test.ts`'s own top comment records this.
+- **A `vscode` module stub was needed and wasn't in the plan.** `logger.ts` and `extension.ts` both do
+  `import * as vscode from 'vscode'` at module scope, even in files/functions the plan calls out as
+  testable without touching the `vscode` API (`truncate`/`redactProxyUrl`, `resolveDefaultSourceDir`) —
+  and `vscode` is a virtual module the real extension host injects, not an installable package, so it
+  can't be resolved by a plain Node test process at all, regardless of whether the code under test calls
+  into it. `test/support/vscodeStub.ts` (a minimal `Uri.file` implementation — the one runtime call
+  `resolveDefaultSourceDir` makes) is aliased in globally via `vitest.config.mts`'s `resolve.alias`, so
+  every test file that transitively imports something touching `vscode` can still be imported at all.
+- **`resolveDefaultSourceDir` had to be exported.** It was a private function in `extension.ts`; testing
+  it directly (rather than only indirectly through the exported `activate`, which would require mocking
+  the entire QuickPick chain) needed one `export` added — a small, low-risk change made in service of the
+  test the plan already called for.
+- **`@salesforce/core/testSetup`'s `TestContext` needs Vitest's `globals: true`.** Its `stubAuths`/
+  constructor register cleanup hooks against the *global* `beforeEach`/`afterEach` (a Mocha-style
+  assumption, not Vitest's default imported-bindings model) — confirmed the hard way (a `ReferenceError:
+  beforeEach is not defined` at `TestContext` construction) before adding `globals: true` to
+  `vitest.config.mts`. `simply-aep-core`'s own vitest config documents this exact same requirement for the
+  exact same dependency, which would have saved a step if read closely enough the first time.
+- **The webview script test deliberately does not use Vitest's `environment: 'jsdom'`.** That environment
+  gives one shared `window` per test *file*; `CLIENT_SCRIPT` registers a `window.addEventListener('message',
+  ...)` on every run, so reusing one `window` across the file's `it()` blocks would accumulate a stale
+  listener per prior test, each still closing over that test's already-replaced DOM. Constructing a fresh
+  `JSDOM` instance per test (via the `jsdom` package directly, the same approach 0009's ad hoc verification
+  already used) sidesteps this by construction — every test gets its own isolated `window`/`document`, no
+  cleanup step required.
+- **`test/tsconfig.json` needed more than the plan's minimal sketch.** `rootDir: "."` alone still failed
+  (`test/extension.test.ts` imports `../src/extension.ts`, which TypeScript's `rootDir` check considers
+  part of the program even though it's outside `include`) — `rootDir: ".."` (the extension root, covering
+  both `src/` and `test/`) was needed instead. The webview script test's `HTMLInputElement`/`Window`-style
+  casts also needed `lib: ["ES2022", "DOM"]` added *locally* in `test/tsconfig.json`, not on the shared
+  parent `tsconfig.json` — `src/`'s own compile deliberately excludes DOM types, since none of that code
+  ever runs in a browser context, and adding DOM repo-wide would quietly allow that to drift. `@types/jsdom`
+  became a new `devDependency` too — `jsdom@30` ships no built-in type declarations.
+- **`vitest.config.mts`, not `.ts`.** A `.ts` extension under this package's CommonJS-default
+  `package.json` (no `"type": "module"`) made Vite's native config loader warn on every run about ESM
+  syntax loaded as CommonJS; renaming to `.mts` (and using `import.meta.dirname` instead of `__dirname`,
+  which the loader also flagged once the file was genuinely ESM) resolved both warnings cleanly.

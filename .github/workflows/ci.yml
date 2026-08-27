@@ -19,3 +19,5 @@ jobs:
       - run: npm ci
 
       - run: npm run compile -w extensions/simply-at4dx
+
+      - run: npm run test -w extensions/simply-at4dx
