@@ -37,10 +37,12 @@ async function showDomainProcessBindings(logger: Logger): Promise<void> {
         return;
     }
 
-    // SObject and trigger-event selection live inside the panel itself from here — it opens showing
-    // its loading state (disabled dropdowns double as the "still working" indicator) and is the
-    // single place every outcome (data, error, or zero bindings) renders to.
-    DomainProcessBindingPanel.open();
+    // SObject and trigger-event selection, and creating/editing a binding, live inside the panel
+    // itself from here — it opens showing its loading state (disabled dropdowns double as the "still
+    // working" indicator) and is the single place every outcome (data, error, or zero bindings)
+    // renders to. See docs/design/0009 for why the panel keeps its own `logger` reference rather than
+    // being handed one per call the way this initial scan is.
+    DomainProcessBindingPanel.open(logger);
 
     try {
         const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, logger);
@@ -48,7 +50,7 @@ async function showDomainProcessBindings(logger: Logger): Promise<void> {
             DomainProcessBindingPanel.showEmpty();
             return;
         }
-        DomainProcessBindingPanel.setData(rows, issues, rules, target.kind);
+        DomainProcessBindingPanel.setData(rows, issues, rules, target);
     } catch (error) {
         DomainProcessBindingPanel.showError(errorMessage(error));
     }
