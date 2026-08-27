@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.3.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.0...simply-at4dx-v2.3.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** stop the panel's dropdowns from going blank ([#19](https://github.com/SimplySF/simply-vscode/issues/19)) ([948318a](https://github.com/SimplySF/simply-vscode/commit/948318a741372db57418dbe0652e60247dbdd8d1))
+
 # [simply-at4dx-v2.3.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.2.1...simply-at4dx-v2.3.0) (2026-08-27)
 
 
