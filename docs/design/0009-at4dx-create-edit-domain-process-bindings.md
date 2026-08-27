@@ -232,11 +232,22 @@ its current or a new value). See Decision.
 
 ## Testing
 
-**Automated:** none beyond `tsc --noEmit` (this extension has no test harness yet — same gap every prior
-`simply-at4dx` design doc has flagged, going back to [0001](0001-at4dx-domain-process-binding-explorer.md)).
+**Automated:** none checked into the repo — this extension has no test harness yet, the same gap every
+prior `simply-at4dx` design doc has flagged, going back to
+[0001](0001-at4dx-domain-process-binding-explorer.md). As a one-off verification (not committed —
+`CLIENT_SCRIPT` is a plain string in `domainProcessBindingPanel.ts`, not a file a real test harness could
+import), the extracted client script was run against a `jsdom` DOM built to match `buildShellHtml`'s
+output, exercising: initial render, opening the create form with SObject prefilled from the toolbar
+selection, client-side required-field validation blocking submission, a valid submission's exact
+`submitBinding` payload shape (including `triggerOperation`/`domainMethodToken` mutual exclusivity), the
+`writeBlocked` response flipping Save to "Save Anyway" and resubmitting with `force: true`, the
+`writeError` response rendering with newlines converted to `<br>`, Cancel returning to the data view, and
+the edit-icon's `stopPropagation` not also firing the row's open-class click. All checks passed. This
+covers the webview's own logic; it does not touch the host side (`createBinding`/`setBinding`,
+`submitBinding` in the panel class) or a real VS Code webview runtime — see Manual below for that gap.
 
 **Manual:** the Implementation plan's step 6 list above is the actual test plan; no automated coverage
-exists to substitute for it.
+exists to substitute for it. Not yet run — this is what's blocking this doc's Status.
 
 ## Open questions
 
@@ -251,3 +262,75 @@ exists to substitute for it.
   not designed here.
 - **Deleting a binding** — out of scope; `simply-aep-core` doesn't expose a delete function yet either
   (0012's own Open Questions), so there's nothing to wire up.
+- **Creating the first binding from the `'empty'` panel state** (a valid source with zero resolvable
+  bindings and zero issues) isn't wired up — "+ New Binding" is only enabled once a scan has produced
+  `'data'`. `'empty'` doesn't currently carry the `BindingSource` a write would need; extending it to do
+  so, purely to unlock this one case, wasn't judged worth it against v1's scope. A real, if narrow, gap:
+  a project with `DomainProcessBinding__mdt` deployed but zero records yet can't add its first one from
+  the panel today.
+- **The Trigger Operation select's blank "— Select —" placeholder** exists only so a user can't
+  accidentally ship "Before Insert" by never touching the dropdown — see Implementation notes below.
+
+## Implementation notes (post-implementation)
+
+A few places where implementing this taught something the design above didn't anticipate:
+
+- **No host-tracked `'form'` `PanelState` after all.** The plan's Implementation plan step 3 proposed a
+  `PanelState` variant for the form, rendered (and re-rendered on Cancel/blocked/error) the same
+  full-HTML-replace way every other state transition already works. Writing it out, that would have meant
+  a full webview reload — and a lost in-progress form — on every Cancel, and on every blocked/error
+  response too (the very moments the user most needs their entered values to survive). Since the webview
+  already holds every row in `ALL_ROWS`, opening/prefilling/closing the form needs nothing the host has
+  that the client doesn't; only Save genuinely needs the host, because only the host can call
+  `createBinding`/`setBinding`. The actual implementation keeps the form entirely client-side (a
+  `renderForm`/`openCreateForm`/`openEditForm` set of functions swapping `#content`'s innerHTML, exactly
+  like switching the SObject/Trigger Event dropdowns already does) and adds exactly one new message each
+  direction: `submitBinding` (webview → host) and `writeBlocked`/`writeError` (host → webview, via
+  `panel.webview.postMessage`, *not* a full `render()` — the point is precisely to update the open form in
+  place without reloading it). A successful write is the one case that *does* still go through
+  `render()`, since "show the fresh, post-write scan" is exactly what a full state transition already
+  means. `DataState` (the `'data'` `PanelState` variant) is unchanged from the plan otherwise, just with
+  `sourceKind: BindingSource['kind']` widened to `target: BindingSource` so a write has something to
+  resolve against.
+- **`ALL_TRIGGER_OPERATIONS` is not forwarded from `simply-aep-core`.** The plan called for forwarding it
+  the same way `DOMAIN_PROCESS_BINDING_RULES` already is, to avoid a second hardcoded list. In practice,
+  forwarding it would have meant either an async fetch inside what is otherwise entirely synchronous
+  client-side form-opening code, or fetching it once up front in `getDomainProcessBindings`'s scan and
+  threading it through `DataState` just to reach a form that may never open. `ALL_TRIGGER_OPERATIONS` is a
+  fixed, 7-value list tied to Salesforce's own trigger-event model (not something `simply-aep-core` would
+  casually change), and the panel's client script already hardcodes an equally fixed
+  `TRIGGER_OPS_BY_FAMILY`/`FAMILY_ITEMS` for the read side — `TRIGGER_OPERATIONS`/`TRIGGER_OPERATION_LABELS`
+  follow that same precedent rather than the `DOMAIN_PROCESS_BINDING_RULES` one, which is a genuinely
+  higher-drift-risk table.
+- **`writeErrorMessage`'s per-code copy table shrank to one special case.** The plan's Errors table wrote
+  custom copy for most `DomainProcessBindingWriteErrorCode` values. In practice,
+  `DomainProcessBindingWriteError`'s own `message` (checked directly in `simply-aep-core`'s source) is
+  already written to be shown as-is — it's the exact text `simply-aep`'s CLI commands print — so
+  re-deriving equivalent copy here would only drift from it over time. The implementation passes
+  `error.message` straight through for every code except `deploy-failed`, which gets one clarifying
+  sentence appended: since this extension never gives a write both a `sourceDir`/`sourceDirs` and a
+  `connection` (see the deferred "both at once" alternative), a `deploy-failed` here always means the
+  org-only path, where the write happened in a temp directory `simply-aep-core` deletes regardless of
+  outcome — unlike the plan's original wording (written before this was confirmed), nothing is "already
+  written locally" to reassure the user about in this extension's current scope.
+- **`resolveConnection` was factored out of `getDomainProcessBindings`'s org branch**, not called out in
+  the plan, so all three call sites (the read path and the two write functions) build a `Connection` the
+  same way instead of duplicating `AuthInfo.create` → `Connection.create` a third time.
+- **A dual-package-hazard cast was needed and wasn't anticipated.** `simply-aep-core` depends on its own
+  `@salesforce/core` (`^8.30.0`) separately from this extension's (`^9.1.7`) — two different installed
+  copies. `scanOrgDomainProcessBindings`'s `AepConnection` type (a `Pick` of just the methods it calls)
+  already papered over this for the read path, but `CreateDomainProcessBindingTarget`/
+  `SetDomainProcessBindingTarget` type `connection` as the *full* `Connection` class, which `tsc` treats as
+  nominally incompatible with this extension's own `Connection` instance (their private fields differ by
+  declaration, even though neither write path touches a private field). `asWriteConnection` in
+  `at4dxCli.ts` is a single, explicit, documented `as unknown as` cast at the one boundary that needs it —
+  see that function's comment for the full reasoning. Aligning the two `@salesforce/core` versions instead
+  (so there's only one installed copy) would remove the need for it, but is a larger, riskier change
+  (an 8→9 major bump for `simply-aep-core`'s own dependency, upstream in `simply-node`, not something to
+  do as a side effect of this doc) than this doc's scope justifies.
+- **Client-side required-field validation was tightened beyond the plan's field list.** Writing the form
+  surfaced that a `<select>` always has *some* value — with no blank option, Trigger Operation would
+  silently default to "Before Insert" if a user never touched it while creating a `TriggerExecution`
+  binding, which is a wrong-data risk, not just a missing-required-field one. The implementation adds a
+  blank "— Select —" option (selected by default) and requires an explicit choice, plus the equivalent
+  required check for Domain Method Token — neither was in the plan's Form fields table.
