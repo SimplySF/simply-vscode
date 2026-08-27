@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.3.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.1...simply-at4dx-v2.3.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** escape U+2028/U+2029 when embedding scan data into the webview script ([#21](https://github.com/SimplySF/simply-vscode/issues/21)) ([129cd2a](https://github.com/SimplySF/simply-vscode/commit/129cd2a3dc8c6f9fe6f8db408a6f50ba10e46b85)), closes [#19](https://github.com/SimplySF/simply-vscode/issues/19)
+
 # [simply-at4dx-v2.3.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.0...simply-at4dx-v2.3.1) (2026-08-27)
 
 
