@@ -868,20 +868,36 @@ function buildInitialContentHtml(state: PanelState): string {
 }
 
 /**
- * `</script>`-safe embed of the fetched rows/issues/rules: this text is JS source (not parsed as
- * JSON), so escaping `<` as a unicode escape stays valid JS while stopping the HTML parser from ever
- * seeing something that looks like a closing `</script>` tag inside embedded data (e.g. a
- * `Description__c` or an issue `message`).
+ * `</script>`-safe embed of a value as JS source (not parsed as JSON): escaping `<` as a unicode escape
+ * stays valid JS while stopping the HTML parser from ever seeing something that looks like a closing
+ * `</script>` tag inside embedded data (e.g. a `Description__c` or an issue `message`).
+ *
+ * Also escapes U+2028/U+2029 (LINE SEPARATOR / PARAGRAPH SEPARATOR): `JSON.stringify` emits both raw
+ * inside a string — valid JSON, since neither is `"`/`\`/a control character — but both are Unicode
+ * line terminators, and older/stricter JS parsing contexts treat a raw line terminator inside a string
+ * literal as ending the statement rather than continuing the string, throwing a generic
+ * "Invalid or unexpected token"/"Invalid regular expression" syntax error partway through whatever
+ * followed. A `Description__c` (free text — the one field here a user actually types, including
+ * pasting from a source that introduces these) is exactly the field that would carry one in. ES2019
+ * made this legal inside a normal `<script>`'s own parse, but this HTML is handed to VS Code's webview
+ * host, which reconstructs the document via its own `document.write` — a different, apparently
+ * stricter parsing path this doesn't benefit from. Exported for `embedJsonInScript.test.ts`.
  */
+export function embedJsonInScript(value: unknown): string {
+    return JSON.stringify(value)
+        .replace(/</g, '\\u003c')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+}
+
 function buildDataScript(state: PanelState): string {
     if (state.kind !== 'data') {
         return 'const ALL_ROWS = null;\nconst ALL_ISSUES = [];\nconst RULE_INFO = {};\nconst IS_LOCAL_SCAN = false;';
     }
-    const jsSafe = (value: unknown): string => JSON.stringify(value).replace(/</g, '\\u003c');
     return [
-        `const ALL_ROWS = ${jsSafe(state.rows)};`,
-        `const ALL_ISSUES = ${jsSafe(state.issues)};`,
-        `const RULE_INFO = ${jsSafe(state.rules)};`,
+        `const ALL_ROWS = ${embedJsonInScript(state.rows)};`,
+        `const ALL_ISSUES = ${embedJsonInScript(state.issues)};`,
+        `const RULE_INFO = ${embedJsonInScript(state.rules)};`,
         `const IS_LOCAL_SCAN = ${state.target.kind === 'source'};`,
     ].join('\n');
 }
