@@ -1,6 +1,6 @@
 # 0010 — Automated Test Harness
 
-**Status:** Draft
+**Status:** Implemented (PR [#20](https://github.com/SimplySF/simply-vscode/pull/20))
 **Extension:** repo-wide tooling — `extensions/simply-at4dx` is the only extension with source today, so
 it's where this first lands, but nothing here is AT4DX-specific (see Decision for why this doc isn't
 titled `AT4DX ...` like every doc before it)
