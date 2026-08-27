@@ -44,13 +44,22 @@
         "vscode:prepublish": "npm run compile",
         "compile": "node esbuild.js --production && tsc --noEmit -p .",
         "watch": "node esbuild.js --watch",
-        "package": "vsce package --no-dependencies"
+        "package": "vsce package --no-dependencies",
+        "test": "vitest run",
+        "test:watch": "vitest watch",
+        "test:coverage": "vitest run --coverage"
     },
     "devDependencies": {
+        "@types/jsdom": "^30.0.0",
         "@types/node": "^22.0.0",
+        "@types/sinon": "^22.0.0",
         "@types/vscode": "^1.119.0",
+        "@vitest/coverage-v8": "^4.1.10",
         "esbuild": "^0.24.0",
-        "typescript": "^5.6.0"
+        "jsdom": "^30.0.1",
+        "sinon": "^22.1.0",
+        "typescript": "^5.6.0",
+        "vitest": "^4.1.10"
     },
     "repository": {
         "type": "git",

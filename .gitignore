@@ -3,4 +3,5 @@
 *.vsix
 node_modules/
 extensions/*/dist/
+extensions/*/coverage/
 *.tsbuildinfo

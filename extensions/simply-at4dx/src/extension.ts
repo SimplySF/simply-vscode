@@ -94,7 +94,7 @@ async function listOrgs(logger: Logger): Promise<OrgSummary[]> {
 // Any resolution failure (no sfdx-project.json, no packageDirectories, resolved path missing on disk)
 // is a silent fallthrough to the next rule; this is a UX nicety, not something worth surfacing to the
 // user.
-async function resolveDefaultSourceDir(workspaceFolder: vscode.WorkspaceFolder): Promise<vscode.Uri> {
+export async function resolveDefaultSourceDir(workspaceFolder: vscode.WorkspaceFolder): Promise<vscode.Uri> {
     const workspacePath = workspaceFolder.uri.fsPath;
     try {
         const project = await SfProject.resolve(workspacePath);

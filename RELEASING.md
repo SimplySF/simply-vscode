@@ -312,3 +312,10 @@ with the `curl` gallery-API check above, not just the `vsce` CLI output.
    separate managed identity (see "One-time Azure setup" above) and wire its
    client/tenant IDs into the workflow via `matrix.include` instead of the shared
    `vars.AZURE_CLIENT_ID`.
+6. Set up its unit-test harness — a sibling `test/` directory (not colocated `*.test.ts`
+   files), `test/tsconfig.json`, `vitest.config.mts`, and the `test`/`test:watch`/
+   `test:coverage` npm scripts — copying `extensions/simply-at4dx`'s as a starting point.
+   See `docs/design/0010-automated-test-harness.md` for why this is per-extension
+   `devDependencies` (like `esbuild`/`typescript`, not root-shared like `vsce`/
+   `semantic-release`) and what each script does. Add `npm run test -w extensions/<name>`
+   to `.github/workflows/ci.yml`, alongside the existing `compile` step.
