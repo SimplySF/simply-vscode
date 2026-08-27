@@ -560,8 +560,24 @@ const CLIENT_SCRIPT = `
     }
   }
 
+  // Written without a regex literal deliberately — see docs/design/0009's post-implementation note on
+  // the "missing /" webview-load failure this avoids.
   function developerNameValid(value) {
-    return /^[A-Za-z][A-Za-z0-9_]*$/.test(value) && value.indexOf('__') === -1 && value.slice(-1) !== '_' && value.length <= 40;
+    if (!value || value.length > 40) {
+      return false;
+    }
+    const isAsciiLetter = (ch) => (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+    const isAsciiLetterOrDigit = (ch) => isAsciiLetter(ch) || (ch >= '0' && ch <= '9');
+    if (!isAsciiLetter(value.charAt(0))) {
+      return false;
+    }
+    for (let i = 0; i < value.length; i++) {
+      const ch = value.charAt(i);
+      if (!isAsciiLetterOrDigit(ch) && ch !== '_') {
+        return false;
+      }
+    }
+    return value.indexOf('__') === -1 && value.charAt(value.length - 1) !== '_';
   }
 
   function formFieldHtml(id, label, control, opts) {
@@ -587,7 +603,7 @@ const CLIENT_SCRIPT = `
       ? '<input type="text" id="fDeveloperName" value="' + escapeHtml(initial.developerName) + '" disabled>'
       : '<input type="text" id="fDeveloperName" value="' + escapeHtml(initial.developerName || '') + '" placeholder="Account_Before_Insert_Assign_Owner">';
     const triggerOpOptions =
-      '<option value=""' + (initial.triggerOperation ? '' : ' selected') + '>\\u2014 Select \\u2014</option>' +
+      '<option value=""' + (initial.triggerOperation ? '' : ' selected') + '>&mdash; Select &mdash;</option>' +
       TRIGGER_OPERATIONS.map((op) =>
         '<option value="' + op + '"' + (op === initial.triggerOperation ? ' selected' : '') + '>' + TRIGGER_OPERATION_LABELS[op] + '</option>'
       ).join('');
@@ -606,14 +622,14 @@ const CLIENT_SCRIPT = `
       formFieldHtml('fDeveloperName', 'Developer Name', developerNameControl) +
       formFieldHtml('fLabel', 'Label', '<input type="text" id="fLabel" value="' + escapeHtml(initial.label || '') + '" placeholder="' + escapeHtml(initial.developerName || '') + '">', { hint: 'Defaults to Developer Name' }) +
       formFieldHtml('fSobject', 'SObject', '<input type="text" id="fSobject" value="' + escapeHtml(initial.sobject || '') + '">') +
-      formFieldHtml('fSobjectAlternate', '\\u00A0', '<label class="form-checkbox"><input type="checkbox" id="fSobjectAlternateInput"' + (initial.sobjectField === 'alternate' ? ' checked' : '') + '> Bind via alternate field</label>', { hint: 'For Setup objects like ServiceResource' }) +
+      formFieldHtml('fSobjectAlternate', '', '<label class="form-checkbox"><input type="checkbox" id="fSobjectAlternateInput"' + (initial.sobjectField === 'alternate' ? ' checked' : '') + '> Bind via alternate field</label>', { hint: 'For Setup objects like ServiceResource' }) +
       formFieldHtml('fProcessContext', 'Process Context', '<select id="fProcessContext"><option value="TriggerExecution"' + (initial.processContext !== 'DomainMethodExecution' ? ' selected' : '') + '>Trigger Execution</option><option value="DomainMethodExecution"' + (initial.processContext === 'DomainMethodExecution' ? ' selected' : '') + '>Domain Method Execution</option></select>') +
       formFieldHtml('fType', 'Type', '<select id="fType"><option value="Action"' + (initial.type !== 'Criteria' ? ' selected' : '') + '>Action</option><option value="Criteria"' + (initial.type === 'Criteria' ? ' selected' : '') + '>Criteria</option></select>') +
       formFieldHtml('fTriggerOperation', 'Trigger Operation', '<select id="fTriggerOperation">' + triggerOpOptions + '</select>') +
       formFieldHtml('fDomainMethodToken', 'Domain Method Token', '<input type="text" id="fDomainMethodToken" value="' + escapeHtml(initial.domainMethodToken || '') + '">') +
       formFieldHtml('fClassToInject', 'Class to Inject', '<input type="text" id="fClassToInject" value="' + escapeHtml(initial.classToInject || '') + '">') +
       formFieldHtml('fOrder', 'Order', '<input type="number" id="fOrder" step="any" value="' + (initial.order === undefined || initial.order === null ? '' : initial.order) + '">') +
-      formFieldHtml('fFlags', '\\u00A0', '<div style="display:flex; gap:16px; flex-wrap:wrap;">' + flags + '</div>', { span2: true }) +
+      formFieldHtml('fFlags', '', '<div style="display:flex; gap:16px; flex-wrap:wrap;">' + flags + '</div>', { span2: true }) +
       formFieldHtml('fDescription', 'Description', '<textarea id="fDescription">' + escapeHtml(initial.description || '') + '</textarea>', { span2: true }) +
       '</div>' +
       '<div class="form-actions">' +
@@ -756,7 +772,7 @@ const CLIENT_SCRIPT = `
       saveBtn.disabled = false;
       const errorEl = document.getElementById('formError');
       errorEl.style.display = '';
-      errorEl.innerHTML = escapeHtml(message.message).replace(/\n/g, '<br>');
+      errorEl.innerHTML = escapeHtml(message.message).split('\n').join('<br>');
     }
   });
 
