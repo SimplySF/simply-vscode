@@ -280,6 +280,11 @@
         letter-spacing: 0.07em;
         color: var(--vscode-descriptionForeground);
     }
+    :global(.col-header > :nth-child(4)),
+    :global(.col-header > :nth-child(5)),
+    :global(.col-header > :nth-child(6)) {
+        text-align: center;
+    }
     :global(.row) {
         min-height: 40px;
         border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
@@ -326,6 +331,7 @@
     }
     :global(.row-flag) {
         color: var(--vscode-foreground);
+        text-align: center;
     }
     :global(.row-flag.row-flag-off) {
         color: var(--vscode-descriptionForeground);
@@ -333,6 +339,7 @@
     :global(.row-async) {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 5px;
         color: var(--vscode-foreground);
     }
