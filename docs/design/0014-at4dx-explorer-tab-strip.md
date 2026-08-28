@@ -1,6 +1,6 @@
 # 0014 — AT4DX Explorer Tab Strip
 
-**Status:** Implemented
+**Status:** Implemented (PR [#27](https://github.com/SimplySF/simply-vscode/pull/27))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 
