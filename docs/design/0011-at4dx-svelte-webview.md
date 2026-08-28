@@ -1,6 +1,6 @@
 # 0011 — AT4DX Webview Rewritten in Svelte
 
-**Status:** Draft
+**Status:** Implemented (PR [#22](https://github.com/SimplySF/simply-vscode/pull/22))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-27
 
@@ -249,10 +249,10 @@ short of clicking through it in a real webview confirms that held.
   (`^1.119.0`, per `package.json`). Not expected to be a real constraint (Svelte 5's compiled output
   targets evergreen browsers, and VS Code's webview Chromium tracks recent Electron closely), but not
   independently verified against that specific floor version.
-- **Manual Extension Development Host smoke test** — not run as part of this change (no GUI available in
-  the environment that implemented it). This is what's blocking this doc's Status; see Implementation
-  plan step 13. Everything else (`npm run compile` — esbuild for both bundles, `tsc --noEmit`,
-  `svelte-check` — and `npm test`, 78 tests across 8 files) is green.
+- **Manual Extension Development Host smoke test** — run by the user (the environment that implemented
+  this had no GUI to run it from); passed cleanly, no discrepancies from the prior implementation across
+  the 0001/0007/0009 flows. Together with `npm run compile` and `npm test` (78 tests across 8 files, both
+  green — see Implementation plan step 13/14), this closes out the doc.
 
 ## Implementation notes (post-implementation)
 
