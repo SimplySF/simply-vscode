@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         outputChannel,
         vscode.commands.registerCommand('simply-at4dx.showDomainProcessBindings', () => {
-            void showDomainProcessBindings(logger);
+            void showDomainProcessBindings(logger, context.extensionUri);
         }),
     );
 }
@@ -26,7 +26,7 @@ export function deactivate(): void {
     // Nothing to clean up: DomainProcessBindingPanel disposes itself via its own onDidDispose handler.
 }
 
-async function showDomainProcessBindings(logger: Logger): Promise<void> {
+async function showDomainProcessBindings(logger: Logger, extensionUri: vscode.Uri): Promise<void> {
     const workspaceFolder = await pickWorkspaceFolder();
     if (!workspaceFolder) {
         return;
@@ -41,8 +41,9 @@ async function showDomainProcessBindings(logger: Logger): Promise<void> {
     // itself from here — it opens showing its loading state (disabled dropdowns double as the "still
     // working" indicator) and is the single place every outcome (data, error, or zero bindings)
     // renders to. See docs/design/0009 for why the panel keeps its own `logger` reference rather than
-    // being handed one per call the way this initial scan is.
-    DomainProcessBindingPanel.open(logger);
+    // being handed one per call the way this initial scan is. `extensionUri` is needed to build a
+    // webview-safe URI to the compiled Svelte bundle — see docs/design/0011.
+    DomainProcessBindingPanel.open(logger, extensionUri);
 
     try {
         const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, logger);

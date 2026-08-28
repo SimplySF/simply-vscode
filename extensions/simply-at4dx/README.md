@@ -71,3 +71,9 @@ no setup needed. If something's failing and you need to share more detail in a b
 the **`simply-at4dx.debug`** setting, reproduce the problem, and copy the channel's contents: with it
 on, entries also include the org/source detail and captured error output. It's off by default since
 that detail can include org usernames and local file paths.
+
+## Development
+
+The panel's UI is a [Svelte 5](https://svelte.dev/) component tree under `src/webview/`, compiled by
+`esbuild.js` into `dist/webview.js` alongside the extension host's own `dist/extension.js`; `npm run
+compile`/`watch` build both together. See `docs/design/0011-at4dx-svelte-webview.md` for why.
