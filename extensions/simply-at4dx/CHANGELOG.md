@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.8.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.7.1...simply-at4dx-v2.8.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** add an explorer tab strip to the bindings panel ([#27](https://github.com/SimplySF/simply-vscode/issues/27)) ([33019d5](https://github.com/SimplySF/simply-vscode/commit/33019d5fa40a488448e182fbc01fdb286d50463d))
+
 # [simply-at4dx-v2.7.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.7.0...simply-at4dx-v2.7.1) (2026-08-28)
 
 
