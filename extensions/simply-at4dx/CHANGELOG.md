@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.8.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.8.0...simply-at4dx-v2.8.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** move the problem summary into the header row ([#28](https://github.com/SimplySF/simply-vscode/issues/28)) ([5de5429](https://github.com/SimplySF/simply-vscode/commit/5de5429092280ca0d8fff89efea7f9e421b30806))
+
 # [simply-at4dx-v2.8.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.7.1...simply-at4dx-v2.8.0) (2026-08-28)
 
 
