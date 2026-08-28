@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.6.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.5.0...simply-at4dx-v2.6.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** redesign bindings panel list columns and form sections ([#24](https://github.com/SimplySF/simply-vscode/issues/24)) ([1332f91](https://github.com/SimplySF/simply-vscode/commit/1332f91c8e8b2bd489a3c16c649cb50c29c229af))
+
 # [simply-at4dx-v2.5.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.4.0...simply-at4dx-v2.5.0) (2026-08-28)
 
 
