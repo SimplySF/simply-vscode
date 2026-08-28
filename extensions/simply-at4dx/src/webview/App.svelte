@@ -299,6 +299,29 @@
         height: 14px;
         color: var(--vscode-descriptionForeground);
     }
+    :global(.flag-icon) {
+        display: flex;
+        align-items: center;
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.flag-icon svg) {
+        width: 14px;
+        height: 14px;
+    }
+    :global(.flag-icon.flag-icon-moon) {
+        width: 18px;
+        height: 18px;
+    }
+    :global(.flag-icon.flag-icon-moon svg) {
+        width: 18px;
+        height: 18px;
+    }
+    :global(.flag-icon.flag-off) {
+        opacity: 0.4;
+    }
     :global(.row-name) {
         flex: 1;
         color: var(--vscode-textLink-foreground);

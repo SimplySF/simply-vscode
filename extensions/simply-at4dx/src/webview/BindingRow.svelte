@@ -48,6 +48,16 @@
         {/if}
         <Icon name={row.type === 'Criteria' ? 'criteria' : 'action'} />
     </span>
+    <span class="flag-icon" class:flag-off={!row.preventRecursive} title={row.preventRecursive ? 'Recursion prevented' : 'Recursion allowed'}>
+        <Icon name={row.preventRecursive ? 'recursion-prevented' : 'recursion-allowed'} />
+    </span>
+    <span
+        class="flag-icon flag-icon-moon"
+        class:flag-off={!row.logicalInverse}
+        title={row.logicalInverse ? 'Logical inverse enabled' : 'Logical inverse disabled'}
+    >
+        <Icon name="logical-inverse" />
+    </span>
     <span class="row-name">{row.developerName}</span>
     <span class="row-order">Order: {row.order}</span>
     {#each badges as entry (entry.index)}
