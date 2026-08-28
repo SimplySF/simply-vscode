@@ -81,6 +81,31 @@ describe('App — data', () => {
         expect(screen.getByText(/1 error\(s\)/)).toBeTruthy();
     });
 
+    it('renders the header as a binding-count context strip with no crown icon', () => {
+        render(App, { props: { initial } });
+
+        const headerText = document.querySelector('.header')?.textContent?.replace(/\s+/g, ' ');
+        expect(headerText).toContain('When an Account record is Created');
+        expect(headerText).toContain('2 bindings are evaluated in order');
+        expect(document.querySelector('.header')?.querySelector('svg')).toBeNull();
+    });
+
+    it('uses "a" for a consonant-initial SObject in the header sentence', () => {
+        render(App, {
+            props: {
+                initial: {
+                    kind: 'data',
+                    rows: [row({ developerName: 'C', sobject: 'Contact', classToInject: 'CClass', triggerOperation: 'Before_Insert' })],
+                    issues: [],
+                    rules: {} as DomainProcessBindingRules,
+                    isLocalScan: true,
+                } as InitialState,
+            },
+        });
+
+        expect(document.querySelector('.header')?.textContent?.replace(/\s+/g, ' ')).toContain('When a Contact record is Created');
+    });
+
     it('opens the create form prefilled from the current SObject/Trigger Event selection', async () => {
         render(App, { props: { initial } });
 

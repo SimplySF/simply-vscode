@@ -72,11 +72,19 @@ describe('familyVerbForOperation', () => {
 
 describe('headerParts', () => {
     it('describes a trigger-event family', () => {
-        expect(headerParts('Account', 'Created')).toEqual({ sobject: 'Account', verb: 'Created', isDomainMethod: false });
+        expect(headerParts('Account', 'Created')).toEqual({ sobject: 'Account', verb: 'Created', isDomainMethod: false, article: 'an' });
     });
 
     it('describes the domain method family', () => {
-        expect(headerParts('Account', 'DomainMethod')).toEqual({ sobject: 'Account', verb: 'executes', isDomainMethod: true });
+        expect(headerParts('Account', 'DomainMethod')).toEqual({ sobject: 'Account', verb: 'executes', isDomainMethod: true, article: 'an' });
+    });
+
+    it('uses "a" for a consonant-initial SObject', () => {
+        expect(headerParts('Contact', 'Created').article).toBe('a');
+    });
+
+    it('uses "an" for a vowel-initial SObject', () => {
+        expect(headerParts('Opportunity', 'Created').article).toBe('an');
     });
 });
 

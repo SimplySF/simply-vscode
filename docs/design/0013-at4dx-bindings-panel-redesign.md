@@ -57,13 +57,23 @@ Each section card gains a column header row, and each binding renders as a fixed
 - `preventRecursive` and `logicalInverse` become labelled text columns (`Enabled` / `Yes` vs a dim
   em-dash) replacing 0012's icons. 0012 is marked superseded by this doc.
 - `Status` becomes a colored dot plus label, replacing the `.pill`.
-- Row height is fixed at 40px (via `min-height`, so an issue badge can still wrap onto a second
-  line without clipping) so columns align; inactive rows keep `opacity: .55`; issue badges render
-  inside the Status cell, ahead of the dot and label, keeping the 8-column grid intact regardless of
-  how many badges a row has.
+- Row height is fixed at 40px (via `height`, not `min-height`) so columns always align. Issue badges
+  get their own auto-width column between Logical Inverse and Status — a 9-column grid, not 8 —
+  rather than sharing the Status cell; a badge is roughly 200px wide and wrapping it into the fixed
+  78px Status track would grow that row past 40px and break alignment for every row below it. The
+  badge column collapses to zero width on badge-free rows.
+- The type pill hugs its label (`justify-self: start`) rather than stretching to the grid track, so
+  `Action` and `Criteria` stay visually distinct by width. Action's pill uses
+  `--vscode-charts-yellow`, Criteria `--vscode-charts-blue`.
 - Below 700px, the Recursion and Logical Inverse columns are dropped (`display: none` via a
-  `:nth-child` media-query rule) rather than shrunk; both values are still available via the row's
-  `title` attribute. The Async column stays visible at every width.
+  `:nth-child` media-query rule) rather than shrunk. The row's `title` attribute carries the
+  developer name (the field the redesign removed from the visible list), not the hidden columns —
+  those get their own per-cell tooltips instead, so they stay discoverable. The Async column stays
+  visible at every width.
+- Above the table, the pre-redesign heading card (crown icon, `a(n)` placeholder grammar) is replaced
+  by a single-line context strip: `When an Account record is Created, 6 bindings are evaluated in
+  order.` `SummaryBar` above the toolbar already covers issue counts (scan-wide, not per-SObject), so
+  the strip doesn't duplicate that state.
 
 ### Create view
 
@@ -151,9 +161,17 @@ Resolutions to the open questions below were made during implementation, not lef
    resolution that doesn't exist yet; worth its own doc if wanted.
 4. **Edit uses the full-page form, not inline-in-list editing** — see "Alternatives considered" above.
 5. **Narrow-panel behavior:** Recursion and Logical Inverse columns are dropped below 700px; their
-   values remain available via the row's `title` attribute. Async stays visible at every width.
+   values remain available via per-cell tooltips. Async stays visible at every width.
 6. **`executeAsynchronous`** has its own labelled Async column (clock icon + `Yes`/`—`), not a suffix
    on the Type pill — see "Behavior" above.
+
+A first implementation pass shipped the column grid but missed the heading (still the pre-redesign
+crown card) and put issue badges inside the fixed-width Status cell, which overflows or wraps to a
+second line and breaks row alignment the first time a workspace has a wiring problem — invisible on
+a clean fixture, so it needs its own test (see "Testing"). A follow-up review pass (`REVIEW-01.md`,
+2026-08-28) caught both, plus the type pill stretching to its grid track, the Action pill's color, and
+a redundant row tooltip that duplicated visible columns instead of restoring the developer name. All
+five are folded into "Behavior" above rather than left as a separate errata list.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into
@@ -165,10 +183,13 @@ optional/deferred there) was not built — it would need the current section's r
 - `App.test.ts` — the toolbar invariant: present in the list view for `kind: 'data'`; absent after
   `openCreateForm()`; absent after `openEditForm(row)`; disabled placeholder present for `loading`.
 - `BindingRow.test.ts` — each column renders from its row field; `developerName` is not in the row's
-  text; `classToInject` is; the Async column shows `Yes` with the clock icon when
-  `executeAsynchronous` is true (and the Type pill carries no suffix); inactive rows carry
+  text (but is the row's `title`); `classToInject` is; the Async column shows `Yes` with the clock
+  icon when `executeAsynchronous` is true (and the Type pill carries no suffix); inactive rows carry
   `.inactive`; `openClass` still posts on row click and `onEdit` still fires on the edit icon with
-  propagation stopped.
+  propagation stopped; an issue badge renders in its own cell, a sibling of the status indicator, not
+  inside it; Recursion/Logical Inverse cells carry their own tooltips.
+- `App.test.ts` — the header renders as a crown-free context strip containing the binding count; the
+  header sentence uses `an`/`a` correctly for a vowel- vs. consonant-initial SObject.
 - `BindingForm.test.ts` — every field still reachable after regrouping; the alternate-binding toggle
   is still an `input[type=checkbox]` bound to `sobjectAlternate`; the segmented Type control emits
   `Action` / `Criteria` and offers no third option; all existing validation cases unchanged; the

@@ -83,13 +83,21 @@ export function sectionTitle(operation: TriggerOperation): string {
     }
 }
 
-export type HeaderParts = { sobject: string; verb: string; isDomainMethod: boolean };
+export type HeaderParts = { sobject: string; verb: string; isDomainMethod: boolean; article: string };
+
+const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
+
+/** `'an'` for a vowel-initial SObject name, `'a'` otherwise — imperfect (e.g. `SLA`), but strictly better than the old `a(n)` placeholder. */
+function articleFor(sobject: string): string {
+    return VOWELS.has(sobject.charAt(0).toUpperCase()) ? 'an' : 'a';
+}
 
 export function headerParts(sobject: string, family: FamilyKey): HeaderParts {
+    const article = articleFor(sobject);
     if (family === 'DomainMethod') {
-        return { sobject, verb: 'executes', isDomainMethod: true };
+        return { sobject, verb: 'executes', isDomainMethod: true, article };
     }
-    return { sobject, verb: FAMILY_LABEL[family], isDomainMethod: false };
+    return { sobject, verb: FAMILY_LABEL[family], isDomainMethod: false, article };
 }
 
 export type BindingSection = { title: string; rows: DomainProcessBindingRow[] };
