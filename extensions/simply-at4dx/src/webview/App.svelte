@@ -390,12 +390,12 @@
         justify-content: center;
         justify-self: start;
         padding: 3px 8px;
-        border: 1px solid var(--vscode-charts-orange);
+        border: 1px solid var(--vscode-charts-yellow);
         border-radius: 4px;
         font-family: var(--vscode-editor-font-family);
         font-size: 0.8em;
         letter-spacing: 0.05em;
-        color: var(--vscode-charts-orange);
+        color: var(--vscode-charts-yellow);
         text-transform: uppercase;
         white-space: nowrap;
     }
