@@ -47,6 +47,7 @@ refactors that keep the observable behavior identical.
 | [0008](0008-at4dx-default-source-folder.md) | AT4DX Default Source Folder | Draft |
 | [0009](0009-at4dx-create-edit-domain-process-bindings.md) | Create & Edit Domain Process Bindings | Draft |
 | [0010](0010-automated-test-harness.md) | Automated Test Harness | Implemented |
+| [0011](0011-at4dx-svelte-webview.md) | AT4DX Webview Rewritten in Svelte | Implemented |
 
 ## Template
 
