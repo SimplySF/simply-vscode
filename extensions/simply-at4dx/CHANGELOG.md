@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.7.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.6.0...simply-at4dx-v2.7.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** add a dedicated Async column to the bindings list ([#25](https://github.com/SimplySF/simply-vscode/issues/25)) ([5ea007b](https://github.com/SimplySF/simply-vscode/commit/5ea007be82326199696218918c0d040682b52d46))
+
 # [simply-at4dx-v2.6.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.5.0...simply-at4dx-v2.6.0) (2026-08-28)
 
 
