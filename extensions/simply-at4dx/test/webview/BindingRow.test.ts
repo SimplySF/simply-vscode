@@ -106,4 +106,33 @@ describe('BindingRow', () => {
 
         expect(screen.getByText(/Order collision/)).toBeTruthy();
     });
+
+    it('renders the issue badge in its own cell, a sibling of the status indicator', () => {
+        const theRow = row();
+        render(BindingRow, {
+            props: {
+                row: theRow,
+                badges: [{ index: 0, issue: { rule: 'order-collision', severity: 'error', message: 'Collides.', developerName: theRow.developerName, source: theRow.source } }],
+                rules: { 'order-collision': { title: 'Order collision', summary: '' } } as unknown as DomainProcessBindingRules,
+                onEdit: vi.fn(),
+            },
+        });
+
+        expect(document.querySelector('.row-badges .badge')).toBeTruthy();
+        expect(document.querySelector('.row-status .badge')).toBeNull();
+        expect(document.querySelector('.row-status .status-indicator')).toBeTruthy();
+    });
+
+    it('carries the developer name as the row tooltip', () => {
+        render(BindingRow, { props: { row: row({ developerName: 'Account_Before_Insert_Test' }), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(document.querySelector('.row')?.getAttribute('title')).toBe('Account_Before_Insert_Test');
+    });
+
+    it('gives the recursion and logical-inverse cells their own tooltips', () => {
+        render(BindingRow, { props: { row: row({ preventRecursive: true, logicalInverse: false }), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(screen.getByTitle('Recursion prevented')).toBeTruthy();
+        expect(screen.getByTitle('Logical inverse disabled')).toBeTruthy();
+    });
 });

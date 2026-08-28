@@ -2,7 +2,6 @@
     import { untrack } from 'svelte';
     import BindingForm from './BindingForm.svelte';
     import BindingSections from './BindingSections.svelte';
-    import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
@@ -45,6 +44,7 @@
     let recordIssues = $derived(issuesByRecord(issues));
     let issuePartition = $derived(partitionIssues(issues, sobject));
     let header = $derived(family ? headerParts(sobject, family) : undefined);
+    let bindingCount = $derived(sections.reduce((n, section) => n + section.rows.length, 0));
 
     let view = $state<'list' | 'form'>('list');
     let formMode = $state<'create' | 'edit'>('create');
@@ -109,12 +109,15 @@
     {:else}
         {#if header}
             <div class="header">
-                <span><Icon name="crown" /></span>
                 <div class="header-text">
                     {#if header.isDomainMethod}
-                        When a(n) <strong>{header.sobject}</strong> domain method <strong>{header.verb}</strong>
+                        When {header.article} <strong>{header.sobject}</strong> domain method
+                        <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
+                        {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
                     {:else}
-                        When a(n) <strong>{header.sobject}</strong> record is <strong>{header.verb}</strong>
+                        When {header.article} <strong>{header.sobject}</strong> record is
+                        <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
+                        {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
                     {/if}
                 </div>
             </div>
@@ -229,20 +232,17 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        background: var(--vscode-sideBar-background);
+        padding: 12px 20px;
+        margin-bottom: 16px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
         border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
         border-radius: 6px;
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-    :global(.header svg) {
-        width: 24px;
-        height: 24px;
-        color: var(--vscode-textLink-foreground);
-        flex-shrink: 0;
     }
     :global(.header-text) {
+        flex: 1;
         font-size: 1.05em;
+        line-height: 1.45;
+        text-wrap: pretty;
     }
     :global(.section) {
         background: var(--vscode-sideBar-background);
@@ -267,7 +267,7 @@
     }
     :global(.row-grid) {
         display: grid;
-        grid-template-columns: 56px 84px minmax(0, 1fr) 68px 100px 108px 78px 34px;
+        grid-template-columns: 56px 84px minmax(0, 1fr) 68px 100px 108px minmax(0, auto) 78px 34px;
         align-items: center;
         gap: 12px;
         padding: 0 20px;
@@ -286,7 +286,7 @@
         text-align: center;
     }
     :global(.row) {
-        min-height: 40px;
+        height: 40px;
         border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
         cursor: pointer;
     }
@@ -304,6 +304,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        justify-self: start;
         padding: 3px 8px;
         border: 1px solid var(--vscode-charts-yellow);
         border-radius: 4px;
@@ -357,12 +358,18 @@
         width: 11px;
         height: 11px;
     }
-    :global(.row-status) {
+    :global(.row-badges) {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        flex-wrap: wrap;
         gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    :global(.row-status) {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
     }
     :global(.status-indicator) {
         display: flex;
@@ -387,7 +394,7 @@
     }
     @media (max-width: 700px) {
         :global(.row-grid) {
-            grid-template-columns: 56px 84px minmax(0, 1fr) 68px 78px 34px;
+            grid-template-columns: 56px 84px minmax(0, 1fr) 68px minmax(0, auto) 78px 34px;
         }
         :global(.row-grid > :nth-child(5)),
         :global(.row-grid > :nth-child(6)) {

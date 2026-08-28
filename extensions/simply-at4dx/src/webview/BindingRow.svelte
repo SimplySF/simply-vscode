@@ -48,7 +48,7 @@
     class:inactive={!row.isActive}
     role="button"
     tabindex="0"
-    title={`Recursion: ${row.preventRecursive ? 'Enabled' : 'Disabled'} · Logical Inverse: ${row.logicalInverse ? 'Yes' : 'No'}`}
+    title={row.developerName}
     onclick={openClass}
     onkeydown={onKeydown}
 >
@@ -66,14 +66,16 @@
             —
         {/if}
     </span>
-    <span class="row-flag" class:row-flag-off={!row.preventRecursive}>{row.preventRecursive ? 'Enabled' : '—'}</span>
-    <span class="row-flag" class:row-flag-off={!row.logicalInverse}>{row.logicalInverse ? 'Yes' : '—'}</span>
-    <span class="row-status">
+    <span class="row-flag" class:row-flag-off={!row.preventRecursive} title={row.preventRecursive ? 'Recursion prevented' : 'Recursion allowed'}>{row.preventRecursive ? 'Enabled' : '—'}</span>
+    <span class="row-flag" class:row-flag-off={!row.logicalInverse} title={row.logicalInverse ? 'Logical inverse enabled' : 'Logical inverse disabled'}>{row.logicalInverse ? 'Yes' : '—'}</span>
+    <span class="row-badges">
         {#each badges as entry (entry.index)}
             <span class="badge" class:error={entry.issue.severity === 'error'} class:warning={entry.issue.severity !== 'error'} title={entry.issue.message}>
                 ⚠ {ruleTitle(rules, entry.issue.rule)}
             </span>
         {/each}
+    </span>
+    <span class="row-status">
         <span class="status-indicator" class:status-active={row.isActive}>
             <span class="status-dot"></span>{row.isActive ? 'Active' : 'Inactive'}
         </span>
