@@ -57,8 +57,15 @@
         class="type-pill"
         class:type-criteria={row.type === 'Criteria'}
         class:type-inactive={!row.isActive}
-    >{typeLabel}{row.executeAsynchronous ? ' · async' : ''}</span>
+    >{typeLabel}</span>
     <span class="row-class">{row.classToInject}</span>
+    <span class="row-async" class:row-flag-off={!row.executeAsynchronous}>
+        {#if row.executeAsynchronous}
+            <span class="row-async-icon"><Icon name="async" /></span>Yes
+        {:else}
+            —
+        {/if}
+    </span>
     <span class="row-flag" class:row-flag-off={!row.preventRecursive}>{row.preventRecursive ? 'Enabled' : '—'}</span>
     <span class="row-flag" class:row-flag-off={!row.logicalInverse}>{row.logicalInverse ? 'Yes' : '—'}</span>
     <span class="row-status">

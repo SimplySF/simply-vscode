@@ -27,7 +27,7 @@
             </div>
             {#if section.rows.length > 0}
                 <div class="col-header row-grid">
-                    <span>Order</span><span>Type</span><span>Class to Inject</span><span>Recursion</span><span>Logical Inverse</span><span>Status</span><span></span>
+                    <span>Order</span><span>Type</span><span>Class to Inject</span><span>Async</span><span>Recursion</span><span>Logical Inverse</span><span>Status</span><span></span>
                 </div>
             {/if}
             {#each section.rows as row (row.developerName + row.source)}

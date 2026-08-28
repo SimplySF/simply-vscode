@@ -34,12 +34,12 @@ instantly, with no re-scan. Click a row to open its class. Bindings are read via
 scan/resolve logic `sf simply aep at4dx domain-process-binding list` itself uses, imported directly
 rather than shelling out to that command.
 
-Each section shows a real column grid — Order, Type, Class to Inject, Recursion, Logical Inverse, and
-Status — instead of one flex row of icons and a developer name. `Class to Inject` is the row's
-identifier (clicking it, or anywhere in the row, opens the class); the Type pill picks up a `· async`
-suffix when the binding executes asynchronously. Recursion and Logical Inverse render as `Enabled`/
-`Yes` or a dim em-dash, so a whole section can be scanned at a glance without hovering anything —
-their exact state is also available from the row's tooltip. Below roughly 700px those two columns
+Each section shows a real column grid — Order, Type, Class to Inject, Async, Recursion, Logical
+Inverse, and Status — instead of one flex row of icons and a developer name. `Class to Inject` is the
+row's identifier (clicking it, or anywhere in the row, opens the class). Async, Recursion, and
+Logical Inverse render as `Yes`/`Enabled` or a dim em-dash, so a whole section can be scanned at a
+glance without hovering anything — Recursion and Logical Inverse's exact state is also available from
+the row's tooltip. Below roughly 700px those two columns
 drop out to keep the remaining ones legible.
 
 ### Validation

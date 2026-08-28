@@ -41,28 +41,29 @@ changes to `types.ts`, no changes to `save()`'s validation.
 
 Each section card gains a column header row, and each binding renders as a fixed-height grid row:
 
-| Order | Type | Class to Inject | Recursion | Logical Inverse | Status | |
-|-------|------|-----------------|-----------|-----------------|--------|-|
-| `10.1` | `Criteria` | `FishSlogansCriteria.cls` | Enabled | Yes | ● Active | ✎ |
-| `10.2` | `Action` | `FishSlogansAction.cls` | — | — | ● Active | ✎ |
-| `20.1` | `Action` | `FishSlogansNotify.cls` | Enabled | — | ○ Inactive | ✎ |
+| Order | Type | Class to Inject | Async | Recursion | Logical Inverse | Status | |
+|-------|------|-----------------|-------|-----------|-----------------|--------|-|
+| `10.1` | `Criteria` | `FishSlogansCriteria.cls` | — | Enabled | Yes | ● Active | ✎ |
+| `10.2` | `Action` | `FishSlogansAction.cls` | ◷ Yes | — | — | ● Active | ✎ |
+| `20.1` | `Action` | `FishSlogansNotify.cls` | — | Enabled | — | ○ Inactive | ✎ |
 
 - `developerName` is no longer rendered in the list. `classToInject` becomes the row's visible
   identifier and carries the link color; the row click still posts `openClass`.
 - `Type` is an outlined pill (uppercased by CSS, not markup) — blue for Criteria, yellow for
-  Action — replacing the type icon. When `executeAsynchronous` is true, the pill's text gains a
-  `· async` suffix (0012's async icon had no replacement in the new grid, so this keeps it visible
-  without adding an eighth column).
+  Action — replacing the type icon.
+- `executeAsynchronous` gets its own labelled Async column — a small clock icon plus `Yes` when true,
+  a dim em-dash when false — rather than folding into the Type pill (a `· async` suffix would make the
+  pill's width vary by row).
 - `preventRecursive` and `logicalInverse` become labelled text columns (`Enabled` / `Yes` vs a dim
   em-dash) replacing 0012's icons. 0012 is marked superseded by this doc.
 - `Status` becomes a colored dot plus label, replacing the `.pill`.
 - Row height is fixed at 40px (via `min-height`, so an issue badge can still wrap onto a second
   line without clipping) so columns align; inactive rows keep `opacity: .55`; issue badges render
-  inside the Status cell, ahead of the dot and label, keeping the 7-column grid intact regardless of
+  inside the Status cell, ahead of the dot and label, keeping the 8-column grid intact regardless of
   how many badges a row has.
 - Below 700px, the Recursion and Logical Inverse columns are dropped (`display: none` via a
   `:nth-child` media-query rule) rather than shrunk; both values are still available via the row's
-  `title` attribute.
+  `title` attribute. The Async column stays visible at every width.
 
 ### Create view
 
@@ -150,8 +151,9 @@ Resolutions to the open questions below were made during implementation, not lef
    resolution that doesn't exist yet; worth its own doc if wanted.
 4. **Edit uses the full-page form, not inline-in-list editing** — see "Alternatives considered" above.
 5. **Narrow-panel behavior:** Recursion and Logical Inverse columns are dropped below 700px; their
-   values remain available via the row's `title` attribute.
-6. **`executeAsynchronous`** renders as a `· async` suffix on the Type pill.
+   values remain available via the row's `title` attribute. Async stays visible at every width.
+6. **`executeAsynchronous`** has its own labelled Async column (clock icon + `Yes`/`—`), not a suffix
+   on the Type pill — see "Behavior" above.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into
@@ -163,9 +165,10 @@ optional/deferred there) was not built — it would need the current section's r
 - `App.test.ts` — the toolbar invariant: present in the list view for `kind: 'data'`; absent after
   `openCreateForm()`; absent after `openEditForm(row)`; disabled placeholder present for `loading`.
 - `BindingRow.test.ts` — each column renders from its row field; `developerName` is not in the row's
-  text; `classToInject` is; the type pill gains `· async` when `executeAsynchronous` is true;
-  inactive rows carry `.inactive`; `openClass` still posts on row click and `onEdit` still fires on
-  the edit icon with propagation stopped.
+  text; `classToInject` is; the Async column shows `Yes` with the clock icon when
+  `executeAsynchronous` is true (and the Type pill carries no suffix); inactive rows carry
+  `.inactive`; `openClass` still posts on row click and `onEdit` still fires on the edit icon with
+  propagation stopped.
 - `BindingForm.test.ts` — every field still reachable after regrouping; the alternate-binding toggle
   is still an `input[type=checkbox]` bound to `sobjectAlternate`; the segmented Type control emits
   `Action` / `Criteria` and offers no third option; all existing validation cases unchanged; the
