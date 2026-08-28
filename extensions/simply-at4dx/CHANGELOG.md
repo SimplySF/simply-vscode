@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.4.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.2...simply-at4dx-v2.4.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** rewrite the AT4DX webview in Svelte ([#22](https://github.com/SimplySF/simply-vscode/issues/22)) ([2114db7](https://github.com/SimplySF/simply-vscode/commit/2114db743f65f94103d460a36e9ee1453e292ca9))
+
 # [simply-at4dx-v2.3.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.1...simply-at4dx-v2.3.2) (2026-08-27)
 
 
