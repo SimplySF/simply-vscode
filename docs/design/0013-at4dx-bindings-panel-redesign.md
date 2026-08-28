@@ -1,6 +1,6 @@
 # 0013 — AT4DX Bindings Panel List & Form Redesign
 
-**Status:** Draft
+**Status:** Implemented (PR [#24](https://github.com/SimplySF/simply-vscode/pull/24))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 
