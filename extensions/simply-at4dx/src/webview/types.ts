@@ -23,6 +23,8 @@ export type InitialState =
           issues: DomainProcessBindingIssue[];
           rules: DomainProcessBindingRules;
           isLocalScan: boolean;
+          /** A short display form of the scan's `BindingSource` — an org username, or a workspace-relative source path — shown in the explorer tab strip. See docs/design/0014. */
+          sourceLabel: string;
       };
 
 /**

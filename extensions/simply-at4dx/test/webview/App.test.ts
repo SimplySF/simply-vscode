@@ -29,6 +29,29 @@ afterEach(() => {
     postMessage.mockClear();
 });
 
+describe('App — explorer tab strip', () => {
+    it('renders all three explorers, with only Domain Process Bindings live', () => {
+        render(App, { props: { initial: { kind: 'loading' } as InitialState } });
+
+        expect(screen.getByText('Domain Process Bindings')).toBeTruthy();
+        expect(screen.getByText('Application Factory')).toBeTruthy();
+        expect(screen.getByText('Platform Events')).toBeTruthy();
+        expect(screen.getAllByText('Coming soon')).toHaveLength(2);
+    });
+
+    it('shows the tab strip even while loading, in error, or empty — not just in the data view', () => {
+        render(App, { props: { initial: { kind: 'error', message: 'Boom' } as InitialState } });
+
+        expect(screen.getByText('Domain Process Bindings')).toBeTruthy();
+    });
+
+    it('does not show a binding-count badge before there is data to count', () => {
+        render(App, { props: { initial: { kind: 'loading' } as InitialState } });
+
+        expect(document.querySelector('.explorer-tab-badge')).toBeNull();
+    });
+});
+
 describe('App — loading/error/empty', () => {
     it('shows the loading message', () => {
         render(App, { props: { initial: { kind: 'loading' } as InitialState } });
@@ -56,6 +79,7 @@ describe('App — data', () => {
         issues: [],
         rules: {} as DomainProcessBindingRules,
         isLocalScan: true,
+        sourceLabel: 'force-app/main/default',
     };
 
     it('groups rows into Before/After Save sections for the default SObject/family', () => {
@@ -99,11 +123,19 @@ describe('App — data', () => {
                     issues: [],
                     rules: {} as DomainProcessBindingRules,
                     isLocalScan: true,
+                    sourceLabel: 'force-app/main/default',
                 } as InitialState,
             },
         });
 
         expect(document.querySelector('.header')?.textContent?.replace(/\s+/g, ' ')).toContain('When a Contact record is Created');
+    });
+
+    it('shows the binding count as a badge on the Domain Process Bindings tab, and the source label', () => {
+        render(App, { props: { initial } });
+
+        expect(document.querySelector('.explorer-tab-badge')?.textContent).toBe('2');
+        expect(screen.getByText('force-app/main/default')).toBeTruthy();
     });
 
     it('opens the create form prefilled from the current SObject/Trigger Event selection', async () => {
@@ -136,6 +168,7 @@ describe('App — the New Binding toolbar and the create/edit form are mutually 
         issues: [],
         rules: {} as DomainProcessBindingRules,
         isLocalScan: true,
+        sourceLabel: 'force-app/main/default',
     };
 
     it('shows + New Binding while browsing the list', () => {

@@ -103,6 +103,14 @@ export function embedJsonInScript(value: unknown): string {
         .join(escapeChar(0x2029));
 }
 
+/** A short display form of a `BindingSource` for the explorer tab strip — see docs/design/0014. */
+function sourceLabel(target: BindingSource): string {
+    if (target.kind === 'org') {
+        return target.username;
+    }
+    return target.dirs.map((dir) => vscode.workspace.asRelativePath(dir, false)).join(', ');
+}
+
 /** The webview-side mirror of `PanelState` — see `src/webview/types.ts`'s `InitialState`, which this must stay in sync with. */
 function toInitialState(state: PanelState): unknown {
     switch (state.kind) {
@@ -113,7 +121,14 @@ function toInitialState(state: PanelState): unknown {
         case 'empty':
             return { kind: 'empty' };
         case 'data':
-            return { kind: 'data', rows: state.rows, issues: state.issues, rules: state.rules, isLocalScan: state.target.kind === 'source' };
+            return {
+                kind: 'data',
+                rows: state.rows,
+                issues: state.issues,
+                rules: state.rules,
+                isLocalScan: state.target.kind === 'source',
+                sourceLabel: sourceLabel(state.target),
+            };
     }
 }
 
@@ -167,7 +182,7 @@ export class DomainProcessBindingPanel {
             return;
         }
 
-        const panel = vscode.window.createWebviewPanel('simplyAt4dxDomainProcessBindings', 'AT4DX Bindings', column, {
+        const panel = vscode.window.createWebviewPanel('simplyAt4dxDomainProcessBindings', 'AT4DX Explorer', column, {
             enableScripts: true,
             retainContextWhenHidden: true,
             localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')],
@@ -191,7 +206,7 @@ export class DomainProcessBindingPanel {
         this.panel = panel;
         this.logger = logger;
         this.webviewJsUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview.js'));
-        this.panel.title = 'AT4DX Bindings';
+        this.panel.title = 'AT4DX Explorer';
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
         this.panel.webview.onDidReceiveMessage(
             (message: {
