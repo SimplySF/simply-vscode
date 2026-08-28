@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.10.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.10.0...simply-at4dx-v2.10.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** show Disabled for prevented recursion in binding table ([#35](https://github.com/SimplySF/simply-vscode/issues/35)) ([171998e](https://github.com/SimplySF/simply-vscode/commit/171998e4f47a2e6a7ce74c760b47f5a0b3252e89))
+
 # [simply-at4dx-v2.10.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.9.0...simply-at4dx-v2.10.0) (2026-08-28)
 
 
