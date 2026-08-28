@@ -51,17 +51,22 @@ describe('BindingRow', () => {
         expect(screen.queryByText('Account_Before_Insert_Test')).toBeNull();
     });
 
-    it('shows em-dashes for disabled recursion/logical-inverse flags and "Inactive" for an inactive row', () => {
-        render(BindingRow, { props: { row: row({ preventRecursive: false, logicalInverse: false, isActive: false }), badges: [], rules, onEdit: vi.fn() } });
+    it('shows em-dashes for disabled async/recursion/logical-inverse flags and "Inactive" for an inactive row', () => {
+        render(BindingRow, {
+            props: { row: row({ executeAsynchronous: false, preventRecursive: false, logicalInverse: false, isActive: false }), badges: [], rules, onEdit: vi.fn() },
+        });
 
-        expect(screen.getAllByText('—')).toHaveLength(2);
+        expect(screen.getAllByText('—')).toHaveLength(3);
         expect(screen.getByText('Inactive')).toBeTruthy();
     });
 
-    it('appends "· async" to the type pill when the binding executes asynchronously', () => {
+    it('shows the async column as "Yes" (with the clock icon) when the binding executes asynchronously, and hides it from the type pill', () => {
         render(BindingRow, { props: { row: row({ executeAsynchronous: true }), badges: [], rules, onEdit: vi.fn() } });
 
-        expect(screen.getByText('Action · async')).toBeTruthy();
+        expect(screen.getByText('Yes')).toBeTruthy();
+        expect(document.querySelector('.row-async-icon svg')).toBeTruthy();
+        expect(screen.queryByText('Action · async')).toBeNull();
+        expect(screen.getByText('Action')).toBeTruthy();
     });
 
     it('dims the whole row when inactive', () => {
