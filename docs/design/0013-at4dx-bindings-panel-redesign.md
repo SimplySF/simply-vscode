@@ -169,9 +169,15 @@ A first implementation pass shipped the column grid but missed the heading (stil
 crown card) and put issue badges inside the fixed-width Status cell, which overflows or wraps to a
 second line and breaks row alignment the first time a workspace has a wiring problem — invisible on
 a clean fixture, so it needs its own test (see "Testing"). A follow-up review pass (`REVIEW-01.md`,
-2026-08-28) caught both, plus the type pill stretching to its grid track, the Action pill's color, and
-a redundant row tooltip that duplicated visible columns instead of restoring the developer name. All
-five are folded into "Behavior" above rather than left as a separate errata list.
+2026-08-28) caught both, plus the type pill stretching to its grid track and a redundant row tooltip
+that duplicated visible columns instead of restoring the developer name. All three are folded into
+"Behavior" above rather than left as a separate errata list.
+
+REVIEW-01 §4 also called for the Action pill's border/text color to move from `--vscode-charts-yellow`
+to `--vscode-charts-orange` (yellow reads as a warning color and collides with the badge semantics one
+column over). That fix did not land — the shipped pill is still yellow, which is what "Behavior" above
+documents. It's picked up as a two-line carry-over in [0015](0015-sequence-prefix-grouping.md)'s
+implementation, since that work is already touching this stylesheet.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into
