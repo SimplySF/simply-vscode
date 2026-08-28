@@ -32,13 +32,15 @@ convention, not a shared name plus a state prop — see Alternatives considered)
 | `logicalInverse: true` | `logical-inverse-on` | — | "Logical inverse enabled" |
 | `logicalInverse: false` | — | `logical-inverse-off` | "Logical inverse disabled" |
 
-`recursion-prevented`/`recursion-allowed` share the same base glyph (a circular loop, reading as
-"recursion") with a diagonal strike-through added only for the prevented state — the same "same shape,
-struck through when blocked" convention as a muted-microphone or no-repeat icon. `logical-inverse-on`/
-`logical-inverse-off` use an electronics NOT-gate glyph (a triangle with a small circle at its tip) —
-the circle is filled when inverted, hollow when not. Tooltip wording deliberately mirrors the field's
-own name (`Prevent Recursive`, per the create/edit form — see 0009) rather than an inverted "recursion
-enabled" phrasing, so there's one sense to remember across the panel and the form, not two.
+`recursion-prevented`/`recursion-allowed` share the same base glyph — an infinity symbol (∞), reading
+directly as "can recur indefinitely" — with a diagonal strike-through added only for the prevented
+state, the same "same shape, struck through when blocked" convention as a muted-microphone or no-repeat
+icon. `logical-inverse-on`/`logical-inverse-off` use a crescent-moon glyph (half of a circle carved out
+of a full one, via the standard "two arcs" moon-icon technique) — filled solid when inverted, outlined
+only when not, matching "half" as a visual stand-in for "inverted/negated" the way a half-moon reads as
+the opposite state of a full one. Tooltip wording deliberately mirrors the field's own name
+(`Prevent Recursive`, per the create/edit form — see 0009) rather than an inverted "recursion enabled"
+phrasing, so there's one sense to remember across the panel and the form, not two.
 
 ## Behavior
 
@@ -115,9 +117,9 @@ renders per row and the dimmed "off" styling reads clearly against both a light 
 
 ## Open questions
 
-- **Icon choice for "logical inverse."** A NOT-gate glyph is a reasonable, precedent-free pick (nothing
-  elsewhere in the panel represents this concept) — worth a second opinion once it's actually on screen;
-  swapping the glyph later is a one-file change if it doesn't read clearly at 14px.
+- **Icon choice for both indicators is still precedent-free** (nothing elsewhere in the panel represents
+  either concept) — worth a second opinion once the infinity/crescent-moon glyphs are actually on screen
+  at 14px; swapping either is a one-file (`Icon.svelte`) change if it doesn't read clearly.
 - **Whether these two indicators eventually deserve a validation-style badge instead of an icon**, if a
   future rule (e.g. "recursion prevention likely needed here") gets added to `simply-aep-core`'s
   validator — not designed here; today these are purely informational, not something the panel validates.
