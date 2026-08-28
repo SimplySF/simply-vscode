@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.7.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.7.0...simply-at4dx-v2.7.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** apply bindings panel review fixes ([#26](https://github.com/SimplySF/simply-vscode/issues/26)) ([3e85ba8](https://github.com/SimplySF/simply-vscode/commit/3e85ba870bda5cbd3e9dbb8ef197b37665c8963e))
+
 # [simply-at4dx-v2.7.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.6.0...simply-at4dx-v2.7.0) (2026-08-28)
 
 
