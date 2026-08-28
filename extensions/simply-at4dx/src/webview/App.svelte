@@ -2,6 +2,7 @@
     import { untrack } from 'svelte';
     import BindingForm from './BindingForm.svelte';
     import BindingSections from './BindingSections.svelte';
+    import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
@@ -72,6 +73,30 @@
     }
 </script>
 
+<div class="explorer-tabs">
+    <span class="explorer-tab explorer-tab-active">
+        <span class="explorer-tab-icon"><Icon name="domainProcess" /></span>
+        Domain Process Bindings
+        {#if initial.kind === 'data' && view === 'list'}
+            <span class="explorer-tab-badge">{bindingCount}</span>
+        {/if}
+    </span>
+    <span class="explorer-tab explorer-tab-inert" title="Application Factory Bindings is not available yet.">
+        <span class="explorer-tab-icon"><Icon name="applicationFactory" /></span>
+        Application Factory
+        <span class="explorer-tab-soon">Coming soon</span>
+    </span>
+    <span class="explorer-tab explorer-tab-inert" title="Platform Event Distributor is not available yet.">
+        <span class="explorer-tab-icon"><Icon name="platformEvent" /></span>
+        Platform Events
+        <span class="explorer-tab-soon">Coming soon</span>
+    </span>
+    <span class="explorer-tabs-spacer"></span>
+    {#if initial.kind === 'data'}
+        <span class="explorer-tabs-source" title={initial.sourceLabel}>{initial.sourceLabel}</span>
+    {/if}
+</div>
+
 <div id="summary">
     {#if initial.kind === 'data' && view === 'list'}
         <SummaryBar inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} />
@@ -134,6 +159,69 @@
         color: var(--vscode-foreground);
         background: var(--vscode-editor-background);
         padding: 16px;
+    }
+    :global(.explorer-tabs) {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        height: 40px;
+        margin: -16px -16px 16px;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.explorer-tab) {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        font-size: 0.95em;
+        color: var(--vscode-foreground);
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+    }
+    :global(.explorer-tab-active) {
+        border-bottom-color: var(--vscode-focusBorder);
+        font-weight: 500;
+    }
+    :global(.explorer-tab-inert) {
+        color: var(--vscode-descriptionForeground);
+        cursor: default;
+    }
+    :global(.explorer-tab-icon) {
+        display: inline-flex;
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+    :global(.explorer-tab-icon svg) {
+        width: 14px;
+        height: 14px;
+    }
+    :global(.explorer-tab-badge) {
+        padding: 1px 7px;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        border-radius: 9px;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.75em;
+    }
+    :global(.explorer-tab-soon) {
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    :global(.explorer-tabs-spacer) {
+        flex: 1;
+    }
+    :global(.explorer-tabs-source) {
+        display: flex;
+        align-items: center;
+        max-width: 260px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
     }
     :global(.toolbar) {
         display: flex;

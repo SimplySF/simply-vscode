@@ -18,6 +18,12 @@ VS Code.
 
 ## Usage
 
+The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's
+different explorers — today only **Domain Process Bindings** is live; **Application Factory** and
+**Platform Events** show as inert `Coming soon` tabs, reserved for later additions. See
+`docs/design/0014` for why this is a tab strip inside one panel rather than a sidebar/Activity Bar
+presence.
+
 Run **AT4DX: Show Domain Process Bindings** from the Command Palette. You'll be prompted to:
 
 1. Pick a workspace folder (if more than one is open).
@@ -38,9 +44,9 @@ Each section shows a real column grid — Order, Type, Class to Inject, Async, R
 Inverse, and Status — instead of one flex row of icons and a developer name. `Class to Inject` is the
 row's identifier (clicking it, or anywhere in the row, opens the class). Async, Recursion, and
 Logical Inverse render as `Yes`/`Enabled` or a dim em-dash, so a whole section can be scanned at a
-glance without hovering anything — Recursion and Logical Inverse's exact state is also available from
-the row's tooltip. Below roughly 700px those two columns
-drop out to keep the remaining ones legible.
+glance without hovering anything. Below roughly 700px those two columns drop out to keep the
+remaining ones legible, with a tooltip on each cell so their state stays discoverable; the row's own
+tooltip shows its developer name.
 
 ### Validation
 

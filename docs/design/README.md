@@ -50,6 +50,7 @@ refactors that keep the observable behavior identical.
 | [0011](0011-at4dx-svelte-webview.md) | AT4DX Webview Rewritten in Svelte | Implemented |
 | [0012](0012-at4dx-row-flag-indicators.md) | Prevent Recursive & Logical Inverse Row Indicators | Superseded by 0013 |
 | [0013](0013-at4dx-bindings-panel-redesign.md) | AT4DX Bindings Panel List & Form Redesign | Implemented |
+| [0014](0014-at4dx-explorer-tab-strip.md) | AT4DX Explorer Tab Strip | Draft |
 
 ## Template
 
