@@ -24,7 +24,7 @@ different explorers — today only **Domain Process Bindings** is live; **Applic
 `docs/design/0014` for why this is a tab strip inside one panel rather than a sidebar/Activity Bar
 presence.
 
-Run **AT4DX Explorer: Show Domain Process Bindings** from the Command Palette. You'll be prompted to:
+Run **AT4DX: Open Explorer** from the Command Palette. You'll be prompted to:
 
 1. Pick a workspace folder (if more than one is open).
 2. Pick where to read bindings from — the whole workspace, a specific folder you browse to (handy
