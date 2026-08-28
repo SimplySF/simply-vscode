@@ -52,7 +52,7 @@
         <Icon name={row.preventRecursive ? 'recursion-prevented' : 'recursion-allowed'} />
     </span>
     <span class="flag-icon" class:flag-off={!row.logicalInverse} title={row.logicalInverse ? 'Logical inverse enabled' : 'Logical inverse disabled'}>
-        <Icon name={row.logicalInverse ? 'logical-inverse-on' : 'logical-inverse-off'} />
+        <Icon name="logical-inverse" />
     </span>
     <span class="row-name">{row.developerName}</span>
     <span class="row-order">Order: {row.order}</span>

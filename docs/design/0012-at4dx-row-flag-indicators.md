@@ -22,25 +22,27 @@ section can be scanned at a glance for which bindings prevent recursion or inver
 which ones do. The "on" state renders at full `--vscode-descriptionForeground` opacity; the "off" state
 renders the same glyph at reduced opacity, so the on rows still pop without hiding the off ones.
 
-Two new named variants on the existing `Icon.svelte` component (matching its one-name-one-glyph
-convention, not a shared name plus a state prop — see Alternatives considered):
+Three new named variants on the existing `Icon.svelte` component (matching its one-name-one-glyph
+convention, not a shared name plus a state prop — see Alternatives considered). Recursion gets a
+distinct glyph per state; logical inverse reuses one glyph for both (see below the table for why):
 
-| Row field | Icon name (on) | Icon name (off) | Tooltip |
-| --- | --- | --- | --- |
-| `preventRecursive: true` | `recursion-prevented` | — | "Recursion prevented" |
-| `preventRecursive: false` | — | `recursion-allowed` | "Recursion allowed" |
-| `logicalInverse: true` | `logical-inverse-on` | — | "Logical inverse enabled" |
-| `logicalInverse: false` | — | `logical-inverse-off` | "Logical inverse disabled" |
+| Row field | Icon name | Tooltip |
+| --- | --- | --- |
+| `preventRecursive: true` | `recursion-prevented` | "Recursion prevented" |
+| `preventRecursive: false` | `recursion-allowed` | "Recursion allowed" |
+| `logicalInverse` (either state) | `logical-inverse` | "Logical inverse enabled" / "…disabled" |
 
 `recursion-prevented`/`recursion-allowed` share the same base glyph — an infinity symbol (∞), reading
 directly as "can recur indefinitely" — with a diagonal strike-through added only for the prevented
 state, the same "same shape, struck through when blocked" convention as a muted-microphone or no-repeat
-icon. `logical-inverse-on`/`logical-inverse-off` use a crescent-moon glyph (half of a circle carved out
-of a full one, via the standard "two arcs" moon-icon technique) — filled solid when inverted, outlined
-only when not, matching "half" as a visual stand-in for "inverted/negated" the way a half-moon reads as
-the opposite state of a full one. Tooltip wording deliberately mirrors the field's own name
-(`Prevent Recursive`, per the create/edit form — see 0009) rather than an inverted "recursion enabled"
-phrasing, so there's one sense to remember across the panel and the form, not two.
+icon. `logical-inverse` is a single crescent-moon glyph (a supplied asset — a full circle with a
+smaller offset circle cut out of it via `fill-rule: evenodd`, not hand-derived) used unchanged for both
+states; unlike the recursion pair, on/off is carried entirely by the row's existing dimmed-when-off
+styling (see Behavior) rather than a second glyph variant, since the source asset is a single fixed
+silhouette with no natural "outline-only" counterpart to derive one from without inventing a shape the
+asset doesn't define. Tooltip wording deliberately mirrors the field's own name (`Prevent Recursive`,
+per the create/edit form — see 0009) rather than an inverted "recursion enabled" phrasing, so there's
+one sense to remember across the panel and the form, not two.
 
 ## Behavior
 
@@ -67,12 +69,14 @@ async marker's own neutral styling, not the badge/pill red-green vocabulary used
 
 ## Alternatives considered
 
-**A single icon per flag whose fill/state toggles via a boolean prop**, instead of two named variants
-per flag (four total). Rejected: `Icon.svelte`'s existing contract is one `name` → one fixed glyph,
-used identically by every other icon in the row; adding a second, icon-specific `active` prop only to
-these two would be a special case future readers have to notice and remember, for no real savings — the
-four variants add a few more `{#if}` branches inside `Icon.svelte`, not meaningfully more code than a
-prop-driven version.
+**A shape-toggling glyph per flag whose state is driven by a boolean prop**, instead of separate named
+variants for recursion's two states. Rejected: `Icon.svelte`'s existing contract is one `name` → one
+fixed glyph, used identically by every other icon in the row; adding a second, icon-specific `active`
+prop only to recursion would be a special case future readers have to notice and remember, for no real
+savings — the extra variant is one more `{#if}` branch inside `Icon.svelte`, not meaningfully more code
+than a prop-driven version. `logical-inverse` ends up single-glyph anyway (see Decision), but *because*
+its source asset has no natural second state to branch to, not because a prop would have been better —
+had it needed one, the same objection would apply.
 
 **Only show an icon when the flag is true**, matching the existing async marker exactly. Rejected per
 the request driving this doc: the value here is specifically in seeing the *off* state too, to compare
@@ -91,17 +95,17 @@ row to learn anything, which is exactly the "open each one in turn" friction bei
 
 ## Implementation plan
 
-1. **`src/webview/Icon.svelte`** — add `recursion-prevented`, `recursion-allowed`, `logical-inverse-on`,
-   `logical-inverse-off` to the `IconName` union and their `{#if}` branches.
+1. **`src/webview/Icon.svelte`** — add `recursion-prevented`, `recursion-allowed`, `logical-inverse` to
+   the `IconName` union and their `{#if}` branches.
 2. **`src/webview/BindingRow.svelte`** — inside `.row-icon`, after the existing async-marker `{#if}`,
    add the two new indicators, each a `<span class="flag-icon" class:flag-off={...}>` wrapping the
    appropriate `Icon`, with `title` set per the Behavior table.
 3. **`src/webview/App.svelte`** (or wherever `SHARED_STYLE`'s port lives) — add `.flag-icon` (14×14,
    `--vscode-descriptionForeground`, matching `.async-icon`) and `.flag-icon.flag-off` (opacity 0.4).
-4. **`test/webview/BindingRow.test.ts`** — new cases: both flags true renders `recursion-prevented`/
-   `logical-inverse-on` with full opacity and the correct tooltip text; both false renders the "off"
-   variants with the dimmed class; a mixed case (one true, one false) renders the right pairing per
-   field, not just "any flag true → both show as on."
+4. **`test/webview/BindingRow.test.ts`** — new cases: both flags true renders both indicators at full
+   opacity with the correct "on" tooltip text; both false renders both dimmed (`flag-off`) with the
+   correct "off" tooltip text; a mixed case (one true, one false) renders the right pairing per field,
+   not just "any flag true → both show as on."
 5. **`README.md`** — extend the Usage section's row description to mention the two new indicators and
    their tooltips.
 

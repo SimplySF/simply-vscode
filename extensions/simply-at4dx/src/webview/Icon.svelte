@@ -7,8 +7,7 @@
         | 'edit'
         | 'recursion-prevented'
         | 'recursion-allowed'
-        | 'logical-inverse-on'
-        | 'logical-inverse-off';
+        | 'logical-inverse';
 
     let { name }: { name: IconName } = $props();
 </script>
@@ -38,12 +37,19 @@
         <path d="M8 8C6 5 2 5 2 8C2 11 6 11 8 8C10 5 14 5 14 8C14 11 10 11 8 8Z" />
         <path d="M2.5 2.5L13.5 13.5" stroke-width="1.6" />
     </svg>
-{:else if name === 'logical-inverse-off'}
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
-        <path d="M14 8.5A6 6 0 1 1 7.5 2A4.7 4.7 0 0 0 14 8.5Z" />
-    </svg>
-{:else if name === 'logical-inverse-on'}
-    <svg viewBox="0 0 16 16">
-        <path d="M14 8.5A6 6 0 1 1 7.5 2A4.7 4.7 0 0 0 14 8.5Z" fill="currentColor" />
+{:else if name === 'logical-inverse'}
+    <svg viewBox="0 0 512 512" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd">
+        <path
+            d="M 258 156
+      A 103 103 0 1 1 258 362
+      A 103 103 0 1 1 258 156
+      Z
+
+      M 258 178
+      L 258 342
+      C 213.3 342 177 305.3 177 260
+      C 177 214.7 213.3 178 258 178
+      Z"
+        />
     </svg>
 {/if}
