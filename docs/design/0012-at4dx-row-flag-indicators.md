@@ -52,10 +52,12 @@ one sense to remember across the panel and the form, not two.
 [type icon] [async icon?] [recursion icon] [inverse icon]   DeveloperName   Order: N   [badges…]   [Active/Inactive]   [edit]
 ```
 
-Both new icons sit in the existing `.row-icon` group, after the async marker and before the developer
-name — same position/sizing convention (14×14, matching `.async-icon`) as the existing async marker,
-just always present instead of conditional. Each carries a `title` tooltip (per the table above) the
-same way the async icon already does.
+Both new icons are their own `.flag-icon` spans, siblings of `.row-icon` (not nested inside it), placed
+right after it and before the developer name — same 14×14 sizing convention as `.async-icon`, just
+always present instead of conditional. Each carries a `title` tooltip (per the table above) the same way
+the async icon already does. The logical-inverse icon is sized up slightly (18×18, via a `.flag-icon-moon`
+modifier) — the supplied crescent asset reads noticeably smaller than the hand-drawn glyphs at 14px, so
+it needs the extra size to stay legible at the same visual weight as its neighbors.
 
 ### Visual states
 

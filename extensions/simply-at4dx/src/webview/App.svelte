@@ -311,6 +311,14 @@
         width: 14px;
         height: 14px;
     }
+    :global(.flag-icon.flag-icon-moon) {
+        width: 18px;
+        height: 18px;
+    }
+    :global(.flag-icon.flag-icon-moon svg) {
+        width: 18px;
+        height: 18px;
+    }
     :global(.flag-icon.flag-off) {
         opacity: 0.4;
     }
