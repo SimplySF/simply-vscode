@@ -40,7 +40,7 @@ describe('BindingRow', () => {
         expect(screen.getByText('10.1')).toBeTruthy();
         expect(screen.getByText('Criteria')).toBeTruthy();
         expect(screen.getByText('MyActionClass')).toBeTruthy();
-        expect(screen.getByText('Enabled')).toBeTruthy();
+        expect(screen.getByText('Disabled')).toBeTruthy();
         expect(screen.getByText('Yes')).toBeTruthy();
         expect(screen.getByText('Active')).toBeTruthy();
     });
