@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.10.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.9.0...simply-at4dx-v2.10.0) (2026-08-28)
+
+
+### Features
+
+* update at4dx ([62741b2](https://github.com/SimplySF/simply-vscode/commit/62741b2d131e941698084c6ecde7621ccbec84c0))
+
 # [simply-at4dx-v2.9.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.8.1...simply-at4dx-v2.9.0) (2026-08-28)
 
 
