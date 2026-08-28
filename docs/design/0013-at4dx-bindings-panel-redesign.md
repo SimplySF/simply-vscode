@@ -114,6 +114,11 @@ the form view.
 
 ## Alternatives considered
 
+**`--vscode-charts-orange` for the Action pill instead of `--vscode-charts-yellow`.** REVIEW-01 §4
+proposed this — yellow reads as a warning color and collides with the badge semantics one column
+over. Tried during `0015`'s implementation, then explicitly reverted: yellow is the intended color.
+Noted here so this isn't "fixed" back to orange again by someone reading REVIEW-01 in isolation.
+
 **Disable `+ New Binding` on the form view instead of hiding it.** Keeps the toolbar's layout stable
 and avoids the panel shifting when the form opens. Rejected: a disabled control with no explanation
 is the weaker signal, and the SObject / Trigger Event selects beside it would also need disabling —
@@ -173,11 +178,12 @@ a clean fixture, so it needs its own test (see "Testing"). A follow-up review pa
 that duplicated visible columns instead of restoring the developer name. All three are folded into
 "Behavior" above rather than left as a separate errata list.
 
-REVIEW-01 §4 also called for the Action pill's border/text color to move from `--vscode-charts-yellow`
-to `--vscode-charts-orange` (yellow reads as a warning color and collides with the badge semantics one
-column over). That fix did not land — the shipped pill is still yellow, which is what "Behavior" above
-documents. It's picked up as a two-line carry-over in [0015](0015-sequence-prefix-grouping.md)'s
-implementation, since that work is already touching this stylesheet.
+REVIEW-01 §4 called for the Action pill's border/text color to move from `--vscode-charts-yellow` to
+`--vscode-charts-orange` (yellow reads as a warning color and collides with the badge semantics one
+column over). That fix did not land with the original implementation, was briefly applied during
+[0015](0015-sequence-prefix-grouping.md)'s implementation as a carry-over, and was then explicitly
+reverted back to yellow — yellow is the intended color, not an unfixed bug. **Do not "fix" this to
+orange again**; REVIEW-01 §4's reasoning stands as a rejected alternative, not an outstanding TODO.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into
