@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.9.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.8.1...simply-at4dx-v2.9.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** group the bindings list by sequence prefix ([#32](https://github.com/SimplySF/simply-vscode/issues/32)) ([27fddcc](https://github.com/SimplySF/simply-vscode/commit/27fddccb8f6b4f32bc91d473221c5fb6f1884964))
+
 # [simply-at4dx-v2.8.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.8.0...simply-at4dx-v2.8.1) (2026-08-28)
 
 
