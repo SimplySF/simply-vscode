@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.5.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.4.0...simply-at4dx-v2.5.0) (2026-08-28)
+
+
+### Features
+
+* **simply-at4dx:** show Prevent Recursive / Logical Inverse on each row ([#23](https://github.com/SimplySF/simply-vscode/issues/23)) ([8fe6f30](https://github.com/SimplySF/simply-vscode/commit/8fe6f3028bfc00abc04464868d707dcd59cc9faf))
+
 # [simply-at4dx-v2.4.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.3.2...simply-at4dx-v2.4.0) (2026-08-28)
 
 
