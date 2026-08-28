@@ -1,5 +1,14 @@
 <script lang="ts">
-    type IconName = 'criteria' | 'action' | 'async' | 'crown' | 'edit';
+    type IconName =
+        | 'criteria'
+        | 'action'
+        | 'async'
+        | 'crown'
+        | 'edit'
+        | 'recursion-prevented'
+        | 'recursion-allowed'
+        | 'logical-inverse-on'
+        | 'logical-inverse-off';
 
     let { name }: { name: IconName } = $props();
 </script>
@@ -19,5 +28,26 @@
 {:else if name === 'edit'}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M11 2l3 3-8 8-3.5 1 1-3.5 8-8z" />
+    </svg>
+{:else if name === 'recursion-allowed'}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13.5 8A5.5 5.5 0 1 1 11.8 4.2" />
+        <path d="M13.8 1.8L13.5 5.3L10 5" />
+    </svg>
+{:else if name === 'recursion-prevented'}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13.5 8A5.5 5.5 0 1 1 11.8 4.2" />
+        <path d="M13.8 1.8L13.5 5.3L10 5" />
+        <path d="M2.5 2.5L13.5 13.5" stroke-width="1.6" />
+    </svg>
+{:else if name === 'logical-inverse-off'}
+    <svg viewBox="0 0 16 16">
+        <path d="M2 3L2 13L11 8Z" fill="currentColor" />
+        <circle cx="13" cy="8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3" />
+    </svg>
+{:else if name === 'logical-inverse-on'}
+    <svg viewBox="0 0 16 16">
+        <path d="M2 3L2 13L11 8Z" fill="currentColor" />
+        <circle cx="13" cy="8" r="1.6" fill="currentColor" />
     </svg>
 {/if}

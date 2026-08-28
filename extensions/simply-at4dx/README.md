@@ -34,6 +34,11 @@ instantly, with no re-scan. Click a row to open its class. Bindings are read via
 scan/resolve logic `sf simply aep at4dx domain-process-binding list` itself uses, imported directly
 rather than shelling out to that command.
 
+Each row also shows two dimmed-when-off indicators, next to the async marker: whether the binding
+prevents recursive re-entry (Prevent Recursive), and whether it inverts its criteria's result (Logical
+Inverse). Both render in every row, on or off, so a whole section can be scanned at a glance — hover
+either icon for the exact state.
+
 ### Validation
 
 Every scan is also validated, automatically — there's no separate command and nothing to turn on.
