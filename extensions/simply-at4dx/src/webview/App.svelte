@@ -97,12 +97,6 @@
     {/if}
 </div>
 
-<div id="summary">
-    {#if initial.kind === 'data' && view === 'list'}
-        <SummaryBar inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} />
-    {/if}
-</div>
-
 {#if initial.kind === 'data' && view === 'list'}
     <Toolbar {sobjects} bind:sobject bind:family {familyItems} {canWrite} onNewBinding={openCreateForm} />
 {:else if initial.kind !== 'data'}
@@ -145,6 +139,7 @@
                         {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
                     {/if}
                 </div>
+                <SummaryBar inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} />
             </div>
         {/if}
         <BindingSections {sections} issuesByRecord={recordIssues} {rules} onEdit={openEditForm} />
@@ -299,10 +294,11 @@
         color: var(--vscode-errorForeground);
     }
     :global(.summary) {
+        flex-shrink: 0;
         padding: 8px 12px;
         border-radius: 4px;
-        margin-bottom: 12px;
         font-size: 0.9em;
+        white-space: nowrap;
     }
     :global(.summary.clean) {
         color: var(--vscode-descriptionForeground);
