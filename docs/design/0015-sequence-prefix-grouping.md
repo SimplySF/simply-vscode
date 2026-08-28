@@ -1,6 +1,6 @@
 # 0015 — Sequence-prefix grouping in the bindings list
 
-**Status:** Draft
+**Status:** Implemented (PR [#30](https://github.com/SimplySF/simply-vscode/pull/30))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 
