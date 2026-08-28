@@ -1,6 +1,6 @@
 # 0012 — Prevent Recursive & Logical Inverse Row Indicators
 
-**Status:** Draft
+**Status:** Implemented (PR [#23](https://github.com/SimplySF/simply-vscode/pull/23))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 
@@ -120,12 +120,12 @@ row to learn anything, which is exactly the "open each one in turn" friction bei
 **Manual:** in a real Extension Development Host, a section with at least one binding in each of the
 four flag combinations (both off, both on, each individually on) — confirm the right icon/tooltip pair
 renders per row and the dimmed "off" styling reads clearly against both a light and a dark VS Code theme.
+Run by the user; passed — the infinity/crescent-moon pair, the strike-through vs. dimmed-opacity
+distinction, and the 18px moon-icon bump (added after an initial pass found the crescent read too small
+next to the recursion glyph) all confirmed legible across the flag combinations.
 
 ## Open questions
 
-- **Icon choice for both indicators is still precedent-free** (nothing elsewhere in the panel represents
-  either concept) — worth a second opinion once the infinity/crescent-moon glyphs are actually on screen
-  at 14px; swapping either is a one-file (`Icon.svelte`) change if it doesn't read clearly.
 - **Whether these two indicators eventually deserve a validation-style badge instead of an icon**, if a
   future rule (e.g. "recursion prevention likely needed here") gets added to `simply-aep-core`'s
   validator — not designed here; today these are purely informational, not something the panel validates.

@@ -48,7 +48,7 @@ refactors that keep the observable behavior identical.
 | [0009](0009-at4dx-create-edit-domain-process-bindings.md) | Create & Edit Domain Process Bindings | Draft |
 | [0010](0010-automated-test-harness.md) | Automated Test Harness | Implemented |
 | [0011](0011-at4dx-svelte-webview.md) | AT4DX Webview Rewritten in Svelte | Implemented |
-| [0012](0012-at4dx-row-flag-indicators.md) | Prevent Recursive & Logical Inverse Row Indicators | Draft |
+| [0012](0012-at4dx-row-flag-indicators.md) | Prevent Recursive & Logical Inverse Row Indicators | Implemented |
 
 ## Template
 
