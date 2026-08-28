@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     availableFamilies,
     buildSections,
+    buildSequenceGroups,
     developerNameValid,
     familyVerbForOperation,
     headerParts,
@@ -180,6 +181,61 @@ describe('partitionIssues', () => {
 
         expect(inView.map((e) => e.issue)).toEqual([issues[0]]);
         expect(elsewhere.map((e) => e.issue)).toEqual([issues[1], issues[2]]);
+    });
+});
+
+describe('buildSequenceGroups', () => {
+    it('splits rows into groups by the integer part of order, sorted ascending', () => {
+        const rows = [
+            row({ developerName: 'A', order: 10.1 }),
+            row({ developerName: 'B', order: 10.2 }),
+            row({ developerName: 'C', order: 10.3 }),
+            row({ developerName: 'D', order: 20.1 }),
+            row({ developerName: 'E', order: 20.2 }),
+        ];
+        const groups = buildSequenceGroups(rows);
+
+        expect(groups.map((g) => g.prefix)).toEqual([10, 20]);
+        expect(groups[0].range).toBe('10.1 – 10.3');
+        expect(groups[1].range).toBe('20.1 – 20.2');
+    });
+
+    it('sorts groups and rows within a group ascending even when input is shuffled', () => {
+        const rows = [row({ developerName: 'C', order: 20.1 }), row({ developerName: 'A', order: 10.2 }), row({ developerName: 'B', order: 10.1 })];
+        const groups = buildSequenceGroups(rows);
+
+        expect(groups.map((g) => g.prefix)).toEqual([10, 20]);
+        expect(groups[0].rows.map((r) => r.developerName)).toEqual(['B', 'A']);
+    });
+
+    it('gives a single-row group a bare range, not a repeated one', () => {
+        const groups = buildSequenceGroups([row({ order: 10.1 })]);
+        expect(groups[0].range).toBe('10.1');
+    });
+
+    it('collects rows with no usable order into a trailing "No order" group, not group 0', () => {
+        const rows = [row({ developerName: 'A', order: 10.1 }), row({ developerName: 'B', order: NaN }), row({ developerName: 'C', order: undefined })];
+        const groups = buildSequenceGroups(rows);
+
+        expect(groups.map((g) => g.label)).toEqual(['10', 'No order']);
+        expect(groups[1].prefix).toBeNull();
+        expect(groups[1].rows.map((r) => r.developerName)).toEqual(['B', 'C']);
+    });
+
+    it('summarizes a mixed group as "N criteria gate(s) M action(s)"', () => {
+        const groups = buildSequenceGroups([row({ order: 10.1, type: 'Criteria' }), row({ order: 10.2, type: 'Action' }), row({ order: 10.3, type: 'Action' })]);
+        expect(groups[0].summary).toBe('1 criteria gates 2 actions');
+    });
+
+    it('summarizes an actions-only group without mentioning criteria', () => {
+        const groups = buildSequenceGroups([row({ order: 10.1, type: 'Action' }), row({ order: 10.2, type: 'Action' })]);
+        expect(groups[0].summary).toBe('2 actions');
+    });
+
+    it('summarizes a criteria-only group as plural "criteria", never "criterias"', () => {
+        const groups = buildSequenceGroups([row({ order: 10.1, type: 'Criteria' }), row({ order: 10.2, type: 'Criteria' })]);
+        expect(groups[0].summary).toBe('2 criteria');
+        expect(groups[0].summary).not.toContain('criterias');
     });
 });
 

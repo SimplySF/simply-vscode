@@ -102,6 +102,79 @@ export function headerParts(sobject: string, family: FamilyKey): HeaderParts {
 
 export type BindingSection = { title: string; rows: DomainProcessBindingRow[] };
 
+export type SequenceGroup = {
+    /** Integer part of the group's orders, or `null` for rows with no usable order. */
+    prefix: number | null;
+    /** `'10'`, or `'No order'` for the orderless group. */
+    label: string;
+    /** `'10.1 – 10.3'`, or `'10.1'` when the group holds one row. Empty for the orderless group. */
+    range: string;
+    /** Composition summary — `'1 criteria gates 2 actions'`. Empty when it would say nothing useful. */
+    summary: string;
+    rows: DomainProcessBindingRow[];
+};
+
+/** How an order reads in the UI. Matches `BindingRow`'s `{row.order}` so a caption's range and its rows never disagree. */
+export function formatOrder(order: number): string {
+    return String(order);
+}
+
+function groupSummary(rows: DomainProcessBindingRow[]): string {
+    const criteria = rows.filter((row) => row.type === 'Criteria').length;
+    const actions = rows.length - criteria;
+    if (criteria > 0 && actions > 0) {
+        return `${criteria} criteria ${criteria === 1 ? 'gates' : 'gate'} ${actions} action${actions === 1 ? '' : 's'}`;
+    }
+    if (actions > 0) {
+        return `${actions} action${actions === 1 ? '' : 's'}`;
+    }
+    if (criteria > 0) {
+        return `${criteria} criteria`;
+    }
+    return '';
+}
+
+/**
+ * Groups a section's rows by the integer part of `order` — the AT4DX convention where the integer
+ * identifies a unit of work and the fraction orders the bindings inside it. See docs/design/0015.
+ * Rows with no usable order land in a final `prefix: null` group rather than being merged into `0`.
+ */
+export function buildSequenceGroups(rows: DomainProcessBindingRow[]): SequenceGroup[] {
+    const byPrefix = new Map<number, DomainProcessBindingRow[]>();
+    const orderless: DomainProcessBindingRow[] = [];
+
+    for (const row of rows) {
+        if (typeof row.order !== 'number' || !Number.isFinite(row.order)) {
+            orderless.push(row);
+            continue;
+        }
+        const prefix = Math.trunc(row.order);
+        const group = byPrefix.get(prefix) ?? [];
+        group.push(row);
+        byPrefix.set(prefix, group);
+    }
+
+    const groups: SequenceGroup[] = [...byPrefix.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([prefix, groupRows]) => {
+            const sorted = [...groupRows].sort((a, b) => a.order - b.order);
+            const first = formatOrder(sorted[0].order);
+            const last = formatOrder(sorted[sorted.length - 1].order);
+            return {
+                prefix,
+                label: String(prefix),
+                range: sorted.length === 1 ? first : `${first} – ${last}`,
+                summary: groupSummary(sorted),
+                rows: sorted,
+            };
+        });
+
+    if (orderless.length > 0) {
+        groups.push({ prefix: null, label: 'No order', range: '', summary: groupSummary(orderless), rows: orderless });
+    }
+    return groups;
+}
+
 /** Groups `rows` (already filtered to one SObject) into the titled sections the panel renders for `family`. */
 export function buildSections(family: FamilyKey, rows: DomainProcessBindingRow[]): BindingSection[] {
     if (family === 'DomainMethod') {

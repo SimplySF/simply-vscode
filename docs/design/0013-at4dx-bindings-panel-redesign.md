@@ -64,7 +64,7 @@ Each section card gains a column header row, and each binding renders as a fixed
   badge column collapses to zero width on badge-free rows.
 - The type pill hugs its label (`justify-self: start`) rather than stretching to the grid track, so
   `Action` and `Criteria` stay visually distinct by width. Action's pill uses
-  `--vscode-charts-yellow`, Criteria `--vscode-charts-blue`.
+  `--vscode-charts-orange`, Criteria `--vscode-charts-blue`.
 - Below 700px, the Recursion and Logical Inverse columns are dropped (`display: none` via a
   `:nth-child` media-query rule) rather than shrunk. The row's `title` attribute carries the
   developer name (the field the redesign removed from the visible list), not the hidden columns —
@@ -175,9 +175,9 @@ that duplicated visible columns instead of restoring the developer name. All thr
 
 REVIEW-01 §4 also called for the Action pill's border/text color to move from `--vscode-charts-yellow`
 to `--vscode-charts-orange` (yellow reads as a warning color and collides with the badge semantics one
-column over). That fix did not land — the shipped pill is still yellow, which is what "Behavior" above
-documents. It's picked up as a two-line carry-over in [0015](0015-sequence-prefix-grouping.md)'s
-implementation, since that work is already touching this stylesheet.
+column over). That fix did not land with the original implementation — the pill shipped yellow. It was
+picked up as a two-line carry-over in [0015](0015-sequence-prefix-grouping.md)'s implementation, since
+that work was already touching this stylesheet; "Behavior" above now documents the corrected orange.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into

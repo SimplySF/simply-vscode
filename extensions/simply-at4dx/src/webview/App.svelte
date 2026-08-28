@@ -390,12 +390,12 @@
         justify-content: center;
         justify-self: start;
         padding: 3px 8px;
-        border: 1px solid var(--vscode-charts-yellow);
+        border: 1px solid var(--vscode-charts-orange);
         border-radius: 4px;
         font-family: var(--vscode-editor-font-family);
         font-size: 0.8em;
         letter-spacing: 0.05em;
-        color: var(--vscode-charts-yellow);
+        color: var(--vscode-charts-orange);
         text-transform: uppercase;
         white-space: nowrap;
     }
@@ -484,6 +484,72 @@
         :global(.row-grid > :nth-child(6)) {
             display: none;
         }
+    }
+    :global(.seq-group) {
+        margin: 0 14px 10px;
+        border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    :global(.seq-group:last-child) {
+        margin-bottom: 14px;
+    }
+    :global(.seq-caption) {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        height: 32px;
+        padding: 0 12px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+        border: 0;
+        color: var(--vscode-foreground);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+    :global(.seq-caption:hover) {
+        background: var(--vscode-list-hoverBackground);
+    }
+    :global(.seq-caption:focus-visible) {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: -1px;
+    }
+    :global(.seq-chevron) {
+        font-size: 0.8em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.seq-prefix) {
+        font-family: var(--vscode-editor-font-family);
+        font-weight: 700;
+        font-size: 0.9em;
+    }
+    :global(.seq-summary) {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.seq-issues) {
+        font-size: 0.85em;
+        color: var(--vscode-editorWarning-foreground);
+        white-space: nowrap;
+    }
+    :global(.seq-issues.error) {
+        color: var(--vscode-editorError-foreground);
+    }
+    :global(.seq-range) {
+        margin-left: auto;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.seq-group .row-grid) {
+        padding: 0 12px 0 6px;
+    }
+    :global(.col-header-banded) {
+        padding: 0 34px 0 20px;
+    }
+    :global(.seq-group .row:first-of-type) {
+        border-top-color: var(--vscode-widget-border, var(--vscode-panel-border));
     }
     :global(.badge) {
         font-size: 0.8em;
