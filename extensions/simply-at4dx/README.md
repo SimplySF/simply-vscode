@@ -48,6 +48,14 @@ glance without hovering anything. Below roughly 700px those two columns drop out
 remaining ones legible, with a tooltip on each cell so their state stays discoverable; the row's own
 tooltip shows its developer name.
 
+When a section's bindings span more than one order prefix (`10.1`–`10.3` vs `20.1`–`20.2`, following
+the AT4DX convention where the integer part of `Execution_Order__c` is a unit of work and the
+fraction orders the bindings inside it), the rows group into collapsible bands — a caption naming the
+prefix, what it's made of (`1 criteria gates 2 actions`), and its order range. A section with only one
+prefix renders no band at all. Collapsing a band never hides a problem: if any row inside carries an
+issue badge, the caption shows a warning count while collapsed. See
+`docs/design/0015-sequence-prefix-grouping.md` for the full design.
+
 ### Validation
 
 Every scan is also validated, automatically — there's no separate command and nothing to turn on.
