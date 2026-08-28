@@ -1,28 +1,16 @@
 # Simply AT4DX for Visual Studio Code
 
-Explore [AT4DX](https://github.com/apex-enterprise-patterns/at4dx) Trigger Action Framework
-bindings (`DomainProcessBinding__mdt`) for an SObject — grouped by trigger event, sorted by
-execution order, with each criteria/action class's active state and async flag — without leaving
-VS Code.
+Explore [AT4DX](https://github.com/apex-enterprise-patterns/at4dx) framework bindings without leaving VSCode.
 
-## Requirements
-
-- VS Code 1.119.0 or later. This extension depends on `@salesforce/core` and
-  `@simplysf/simply-aep-core`, both of which require Node.js 22+ at runtime — VS Code has only bundled
-  Node 22 since 1.119.0 (see `docs/design/0006`).
-- A Salesforce DX project open as a workspace folder, containing AT4DX's Trigger Action Framework
-  metadata locally, or an authenticated org connection to read it from. Authenticating an org is
-  still done with the [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli)
-  (`sf org login web`, etc.) — this extension reads the auth files that produces, but doesn't require
-  `sf` itself to be installed to run its own command.
+- View bindings from local source and connected orgs
+- Edit bindings from local source and connected orgs
+- Reports errors with configured bindings and sequence collisions
 
 ## Usage
 
 The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's
 different explorers — today only **Domain Process Bindings** is live; **Application Factory** and
-**Platform Events** show as inert `Coming soon` tabs, reserved for later additions. See
-`docs/design/0014` for why this is a tab strip inside one panel rather than a sidebar/Activity Bar
-presence.
+**Platform Events** show as inert `Coming soon` tabs, reserved for later additions.
 
 Run **AT4DX: Open Explorer** from the Command Palette. You'll be prompted to:
 
@@ -35,10 +23,7 @@ The panel then opens right away, with its SObject and Trigger Event dropdowns di
 scans. Once the scan completes, the dropdowns populate and enable — pick an SObject, then a trigger
 event (Created/Updated/Deleted/Undeleted) or Domain Method Execution, and the panel groups that
 SObject's bindings into Before/After sections in execution order. Switching either dropdown re-renders
-instantly, with no re-scan. Click a row to open its class. Bindings are read via
-[`@simplysf/simply-aep-core`](https://www.npmjs.com/package/@simplysf/simply-aep-core) — the same
-scan/resolve logic `sf simply aep at4dx domain-process-binding list` itself uses, imported directly
-rather than shelling out to that command.
+instantly, with no re-scan. Click a row to open its class.
 
 Each section shows a real column grid — Order, Type, Class to Inject, Async, Recursion, Logical
 Inverse, and Status — instead of one flex row of icons and a developer name. `Class to Inject` is the
@@ -53,8 +38,7 @@ the AT4DX convention where the integer part of `Execution_Order__c` is a unit of
 fraction orders the bindings inside it), the rows group into collapsible bands — a caption naming the
 prefix, what it's made of (`1 criteria gates 2 actions`), and its order range. A section with only one
 prefix renders no band at all. Collapsing a band never hides a problem: if any row inside carries an
-issue badge, the caption shows a warning count while collapsed. See
-`docs/design/0015-sequence-prefix-grouping.md` for the full design.
+issue badge, the caption shows a warning count while collapsed.
 
 ### Validation
 
@@ -66,8 +50,7 @@ gets a colored badge naming it. Below the binding sections, an Issues section li
 found, including ones that can't appear as a row at all — a binding with no SObject reference, for
 example, is dropped from the SObject list entirely and only ever shows up here. Clicking a local
 issue opens its `.md-meta.xml` beside the panel; org-sourced issues aren't clickable, since there's
-no local file to open. See `docs/design/0007-at4dx-validate-viewed-bindings.md` for the full design,
-and `testfixtures/` for a source tree exercising every rule.
+no local file to open.
 
 ### Creating and editing bindings
 
@@ -88,8 +71,7 @@ validation already knows how to catch — an order collision, a duplicate Develo
 the form stays open with the issue(s) shown and the button becomes **Save Anyway**, so you can push
 through deliberately instead of guessing why nothing happened. A successful save re-scans and
 refreshes the panel immediately, so the new or changed binding (and anything it now flags) shows up
-right away. See `docs/design/0009-at4dx-create-edit-domain-process-bindings.md` and
-`docs/design/0013-at4dx-bindings-panel-redesign.md` for the full design.
+right away.
 
 ## Troubleshooting
 
@@ -99,9 +81,3 @@ no setup needed. If something's failing and you need to share more detail in a b
 the **`simply-at4dx.debug`** setting, reproduce the problem, and copy the channel's contents: with it
 on, entries also include the org/source detail and captured error output. It's off by default since
 that detail can include org usernames and local file paths.
-
-## Development
-
-The panel's UI is a [Svelte 5](https://svelte.dev/) component tree under `src/webview/`, compiled by
-`esbuild.js` into `dist/webview.js` alongside the extension host's own `dist/extension.js`; `npm run
-compile`/`watch` build both together. See `docs/design/0011-at4dx-svelte-webview.md` for why.
