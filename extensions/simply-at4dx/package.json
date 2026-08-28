@@ -19,14 +19,14 @@
         "sfdx"
     ],
     "activationEvents": [
-        "onCommand:simply-at4dx.showDomainProcessBindings"
+        "onCommand:simply-at4dx.showExplorer"
     ],
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
             {
-                "command": "simply-at4dx.showDomainProcessBindings",
-                "title": "AT4DX: Show Domain Process Bindings"
+                "command": "simply-at4dx.showExplorer",
+                "title": "AT4DX: Open Explorer"
             }
         ],
         "configuration": {

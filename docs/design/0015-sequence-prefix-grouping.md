@@ -1,6 +1,6 @@
 # 0015 — Sequence-prefix grouping in the bindings list
 
-**Status:** Draft
+**Status:** Implemented
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 

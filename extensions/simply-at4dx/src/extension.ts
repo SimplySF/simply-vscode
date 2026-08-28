@@ -12,12 +12,12 @@ import { createOutputChannelLogger, type Logger } from './logger';
 process.env.SF_DISABLE_LOG_FILE = 'true';
 
 export function activate(context: vscode.ExtensionContext): void {
-    const outputChannel = vscode.window.createOutputChannel('AT4DX Domain Process Bindings');
+    const outputChannel = vscode.window.createOutputChannel('AT4DX Explorer');
     const logger = createOutputChannelLogger(outputChannel);
     context.subscriptions.push(
         outputChannel,
-        vscode.commands.registerCommand('simply-at4dx.showDomainProcessBindings', () => {
-            void showDomainProcessBindings(logger, context.extensionUri);
+        vscode.commands.registerCommand('simply-at4dx.showExplorer', () => {
+            void showExplorer(logger, context.extensionUri);
         }),
     );
 }
@@ -26,7 +26,7 @@ export function deactivate(): void {
     // Nothing to clean up: DomainProcessBindingPanel disposes itself via its own onDidDispose handler.
 }
 
-async function showDomainProcessBindings(logger: Logger, extensionUri: vscode.Uri): Promise<void> {
+async function showExplorer(logger: Logger, extensionUri: vscode.Uri): Promise<void> {
     const workspaceFolder = await pickWorkspaceFolder();
     if (!workspaceFolder) {
         return;

@@ -1,6 +1,6 @@
 # AT4DX binding validation fixtures
 
-A minimal Salesforce DX source tree used to exercise **AT4DX: Show Domain Process Bindings**'
+A minimal Salesforce DX source tree used to exercise **AT4DX: Open Explorer**'
 validation (see `docs/design/0007-at4dx-validate-viewed-bindings.md`) against every rule
 `validateDomainProcessBindings` checks, plus the collision detection `resolveDomainProcessBindings`
 already had. Point the extension's "Choose Source Folder…" picker at `testfixtures/`, or open it
