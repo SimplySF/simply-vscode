@@ -3,6 +3,7 @@ import {
     availableFamilies,
     buildSections,
     developerNameValid,
+    familyVerbForOperation,
     headerParts,
     issuesByRecord,
     partitionIssues,
@@ -54,6 +55,18 @@ describe('sectionTitle', () => {
         expect(sectionTitle('Before_Delete')).toBe('Record Before Delete');
         expect(sectionTitle('After_Delete')).toBe('Record After Delete');
         expect(sectionTitle('After_Undelete')).toBe('Record After Undelete');
+    });
+});
+
+describe('familyVerbForOperation', () => {
+    it('maps every trigger operation to its family-style verb', () => {
+        expect(familyVerbForOperation('Before_Insert')).toBe('Created');
+        expect(familyVerbForOperation('After_Insert')).toBe('Created');
+        expect(familyVerbForOperation('Before_Update')).toBe('Updated');
+        expect(familyVerbForOperation('After_Update')).toBe('Updated');
+        expect(familyVerbForOperation('Before_Delete')).toBe('Deleted');
+        expect(familyVerbForOperation('After_Delete')).toBe('Deleted');
+        expect(familyVerbForOperation('After_Undelete')).toBe('Undeleted');
     });
 });
 

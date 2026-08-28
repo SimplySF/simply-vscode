@@ -1,6 +1,6 @@
 # 0012 — Prevent Recursive & Logical Inverse Row Indicators
 
-**Status:** Implemented (PR [#23](https://github.com/SimplySF/simply-vscode/pull/23))
+**Status:** Superseded by [0013](0013-at4dx-bindings-panel-redesign.md) (icons replaced by labelled text columns; implemented via PR [#23](https://github.com/SimplySF/simply-vscode/pull/23))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-28
 

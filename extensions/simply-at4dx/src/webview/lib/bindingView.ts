@@ -49,6 +49,21 @@ export const TRIGGER_OPERATION_LABELS: Record<TriggerOperation, string> = {
     After_Undelete: 'After Undelete',
 };
 
+const FAMILY_VERB_BY_OPERATION: Record<TriggerOperation, string> = {
+    Before_Insert: 'Created',
+    After_Insert: 'Created',
+    Before_Update: 'Updated',
+    After_Update: 'Updated',
+    Before_Delete: 'Deleted',
+    After_Delete: 'Deleted',
+    After_Undelete: 'Undeleted',
+};
+
+/** The family-style verb (`Created`/`Updated`/...) a `TriggerOperation` belongs to — used by the create/edit form's live "resulting binding" preview sentence. */
+export function familyVerbForOperation(operation: TriggerOperation): string {
+    return FAMILY_VERB_BY_OPERATION[operation];
+}
+
 export function sectionTitle(operation: TriggerOperation): string {
     switch (operation) {
         case 'Before_Insert':
