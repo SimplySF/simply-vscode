@@ -1,6 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { TRIGGER_OPERATIONS, TRIGGER_OPERATION_LABELS, developerNameValid, ruleTitle } from './lib/bindingView';
+    import { TRIGGER_OPERATIONS, TRIGGER_OPERATION_LABELS, developerNameValid, familyVerbForOperation, ruleTitle } from './lib/bindingView';
     import type {
         BindingFormInitial,
         BindingFormPayload,
@@ -16,11 +16,15 @@
         mode: modeProp,
         initial: initialProp,
         rules,
+        scopeSobject,
+        scopeLabel,
         onCancel,
     }: {
         mode: 'create' | 'edit';
         initial: BindingFormInitial;
         rules: DomainProcessBindingRules;
+        scopeSobject: string;
+        scopeLabel: string;
         onCancel: () => void;
     } = $props();
 
@@ -51,6 +55,10 @@
 
     let isTrigger = $derived(processContext !== 'DomainMethodExecution');
 
+    let previewArticle = $derived(/^[aeiou]/i.test(sobject.trim()) ? 'an' : 'a');
+    let previewSobject = $derived(sobject.trim() || 'SObject');
+    let previewProcessLabel = $derived(processContext === 'DomainMethodExecution' ? 'Domain Method Execution' : 'Trigger Execution');
+
     let fieldErrors = $state<Record<string, string>>({});
     let formError = $state<string | undefined>(undefined);
     let blockedIssues = $state<DomainProcessBindingIssue[] | undefined>(undefined);
@@ -75,6 +83,13 @@
 
     function fieldError(id: string): string | undefined {
         return fieldErrors[id];
+    }
+
+    function onBreadcrumbKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onCancel();
+        }
     }
 
     function save(): void {
@@ -141,7 +156,24 @@
     }
 </script>
 
-<div class="form-title">{isEdit ? 'Edit Binding' : 'New Binding'}</div>
+{#if isEdit}
+    <div class="form-context-bar">
+        <span>Editing</span>
+        <span class="form-context-devname">{initial.developerName}</span>
+        <span class="form-context-spacer"></span>
+        <button class="secondary" disabled={saving} onclick={onCancel}>Discard</button>
+        <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Save changes'}</button>
+    </div>
+{:else}
+    <div class="form-context-bar">
+        <span class="form-breadcrumb-link" role="button" tabindex="0" onclick={onCancel} onkeydown={onBreadcrumbKeydown}>{scopeSobject} / {scopeLabel}</span>
+        <span class="form-breadcrumb-sep">›</span>
+        <span class="form-breadcrumb-current">New binding</span>
+        <span class="form-context-spacer"></span>
+        <button class="secondary" disabled={saving} onclick={onCancel}>Cancel</button>
+        <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Create binding'}</button>
+    </div>
+{/if}
 
 {#if formError}
     <div class="form-error">{#each formError.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}</div>
@@ -163,108 +195,162 @@
     </div>
 {/if}
 
-<div class="form-grid">
-    <div class="form-field">
-        <label for="fDeveloperName">Developer Name</label>
-        {#if isEdit}
-            <input type="text" id="fDeveloperName" value={initial.developerName} disabled />
+{#if !isEdit}
+    <div class="form-scope-strip">
+        <span class="form-scope-label">Scope locked while creating:</span>
+        <span class="pill">{scopeSobject}</span>
+        <span class="pill">{scopeLabel}</span>
+    </div>
+{/if}
+
+<div class="form-preview">
+    <span class="form-preview-eyebrow">RESULTING BINDING</span>
+    <span class="form-preview-text">
+        When {previewArticle} <strong>{previewSobject}</strong>
+        {#if isTrigger}
+            is <strong>{triggerOperation ? familyVerbForOperation(triggerOperation) : '…'}</strong>,
         {:else}
-            <input type="text" id="fDeveloperName" bind:value={developerName} placeholder="Account_Before_Insert_Assign_Owner" />
+            domain method <strong>{domainMethodToken.trim() || '…'}</strong> executes,
         {/if}
-        <span class="form-field-error" id="fDeveloperNameError">{fieldError('fDeveloperName') ?? ''}</span>
-    </div>
+        run the <strong>{type}</strong>
+        <span class="mono-link">{classToInject.trim() || '…'}</span>
+        at order <span class="mono-link">{order.trim() || '…'}</span>
+        during <strong>{previewProcessLabel}</strong>.
+    </span>
+</div>
 
-    <div class="form-field">
-        <label for="fLabel">Label <span class="form-hint">Defaults to Developer Name</span></label>
-        <input type="text" id="fLabel" bind:value={label} placeholder={initial.developerName ?? ''} />
-        <span class="form-field-error" id="fLabelError">{fieldError('fLabel') ?? ''}</span>
-    </div>
-
-    <div class="form-field">
-        <label for="fSobject">SObject</label>
-        <input type="text" id="fSobject" bind:value={sobject} />
-        <span class="form-field-error" id="fSobjectError">{fieldError('fSobject') ?? ''}</span>
-    </div>
-
-    <div class="form-field">
-        <label for="fSobjectAlternateInput"></label>
-        <label class="form-checkbox">
-            <input type="checkbox" id="fSobjectAlternateInput" bind:checked={sobjectAlternate} /> Bind via alternate field
-        </label>
-        <span class="form-hint">For Setup objects like ServiceResource</span>
-        <span class="form-field-error"></span>
-    </div>
-
-    <div class="form-field">
-        <label for="fProcessContext">Process Context</label>
-        <select id="fProcessContext" bind:value={processContext}>
-            <option value="TriggerExecution">Trigger Execution</option>
-            <option value="DomainMethodExecution">Domain Method Execution</option>
-        </select>
-    </div>
-
-    <div class="form-field">
-        <label for="fType">Type</label>
-        <select id="fType" bind:value={type}>
-            <option value="Action">Action</option>
-            <option value="Criteria">Criteria</option>
-        </select>
-    </div>
-
-    {#if isTrigger}
-        <div class="form-field">
-            <label for="fTriggerOperation">Trigger Operation</label>
-            <select id="fTriggerOperation" bind:value={triggerOperation}>
-                <option value="">&mdash; Select &mdash;</option>
-                {#each TRIGGER_OPERATIONS as op (op)}
-                    <option value={op}>{TRIGGER_OPERATION_LABELS[op]}</option>
-                {/each}
-            </select>
-            <span class="form-field-error" id="fTriggerOperationError">{fieldError('fTriggerOperation') ?? ''}</span>
+<div class="form-sections">
+    <div class="form-section">
+        <div class="form-section-header">
+            <span class="form-section-badge">1</span>
+            <span class="form-section-title">Identity</span>
         </div>
-    {:else}
-        <div class="form-field">
-            <label for="fDomainMethodToken">Domain Method Token</label>
-            <input type="text" id="fDomainMethodToken" bind:value={domainMethodToken} />
-            <span class="form-field-error" id="fDomainMethodTokenError">{fieldError('fDomainMethodToken') ?? ''}</span>
-        </div>
-    {/if}
+        <div class="form-grid">
+            <div class="form-field">
+                <label for="fDeveloperName">Developer Name <span class="required-marker">*</span></label>
+                {#if isEdit}
+                    <input type="text" id="fDeveloperName" value={initial.developerName} disabled />
+                {:else}
+                    <input
+                        type="text"
+                        id="fDeveloperName"
+                        class:field-invalid={fieldError('fDeveloperName')}
+                        bind:value={developerName}
+                        placeholder="Account_Before_Insert_Assign_Owner"
+                    />
+                {/if}
+                <span class="form-field-error" id="fDeveloperNameError">{fieldError('fDeveloperName') ?? ''}</span>
+            </div>
 
-    <div class="form-field">
-        <label for="fClassToInject">Class to Inject</label>
-        <input type="text" id="fClassToInject" bind:value={classToInject} />
-        <span class="form-field-error" id="fClassToInjectError">{fieldError('fClassToInject') ?? ''}</span>
-    </div>
-
-    <div class="form-field">
-        <label for="fOrder">Order</label>
-        <input
-            type="number"
-            id="fOrder"
-            step="any"
-            value={order}
-            oninput={(event) => (order = (event.currentTarget as HTMLInputElement).value)}
-        />
-        <span class="form-field-error" id="fOrderError">{fieldError('fOrder') ?? ''}</span>
-    </div>
-
-    <div class="form-field span2">
-        <label for="fFlags"></label>
-        <div style="display:flex; gap:16px; flex-wrap:wrap;">
-            <label class="form-checkbox"><input type="checkbox" bind:checked={isActive} /> Active</label>
-            <label class="form-checkbox"><input type="checkbox" bind:checked={executeAsynchronous} /> Execute Asynchronously</label>
-            <label class="form-checkbox"><input type="checkbox" bind:checked={logicalInverse} /> Logical Inverse</label>
-            <label class="form-checkbox"><input type="checkbox" bind:checked={preventRecursive} /> Prevent Recursive</label>
+            <div class="form-field">
+                <label for="fLabel">Label <span class="form-hint">Defaults to Developer Name</span></label>
+                <input type="text" id="fLabel" class:field-invalid={fieldError('fLabel')} bind:value={label} placeholder={initial.developerName ?? ''} />
+                <span class="form-field-error" id="fLabelError">{fieldError('fLabel') ?? ''}</span>
+            </div>
         </div>
     </div>
 
-    <div class="form-field span2">
-        <label for="fDescription">Description</label>
-        <textarea id="fDescription" bind:value={description}></textarea>
+    <div class="form-section">
+        <div class="form-section-header">
+            <span class="form-section-badge">2</span>
+            <span class="form-section-title">When it runs</span>
+        </div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label for="fSobject">SObject <span class="required-marker">*</span></label>
+                <input type="text" id="fSobject" class:field-invalid={fieldError('fSobject')} bind:value={sobject} />
+                <span class="form-hint">Prefilled from the current scope</span>
+                <span class="form-field-error" id="fSobjectError">{fieldError('fSobject') ?? ''}</span>
+            </div>
+
+            <div class="form-field">
+                <label for="fProcessContext">Process Context</label>
+                <select id="fProcessContext" bind:value={processContext}>
+                    <option value="TriggerExecution">Trigger Execution</option>
+                    <option value="DomainMethodExecution">Domain Method Execution</option>
+                </select>
+            </div>
+
+            {#if isTrigger}
+                <div class="form-field">
+                    <label for="fTriggerOperation">Trigger Operation <span class="required-marker">*</span></label>
+                    <select id="fTriggerOperation" class:field-invalid={fieldError('fTriggerOperation')} bind:value={triggerOperation}>
+                        <option value="">&mdash; Select &mdash;</option>
+                        {#each TRIGGER_OPERATIONS as op (op)}
+                            <option value={op}>{TRIGGER_OPERATION_LABELS[op]}</option>
+                        {/each}
+                    </select>
+                    <span class="form-field-error" id="fTriggerOperationError">{fieldError('fTriggerOperation') ?? ''}</span>
+                </div>
+            {:else}
+                <div class="form-field">
+                    <label for="fDomainMethodToken">Domain Method Token <span class="required-marker">*</span></label>
+                    <input type="text" id="fDomainMethodToken" class:field-invalid={fieldError('fDomainMethodToken')} bind:value={domainMethodToken} />
+                    <span class="form-field-error" id="fDomainMethodTokenError">{fieldError('fDomainMethodToken') ?? ''}</span>
+                </div>
+            {/if}
+
+            <div class="form-field">
+                <label for="fOrder">Order <span class="required-marker">*</span></label>
+                <input
+                    type="number"
+                    id="fOrder"
+                    step="any"
+                    class:field-invalid={fieldError('fOrder')}
+                    value={order}
+                    oninput={(event) => (order = (event.currentTarget as HTMLInputElement).value)}
+                />
+                <span class="form-field-error" id="fOrderError">{fieldError('fOrder') ?? ''}</span>
+            </div>
+
+            <div class="form-field">
+                <div class="toggle-row">
+                    <label class="toggle" for="fSobjectAlternateInput">
+                        <input type="checkbox" id="fSobjectAlternateInput" class="toggle-input" bind:checked={sobjectAlternate} />
+                        <span class="toggle-track"><span class="toggle-knob"></span></span>
+                    </label>
+                    <label class="toggle-label" for="fSobjectAlternateInput">Use Alternate SObject Binding</label>
+                </div>
+                <span class="form-hint">For Setup objects like ServiceResource</span>
+                <span class="form-field-error"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="form-section-header">
+            <span class="form-section-badge">3</span>
+            <span class="form-section-title">What it does</span>
+        </div>
+        <div class="form-grid">
+            <div class="form-field">
+                <label for="fType">Type</label>
+                <div class="segmented" id="fType" role="group" aria-label="Type">
+                    <button type="button" class="segmented-option" class:selected={type === 'Action'} onclick={() => (type = 'Action')}>Action</button>
+                    <button type="button" class="segmented-option" class:selected={type === 'Criteria'} onclick={() => (type = 'Criteria')}>Criteria</button>
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label for="fClassToInject">Class to Inject <span class="required-marker">*</span></label>
+                <input type="text" id="fClassToInject" class:field-invalid={fieldError('fClassToInject')} bind:value={classToInject} />
+                <span class="form-field-error" id="fClassToInjectError">{fieldError('fClassToInject') ?? ''}</span>
+            </div>
+
+            <div class="form-field span2">
+                <label for="fFlags">&nbsp;</label>
+                <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                    <label class="form-checkbox"><input type="checkbox" bind:checked={isActive} /> Active</label>
+                    <label class="form-checkbox"><input type="checkbox" bind:checked={executeAsynchronous} /> Execute asynchronously</label>
+                    <label class="form-checkbox"><input type="checkbox" bind:checked={logicalInverse} /> Logical inverse</label>
+                    <label class="form-checkbox"><input type="checkbox" bind:checked={preventRecursive} /> Prevent recursive</label>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="form-actions">
-    <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Save'}</button>
-    <button class="secondary" onclick={onCancel}>Cancel</button>
+<div class="form-field form-description">
+    <label for="fDescription">Description <span class="form-hint">optional</span></label>
+    <textarea id="fDescription" bind:value={description}></textarea>
 </div>

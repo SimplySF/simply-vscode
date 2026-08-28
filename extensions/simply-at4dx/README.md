@@ -34,10 +34,13 @@ instantly, with no re-scan. Click a row to open its class. Bindings are read via
 scan/resolve logic `sf simply aep at4dx domain-process-binding list` itself uses, imported directly
 rather than shelling out to that command.
 
-Each row also shows two dimmed-when-off indicators, next to the async marker: whether the binding
-prevents recursive re-entry (Prevent Recursive), and whether it inverts its criteria's result (Logical
-Inverse). Both render in every row, on or off, so a whole section can be scanned at a glance — hover
-either icon for the exact state.
+Each section shows a real column grid — Order, Type, Class to Inject, Recursion, Logical Inverse, and
+Status — instead of one flex row of icons and a developer name. `Class to Inject` is the row's
+identifier (clicking it, or anywhere in the row, opens the class); the Type pill picks up a `· async`
+suffix when the binding executes asynchronously. Recursion and Logical Inverse render as `Enabled`/
+`Yes` or a dim em-dash, so a whole section can be scanned at a glance without hovering anything —
+their exact state is also available from the row's tooltip. Below roughly 700px those two columns
+drop out to keep the remaining ones legible.
 
 ### Validation
 
@@ -54,10 +57,15 @@ and `testfixtures/` for a source tree exercising every rule.
 
 ### Creating and editing bindings
 
-Click **+ New Binding** in the panel toolbar to add a binding, prefilled with the SObject you're
-currently viewing, or click the pencil icon on any row to edit that binding. Either opens a form for
-every `DomainProcessBinding__mdt` field — Developer Name is fixed once you're editing an existing
-record, since renaming one is really a delete-and-recreate from Salesforce's own perspective.
+Click **+ New Binding** in the panel toolbar to add a binding, prefilled with the SObject and Trigger
+Event you're currently viewing, or click the pencil icon on any row to edit that binding. The toolbar
+and its **+ New Binding** button are hidden the whole time either form is open, so there's never more
+than one primary action on screen. Either opens a form for every `DomainProcessBinding__mdt` field,
+grouped into three sections — Identity, When it runs, What it does — with a live sentence above them
+showing the binding you're about to save (e.g. "When an Account is Created, run the Action
+`AssignOwner.cls` at order `10.3` during Trigger Execution"), recomputed as you type. Developer Name
+is fixed once you're editing an existing record, since renaming one is really a delete-and-recreate
+from Salesforce's own perspective.
 
 Saving writes to whatever you picked when you opened the panel: a local folder gets its
 `.md-meta.xml` file created or updated on disk; a connected org gets the equivalent record deployed
@@ -66,7 +74,8 @@ validation already knows how to catch — an order collision, a duplicate Develo
 the form stays open with the issue(s) shown and the button becomes **Save Anyway**, so you can push
 through deliberately instead of guessing why nothing happened. A successful save re-scans and
 refreshes the panel immediately, so the new or changed binding (and anything it now flags) shows up
-right away. See `docs/design/0009-at4dx-create-edit-domain-process-bindings.md` for the full design.
+right away. See `docs/design/0009-at4dx-create-edit-domain-process-bindings.md` and
+`docs/design/0013-at4dx-bindings-panel-redesign.md` for the full design.
 
 ## Troubleshooting
 

@@ -49,7 +49,10 @@ describe('App — loading/error/empty', () => {
 describe('App — data', () => {
     const initial: InitialState = {
         kind: 'data',
-        rows: [row({ developerName: 'A', triggerOperation: 'Before_Insert' }), row({ developerName: 'B', triggerOperation: 'After_Insert' })],
+        rows: [
+            row({ developerName: 'A', classToInject: 'AClass', triggerOperation: 'Before_Insert' }),
+            row({ developerName: 'B', classToInject: 'BClass', triggerOperation: 'After_Insert' }),
+        ],
         issues: [],
         rules: {} as DomainProcessBindingRules,
         isLocalScan: true,
@@ -60,8 +63,8 @@ describe('App — data', () => {
 
         expect(screen.getByText('Record Before Save')).toBeTruthy();
         expect(screen.getByText('Record After Save')).toBeTruthy();
-        expect(screen.getByText('A')).toBeTruthy();
-        expect(screen.getByText('B')).toBeTruthy();
+        expect(screen.getByText('AClass')).toBeTruthy();
+        expect(screen.getByText('BClass')).toBeTruthy();
         expect(screen.getByText('✓ No problems found')).toBeTruthy();
     });
 
@@ -83,7 +86,7 @@ describe('App — data', () => {
 
         await fireEvent.click(screen.getByText('+ New Binding'));
 
-        expect(screen.getByText('New Binding')).toBeTruthy();
+        expect(screen.getByText('New binding')).toBeTruthy();
         const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
         expect(sobjectInput.value).toBe('Account');
     });
@@ -94,8 +97,56 @@ describe('App — data', () => {
         const editIcons = screen.getAllByTitle('Edit this binding');
         await fireEvent.click(editIcons[0]);
 
-        expect(screen.getByText('Edit Binding')).toBeTruthy();
+        expect(screen.getByText('Editing')).toBeTruthy();
         const developerNameInput = document.getElementById('fDeveloperName') as HTMLInputElement;
         expect(developerNameInput.value).toBe('A');
+        expect(developerNameInput.disabled).toBe(true);
+    });
+});
+
+describe('App — the New Binding toolbar and the create/edit form are mutually exclusive', () => {
+    const initial: InitialState = {
+        kind: 'data',
+        rows: [row({ developerName: 'A', triggerOperation: 'Before_Insert' })],
+        issues: [],
+        rules: {} as DomainProcessBindingRules,
+        isLocalScan: true,
+    };
+
+    it('shows + New Binding while browsing the list', () => {
+        render(App, { props: { initial } });
+
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
+    });
+
+    it('hides + New Binding once the create form is open', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+
+        expect(screen.queryByText('+ New Binding')).toBeNull();
+    });
+
+    it('hides + New Binding once the edit form is open', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+
+        expect(screen.queryByText('+ New Binding')).toBeNull();
+    });
+
+    it('returns to the list — with + New Binding restored — after cancelling the create form', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
+    });
+
+    it('shows a disabled placeholder + New Binding while loading', () => {
+        render(App, { props: { initial: { kind: 'loading' } as InitialState } });
+
+        expect(screen.getByRole('button', { name: '+ New Binding' })).toHaveProperty('disabled', true);
     });
 });

@@ -32,10 +32,48 @@ afterEach(() => {
 });
 
 describe('BindingRow', () => {
+    it('renders order, type, class, recursion, logical inverse, and status from row fields', () => {
+        render(BindingRow, {
+            props: { row: row({ order: 10.1, type: 'Criteria', preventRecursive: true, logicalInverse: true, isActive: true }), badges: [], rules, onEdit: vi.fn() },
+        });
+
+        expect(screen.getByText('10.1')).toBeTruthy();
+        expect(screen.getByText('Criteria')).toBeTruthy();
+        expect(screen.getByText('MyActionClass')).toBeTruthy();
+        expect(screen.getByText('Enabled')).toBeTruthy();
+        expect(screen.getByText('Yes')).toBeTruthy();
+        expect(screen.getByText('Active')).toBeTruthy();
+    });
+
+    it('does not render the developer name', () => {
+        render(BindingRow, { props: { row: row(), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(screen.queryByText('Account_Before_Insert_Test')).toBeNull();
+    });
+
+    it('shows em-dashes for disabled recursion/logical-inverse flags and "Inactive" for an inactive row', () => {
+        render(BindingRow, { props: { row: row({ preventRecursive: false, logicalInverse: false, isActive: false }), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(screen.getAllByText('—')).toHaveLength(2);
+        expect(screen.getByText('Inactive')).toBeTruthy();
+    });
+
+    it('appends "· async" to the type pill when the binding executes asynchronously', () => {
+        render(BindingRow, { props: { row: row({ executeAsynchronous: true }), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(screen.getByText('Action · async')).toBeTruthy();
+    });
+
+    it('dims the whole row when inactive', () => {
+        render(BindingRow, { props: { row: row({ isActive: false }), badges: [], rules, onEdit: vi.fn() } });
+
+        expect(document.querySelector('.row')?.classList.contains('inactive')).toBe(true);
+    });
+
     it('posts openClass on a row click', async () => {
         render(BindingRow, { props: { row: row(), badges: [], rules, onEdit: vi.fn() } });
 
-        await fireEvent.click(screen.getByText('Account_Before_Insert_Test'));
+        await fireEvent.click(screen.getByText('MyActionClass'));
 
         expect(postMessage).toHaveBeenCalledWith({ command: 'openClass', classToInject: 'MyActionClass' });
     });
@@ -62,30 +100,5 @@ describe('BindingRow', () => {
         });
 
         expect(screen.getByText(/Order collision/)).toBeTruthy();
-    });
-
-    it('shows both recursion/logical-inverse indicators dimmed when both flags are off', () => {
-        render(BindingRow, { props: { row: row({ preventRecursive: false, logicalInverse: false }), badges: [], rules, onEdit: vi.fn() } });
-
-        const recursion = screen.getByTitle('Recursion allowed');
-        const inverse = screen.getByTitle('Logical inverse disabled');
-        expect(recursion.classList.contains('flag-off')).toBe(true);
-        expect(inverse.classList.contains('flag-off')).toBe(true);
-    });
-
-    it('shows both indicators at full opacity when both flags are on', () => {
-        render(BindingRow, { props: { row: row({ preventRecursive: true, logicalInverse: true }), badges: [], rules, onEdit: vi.fn() } });
-
-        const recursion = screen.getByTitle('Recursion prevented');
-        const inverse = screen.getByTitle('Logical inverse enabled');
-        expect(recursion.classList.contains('flag-off')).toBe(false);
-        expect(inverse.classList.contains('flag-off')).toBe(false);
-    });
-
-    it('renders each flag independently (mixed on/off)', () => {
-        render(BindingRow, { props: { row: row({ preventRecursive: true, logicalInverse: false }), badges: [], rules, onEdit: vi.fn() } });
-
-        expect(screen.getByTitle('Recursion prevented').classList.contains('flag-off')).toBe(false);
-        expect(screen.getByTitle('Logical inverse disabled').classList.contains('flag-off')).toBe(true);
     });
 });

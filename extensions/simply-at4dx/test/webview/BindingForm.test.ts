@@ -27,12 +27,19 @@ afterEach(() => {
 describe('BindingForm — create mode', () => {
     beforeEach(() => {
         render(BindingForm, {
-            props: { mode: 'create', initial: { sobject: 'Account', processContext: 'TriggerExecution', type: 'Action', isActive: true }, rules, onCancel: vi.fn() },
+            props: {
+                mode: 'create',
+                initial: { sobject: 'Account', processContext: 'TriggerExecution', type: 'Action', isActive: true },
+                rules,
+                scopeSobject: 'Account',
+                scopeLabel: 'Created',
+                onCancel: vi.fn(),
+            },
         });
     });
 
     it('blocks submission with inline errors when required fields are empty', async () => {
-        await fireEvent.click(screen.getByText('Save'));
+        await fireEvent.click(screen.getByText('Create binding'));
 
         expect(postMessage).not.toHaveBeenCalled();
         expect(document.getElementById('fDeveloperNameError')?.textContent).toContain('Must start with a letter');
@@ -48,7 +55,7 @@ describe('BindingForm — create mode', () => {
         await fireEvent.input(field('fOrder'), { target: { value: '10' } });
         await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
 
-        await fireEvent.click(screen.getByText('Save'));
+        await fireEvent.click(screen.getByText('Create binding'));
 
         expect(postMessage).toHaveBeenCalledTimes(1);
         expect(postMessage).toHaveBeenCalledWith({
@@ -85,7 +92,7 @@ describe('BindingForm — create mode', () => {
         await fireEvent.input(field('fSobject'), { target: { value: 'Account' } });
         await fireEvent.input(field('fClassToInject'), { target: { value: 'MyCriteria' } });
         await fireEvent.input(field('fOrder'), { target: { value: '1' } });
-        await fireEvent.click(screen.getByText('Save'));
+        await fireEvent.click(screen.getByText('Create binding'));
 
         expect(postMessage).not.toHaveBeenCalled();
         expect(document.getElementById('fDomainMethodTokenError')?.textContent).toBe('Required.');
@@ -97,7 +104,7 @@ describe('BindingForm — create mode', () => {
         await fireEvent.input(field('fClassToInject'), { target: { value: 'MyActionClass' } });
         await fireEvent.input(field('fOrder'), { target: { value: '10' } });
         await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
-        await fireEvent.click(screen.getByText('Save'));
+        await fireEvent.click(screen.getByText('Create binding'));
 
         window.dispatchEvent(
             new MessageEvent('message', {
@@ -128,10 +135,69 @@ describe('BindingForm — create mode', () => {
     it('calls onCancel when Cancel is clicked', async () => {
         cleanup();
         const onCancel = vi.fn();
-        render(BindingForm, { props: { mode: 'create', initial: {}, rules, onCancel } });
+        render(BindingForm, { props: { mode: 'create', initial: {}, rules, scopeSobject: 'Account', scopeLabel: 'Created', onCancel } });
 
         await fireEvent.click(screen.getByText('Cancel'));
         expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onCancel when the breadcrumb is clicked', async () => {
+        cleanup();
+        const onCancel = vi.fn();
+        render(BindingForm, { props: { mode: 'create', initial: {}, rules, scopeSobject: 'Account', scopeLabel: 'Created', onCancel } });
+
+        await fireEvent.click(screen.getByText('Account / Created'));
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the Type field as a two-option segmented control and lets Criteria be selected', async () => {
+        const segmented = document.getElementById('fType') as HTMLElement;
+        const options = segmented.querySelectorAll<HTMLButtonElement>('.segmented-option');
+        expect(Array.from(options).map((option) => option.textContent)).toEqual(['Action', 'Criteria']);
+        expect(options[0]?.classList.contains('selected')).toBe(true);
+
+        await fireEvent.click(options[1]!);
+        expect(options[1]?.classList.contains('selected')).toBe(true);
+        expect(options[0]?.classList.contains('selected')).toBe(false);
+
+        await fireEvent.input(field('fDeveloperName'), { target: { value: 'Account_Before_Insert_Test' } });
+        await fireEvent.input(field('fClassToInject'), { target: { value: 'MyCriteria' } });
+        await fireEvent.input(field('fOrder'), { target: { value: '10' } });
+        await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
+        await fireEvent.click(screen.getByText('Create binding'));
+
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ type: 'Criteria' }) }));
+    });
+
+    it('keeps the alternate-SObject toggle a real checkbox bound to sobjectAlternate', async () => {
+        const toggle = document.getElementById('fSobjectAlternateInput') as HTMLInputElement;
+        expect(toggle.type).toBe('checkbox');
+        expect(toggle.checked).toBe(false);
+
+        await fireEvent.click(toggle);
+        expect(toggle.checked).toBe(true);
+
+        await fireEvent.input(field('fDeveloperName'), { target: { value: 'Account_Before_Insert_Test' } });
+        await fireEvent.input(field('fClassToInject'), { target: { value: 'MyActionClass' } });
+        await fireEvent.input(field('fOrder'), { target: { value: '10' } });
+        await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
+        await fireEvent.click(screen.getByText('Create binding'));
+
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ sobjectAlternate: true }) }));
+    });
+
+    it('updates the live "resulting binding" preview sentence as the form changes', async () => {
+        expect(document.querySelector('.form-preview-text')?.textContent).toContain('…');
+
+        await fireEvent.input(field('fClassToInject'), { target: { value: 'AssignOwner.cls' } });
+        await fireEvent.input(field('fOrder'), { target: { value: '10.3' } });
+        await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
+
+        const preview = document.querySelector('.form-preview-text')?.textContent ?? '';
+        expect(preview).toContain('AssignOwner.cls');
+        expect(preview).toContain('10.3');
+        expect(preview).toContain('Created');
+        expect(preview).toContain('Trigger Execution');
     });
 });
 
@@ -156,6 +222,8 @@ describe('BindingForm — edit mode', () => {
                     description: 'Existing description',
                 },
                 rules,
+                scopeSobject: 'Account',
+                scopeLabel: 'Updated',
                 onCancel: vi.fn(),
             },
         });
@@ -164,7 +232,9 @@ describe('BindingForm — edit mode', () => {
         expect(developerNameInput.disabled).toBe(true);
         expect(developerNameInput.value).toBe('Account_After_Update_Notify');
 
-        await fireEvent.click(screen.getByText('Save'));
+        expect(screen.getByText('Editing')).toBeTruthy();
+
+        await fireEvent.click(screen.getByText('Save changes'));
 
         expect(postMessage).toHaveBeenCalledWith({
             command: 'submitBinding',

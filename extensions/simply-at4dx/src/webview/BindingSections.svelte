@@ -25,6 +25,11 @@
                 <span class="section-title">{section.title}</span>
                 <span class="section-count">{section.rows.length} Item(s) &middot; Sorted By Order of Execution</span>
             </div>
+            {#if section.rows.length > 0}
+                <div class="col-header row-grid">
+                    <span>Order</span><span>Type</span><span>Class to Inject</span><span>Recursion</span><span>Logical Inverse</span><span>Status</span><span></span>
+                </div>
+            {/if}
             {#each section.rows as row (row.developerName + row.source)}
                 <BindingRow {row} badges={issuesByRecord.get(`${row.developerName} ${row.source}`) ?? []} {rules} {onEdit} />
             {/each}
