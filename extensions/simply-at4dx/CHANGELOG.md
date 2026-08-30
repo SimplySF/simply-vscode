@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.11.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.10.1...simply-at4dx-v2.11.0) (2026-08-30)
+
+
+### Features
+
+* **simply-at4dx:** add read-only Application Factory binding explorer ([#36](https://github.com/SimplySF/simply-vscode/issues/36)) ([dcf21aa](https://github.com/SimplySF/simply-vscode/commit/dcf21aa827ab85c084af71ebd4bdcef32ba08913))
+
 # [simply-at4dx-v2.10.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.10.0...simply-at4dx-v2.10.1) (2026-08-28)
 
 
