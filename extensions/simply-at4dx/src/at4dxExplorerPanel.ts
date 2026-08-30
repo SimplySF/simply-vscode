@@ -14,6 +14,13 @@ import {
     type SetDomainProcessBindingInput,
     type TriggerOperation,
 } from './at4dxCli';
+import {
+    applicationFactoryLocalObjectName,
+    getApplicationFactoryBindings,
+    type ApplicationFactoryRules,
+    type At4dxBindingRow,
+    type BindingIssue,
+} from './applicationFactoryCli';
 import type { Logger } from './logger';
 
 function getNonce(): string {
@@ -25,23 +32,39 @@ function getNonce(): string {
     return text;
 }
 
-/**
- * State the panel can be in. `data` embeds every fetched row and every issue
- * `validateDomainProcessBindings` found — SObject/operation-family selection, and the issue
- * summary/badges/section that go with it, all happen entirely client-side from there, no round trip
- * back to the extension host, since nothing about "show a different already-fetched slice" needs
- * anything only the host can do.
- */
-type DataState = {
-    kind: 'data';
+type ExplorerKey = 'domainProcess' | 'applicationFactory';
+
+type DomainProcessData = {
     rows: DomainProcessBindingRow[];
     issues: DomainProcessBindingIssue[];
     rules: DomainProcessBindingRules;
-    /** What a create/edit submitted from this render writes to — see docs/design/0009. */
-    target: BindingSource;
 };
 
-type PanelState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'empty' } | DataState;
+type ApplicationFactoryData = {
+    rows: At4dxBindingRow[];
+    issues: BindingIssue[];
+    rules: ApplicationFactoryRules;
+};
+
+/** One explorer's own slice of panel state. */
+type ExplorerState<T> = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'empty' } | ({ kind: 'data' } & T);
+
+/**
+ * The whole panel's state: which tab is active, plus each explorer's own independently-scanned data —
+ * see docs/design/0016. `target` is panel-level (both explorers read the same `BindingSource`), known as
+ * soon as `extension.ts`'s `pickBindingSource` resolves, well before either explorer has scanned
+ * anything.
+ */
+type PanelState = {
+    active: ExplorerKey;
+    domainProcess: ExplorerState<DomainProcessData>;
+    applicationFactory: ExplorerState<ApplicationFactoryData>;
+    target?: BindingSource;
+};
+
+function initialPanelState(): PanelState {
+    return { active: 'domainProcess', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
+}
 
 /**
  * The create/edit form's field values as the webview posts them on submit — see docs/design/0009. The
@@ -113,23 +136,13 @@ function sourceLabel(target: BindingSource): string {
 
 /** The webview-side mirror of `PanelState` — see `src/webview/types.ts`'s `InitialState`, which this must stay in sync with. */
 function toInitialState(state: PanelState): unknown {
-    switch (state.kind) {
-        case 'loading':
-            return { kind: 'loading' };
-        case 'error':
-            return { kind: 'error', message: state.message };
-        case 'empty':
-            return { kind: 'empty' };
-        case 'data':
-            return {
-                kind: 'data',
-                rows: state.rows,
-                issues: state.issues,
-                rules: state.rules,
-                isLocalScan: state.target.kind === 'source',
-                sourceLabel: sourceLabel(state.target),
-            };
-    }
+    return {
+        active: state.active,
+        domainProcess: state.domainProcess,
+        applicationFactory: state.applicationFactory,
+        isLocalScan: state.target ? state.target.kind === 'source' : undefined,
+        sourceLabel: state.target ? sourceLabel(state.target) : undefined,
+    };
 }
 
 /**
@@ -155,30 +168,31 @@ function buildShellHtml(state: PanelState, nonce: string, webviewJsUri: vscode.U
 </html>`;
 }
 
-/** Opens/updates the "AT4DX Domain Process Bindings" webview panel. */
-export class DomainProcessBindingPanel {
-    private static currentPanel: DomainProcessBindingPanel | undefined;
+/** Opens/updates the "AT4DX Explorer" webview panel — Domain Process bindings and, since docs/design/0016, Application Factory bindings, as two tabs sharing one panel and one `BindingSource`. */
+export class At4dxExplorerPanel {
+    private static currentPanel: At4dxExplorerPanel | undefined;
 
     private readonly panel: vscode.WebviewPanel;
     private readonly webviewJsUri: vscode.Uri;
     private readonly disposables: vscode.Disposable[] = [];
-    private state: PanelState = { kind: 'loading' };
+    private state: PanelState = initialPanelState();
     private logger: Logger | undefined;
 
     /**
      * Opens the panel (or reveals/resets an existing one) showing its loading state. `logger` is kept
      * for the lifetime of the panel instance — a create/edit's write call and the rescan that follows a
-     * successful one (see `submitBinding` below) both happen entirely from inside the panel, not via a
-     * round trip back through `extension.ts`, so the panel needs its own reference rather than being
-     * handed one per call the way the initial scan is.
+     * successful one (see `submitBinding` below), and the Application Factory tab's own lazy scan (see
+     * `selectExplorer`), all happen entirely from inside the panel, not via a round trip back through
+     * `extension.ts`, so the panel needs its own reference rather than being handed one per call the way
+     * the initial scan is.
      */
     public static open(logger: Logger, extensionUri: vscode.Uri): void {
         const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
-        if (DomainProcessBindingPanel.currentPanel) {
-            DomainProcessBindingPanel.currentPanel.logger = logger;
-            DomainProcessBindingPanel.currentPanel.panel.reveal(column);
-            DomainProcessBindingPanel.currentPanel.render({ kind: 'loading' });
+        if (At4dxExplorerPanel.currentPanel) {
+            At4dxExplorerPanel.currentPanel.logger = logger;
+            At4dxExplorerPanel.currentPanel.panel.reveal(column);
+            At4dxExplorerPanel.currentPanel.render(initialPanelState());
             return;
         }
 
@@ -187,19 +201,33 @@ export class DomainProcessBindingPanel {
             retainContextWhenHidden: true,
             localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')],
         });
-        DomainProcessBindingPanel.currentPanel = new DomainProcessBindingPanel(panel, logger, extensionUri);
+        At4dxExplorerPanel.currentPanel = new At4dxExplorerPanel(panel, logger, extensionUri);
     }
 
+    /** Sets the Domain Process explorer's data — the result of `extension.ts`'s initial scan. */
     public static setData(rows: DomainProcessBindingRow[], issues: DomainProcessBindingIssue[], rules: DomainProcessBindingRules, target: BindingSource): void {
-        DomainProcessBindingPanel.currentPanel?.render({ kind: 'data', rows, issues, rules, target });
+        const current = At4dxExplorerPanel.currentPanel;
+        if (!current) {
+            return;
+        }
+        current.state.target = target;
+        current.render({ ...current.state, domainProcess: { kind: 'data', rows, issues, rules } });
     }
 
     public static showError(message: string): void {
-        DomainProcessBindingPanel.currentPanel?.render({ kind: 'error', message });
+        const current = At4dxExplorerPanel.currentPanel;
+        if (!current) {
+            return;
+        }
+        current.render({ ...current.state, domainProcess: { kind: 'error', message } });
     }
 
     public static showEmpty(): void {
-        DomainProcessBindingPanel.currentPanel?.render({ kind: 'empty' });
+        const current = At4dxExplorerPanel.currentPanel;
+        if (!current) {
+            return;
+        }
+        current.render({ ...current.state, domainProcess: { kind: 'empty' } });
     }
 
     private constructor(panel: vscode.WebviewPanel, logger: Logger, extensionUri: vscode.Uri) {
@@ -216,29 +244,66 @@ export class DomainProcessBindingPanel {
                 mode?: 'create' | 'edit';
                 input?: BindingFormPayload;
                 force?: boolean;
+                explorer?: ExplorerKey;
             }) => {
                 if (message.command === 'openClass' && message.classToInject) {
                     void openApexClass(message.classToInject);
                 } else if (message.command === 'openIssue' && typeof message.index === 'number') {
                     void this.openIssue(message.index);
+                } else if (message.command === 'openApplicationFactoryIssue' && typeof message.index === 'number') {
+                    void this.openApplicationFactoryIssue(message.index);
                 } else if (message.command === 'submitBinding' && message.mode && message.input) {
                     void this.submitBinding(message.mode, message.input, Boolean(message.force));
+                } else if (message.command === 'selectExplorer' && message.explorer) {
+                    void this.selectExplorer(message.explorer);
                 }
             },
             null,
             this.disposables,
         );
-        this.render({ kind: 'loading' });
+        this.render(this.state);
     }
 
     private async openIssue(index: number): Promise<void> {
-        if (this.state.kind !== 'data') {
+        if (this.state.domainProcess.kind !== 'data') {
             return;
         }
-        const issue = this.state.issues[index];
+        const issue = this.state.domainProcess.issues[index];
         if (issue) {
             await openBindingFile(issue);
         }
+    }
+
+    private async openApplicationFactoryIssue(index: number): Promise<void> {
+        if (this.state.applicationFactory.kind !== 'data') {
+            return;
+        }
+        const issue = this.state.applicationFactory.issues[index];
+        if (issue) {
+            await openApplicationFactoryBindingFile(issue);
+        }
+    }
+
+    /**
+     * Switches the active tab. The Application Factory explorer scans lazily — the first switch to it
+     * triggers `getApplicationFactoryBindings` and re-renders when that resolves; switching back and
+     * forth afterward just flips `active` against already-scanned data, no repeat org round trip. See
+     * docs/design/0016.
+     */
+    private async selectExplorer(explorer: ExplorerKey): Promise<void> {
+        this.state.active = explorer;
+
+        if (explorer === 'applicationFactory' && this.state.applicationFactory.kind === 'loading' && this.state.target) {
+            const target = this.state.target;
+            this.render(this.state);
+            try {
+                const { rows, issues, rules } = await getApplicationFactoryBindings(target, this.logger);
+                this.state.applicationFactory = rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules };
+            } catch (error) {
+                this.state.applicationFactory = { kind: 'error', message: formatReadError(error, 'reading Application Factory bindings') };
+            }
+        }
+        this.render(this.state);
     }
 
     /**
@@ -249,7 +314,7 @@ export class DomainProcessBindingPanel {
      * blocking issue or an error without losing what the user typed.
      */
     private async submitBinding(mode: 'create' | 'edit', input: BindingFormPayload, force: boolean): Promise<void> {
-        if (this.state.kind !== 'data') {
+        if (this.state.domainProcess.kind !== 'data' || !this.state.target) {
             return;
         }
         const target = this.state.target;
@@ -266,11 +331,8 @@ export class DomainProcessBindingPanel {
             }
 
             const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, this.logger);
-            if (rows.length === 0 && issues.length === 0) {
-                this.render({ kind: 'empty' });
-                return;
-            }
-            this.render({ kind: 'data', rows, issues, rules, target });
+            const domainProcess: ExplorerState<DomainProcessData> = rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules };
+            this.render({ ...this.state, domainProcess });
         } catch (error) {
             void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
         }
@@ -282,7 +344,7 @@ export class DomainProcessBindingPanel {
     }
 
     private dispose(): void {
-        DomainProcessBindingPanel.currentPanel = undefined;
+        At4dxExplorerPanel.currentPanel = undefined;
         this.panel.dispose();
         let disposable: vscode.Disposable | undefined;
         while ((disposable = this.disposables.pop())) {
@@ -291,13 +353,22 @@ export class DomainProcessBindingPanel {
     }
 }
 
-/** Mirrors `extension.ts`'s `errorMessage` — kept separate rather than shared since `at4dxCli.ts` deliberately has no `vscode` dependency (see `logger.ts`) and this is the only other call site that needs the same debug-hint copy. */
+/** Shared by `formatWriteError` and `selectExplorer`'s scan-failure path — same debug-hint copy, different lead message. */
+function formatError(message: string): string {
+    const debugHint = vscode.workspace.getConfiguration('simply-at4dx').get<boolean>('debug', false)
+        ? 'See the "AT4DX Explorer" output channel for the full command and captured output.'
+        : 'See the "AT4DX Explorer" output channel for details, or enable the simply-at4dx.debug setting and retry for the full command and captured output.';
+    return `${message}\n\n${debugHint}`;
+}
+
 function formatWriteError(error: unknown): string {
     const message = error instanceof At4dxCliError ? error.message : `Unexpected error writing the binding: ${(error as Error).message}`;
-    const debugHint = vscode.workspace.getConfiguration('simply-at4dx').get<boolean>('debug', false)
-        ? 'See the "AT4DX Domain Process Bindings" output channel for the full command and captured output.'
-        : 'See the "AT4DX Domain Process Bindings" output channel for details, or enable the simply-at4dx.debug setting and retry for the full command and captured output.';
-    return `${message}\n\n${debugHint}`;
+    return formatError(message);
+}
+
+function formatReadError(error: unknown, action: string): string {
+    const message = error instanceof At4dxCliError ? error.message : `Unexpected error ${action}: ${(error as Error).message}`;
+    return formatError(message);
 }
 
 async function openApexClass(className: string): Promise<void> {
@@ -325,6 +396,24 @@ async function openBindingFile(issue: DomainProcessBindingIssue): Promise<void> 
             '**/node_modules/**',
             1,
         );
+        uri = files[0];
+    }
+    if (!uri) {
+        void vscode.window.showWarningMessage(`Could not find the metadata file for ${issue.developerName ?? 'this issue'}.`);
+        return;
+    }
+    const document = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+}
+
+/** Same shape as `openBindingFile`, for an Application Factory `BindingIssue` — the local file name is keyed by `bindingType` rather than a single fixed object name. See docs/design/0016. */
+async function openApplicationFactoryBindingFile(issue: BindingIssue): Promise<void> {
+    let uri: vscode.Uri | undefined;
+    if (issue.filePath) {
+        uri = vscode.Uri.file(issue.filePath);
+    } else if (issue.developerName) {
+        const localObjectName = await applicationFactoryLocalObjectName(issue.bindingType);
+        const files = await vscode.workspace.findFiles(`**/${localObjectName}.${issue.developerName}.md-meta.xml`, '**/node_modules/**', 1);
         uri = files[0];
     }
     if (!uri) {

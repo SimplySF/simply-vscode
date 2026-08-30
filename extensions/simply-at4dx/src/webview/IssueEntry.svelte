@@ -1,15 +1,18 @@
 <script lang="ts">
-    import { ruleTitle } from './lib/bindingView';
-    import type { DomainProcessBindingRules, IndexedIssue } from './types';
-    import { postMessage } from './vscodeApi';
+    import type { IndexedIssue, IssueLike } from './types';
 
-    let { entry, rules, clickable }: { entry: IndexedIssue; rules: DomainProcessBindingRules; clickable: boolean } = $props();
+    let {
+        entry,
+        title,
+        clickable,
+        onOpen,
+    }: { entry: IndexedIssue<IssueLike>; title: string; clickable: boolean; onOpen: (index: number) => void } = $props();
 
     let issue = $derived(entry.issue);
-    let meta = $derived([issue.source, issue.sobject].filter((part): part is string => Boolean(part)));
+    let meta = $derived([issue.source, issue.sobject ?? issue.key].filter((part): part is string => Boolean(part)));
 
     function open(): void {
-        postMessage({ command: 'openIssue', index: entry.index });
+        onOpen(entry.index);
     }
 
     function onKeydown(event: KeyboardEvent): void {
@@ -22,7 +25,7 @@
 
 {#snippet body()}
     <span class="issue-icon" class:error={issue.severity === 'error'} class:warning={issue.severity !== 'error'}>⚠</span>
-    <span class="issue-title">{ruleTitle(rules, issue.rule)}</span>
+    <span class="issue-title">{title}</span>
     {#if issue.developerName}
         <span class="issue-meta">{issue.developerName}</span>
     {/if}

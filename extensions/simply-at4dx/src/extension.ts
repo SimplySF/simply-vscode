@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { At4dxCliError, getDomainProcessBindings, type BindingSource } from './at4dxCli';
-import { DomainProcessBindingPanel } from './domainProcessBindingPanel';
+import { At4dxExplorerPanel } from './at4dxExplorerPanel';
 import { createOutputChannelLogger, type Logger } from './logger';
 
 // `@salesforce/core` builds its `Logger` singleton with a worker-thread file transport unless this
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-    // Nothing to clean up: DomainProcessBindingPanel disposes itself via its own onDidDispose handler.
+    // Nothing to clean up: At4dxExplorerPanel disposes itself via its own onDidDispose handler.
 }
 
 async function showExplorer(logger: Logger, extensionUri: vscode.Uri): Promise<void> {
@@ -42,18 +42,19 @@ async function showExplorer(logger: Logger, extensionUri: vscode.Uri): Promise<v
     // working" indicator) and is the single place every outcome (data, error, or zero bindings)
     // renders to. See docs/design/0009 for why the panel keeps its own `logger` reference rather than
     // being handed one per call the way this initial scan is. `extensionUri` is needed to build a
-    // webview-safe URI to the compiled Svelte bundle — see docs/design/0011.
-    DomainProcessBindingPanel.open(logger, extensionUri);
+    // webview-safe URI to the compiled Svelte bundle — see docs/design/0011. The Application Factory
+    // tab scans lazily from inside the panel itself on first selection — see docs/design/0016.
+    At4dxExplorerPanel.open(logger, extensionUri);
 
     try {
         const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, logger);
         if (rows.length === 0 && issues.length === 0) {
-            DomainProcessBindingPanel.showEmpty();
+            At4dxExplorerPanel.showEmpty();
             return;
         }
-        DomainProcessBindingPanel.setData(rows, issues, rules, target);
+        At4dxExplorerPanel.setData(rows, issues, rules, target);
     } catch (error) {
-        DomainProcessBindingPanel.showError(errorMessage(error));
+        At4dxExplorerPanel.showError(errorMessage(error));
     }
 }
 
@@ -173,7 +174,7 @@ function errorMessage(error: unknown): string {
     const message =
         error instanceof At4dxCliError ? error.message : `Unexpected error reading AT4DX bindings: ${(error as Error).message}`;
     const debugHint = vscode.workspace.getConfiguration('simply-at4dx').get<boolean>('debug', false)
-        ? 'See the "AT4DX Domain Process Bindings" output channel for the full command and captured output.'
-        : 'See the "AT4DX Domain Process Bindings" output channel for details, or enable the simply-at4dx.debug setting and retry for the full command and captured output.';
+        ? 'See the "AT4DX Explorer" output channel for the full command and captured output.'
+        : 'See the "AT4DX Explorer" output channel for details, or enable the simply-at4dx.debug setting and retry for the full command and captured output.';
     return `${message}\n\n${debugHint}`;
 }

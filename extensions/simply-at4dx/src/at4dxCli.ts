@@ -159,8 +159,13 @@ export async function getDomainProcessBindings(
     return { rows: resolveDomainProcessBindings(filteredRecords), issues, rules: DOMAIN_PROCESS_BINDING_RULES };
 }
 
-/** Builds a `Connection` for `username` the same way for every call site that needs one — the read path above and the two write functions below. Throws the raw `AuthInfo`/`Connection` error; callers wrap it into an `At4dxCliError` themselves so each can log/summarize with its own context. */
-async function resolveConnection(username: string): Promise<Connection> {
+/**
+ * Builds a `Connection` for `username` the same way for every call site that needs one — the read path
+ * above, the two write functions below, and `applicationFactoryCli.ts`'s own read path. Throws the raw
+ * `AuthInfo`/`Connection` error; callers wrap it into an `At4dxCliError` themselves so each can
+ * log/summarize with its own context.
+ */
+export async function resolveConnection(username: string): Promise<Connection> {
     const authInfo = await AuthInfo.create({ username });
     return Connection.create({ authInfo });
 }

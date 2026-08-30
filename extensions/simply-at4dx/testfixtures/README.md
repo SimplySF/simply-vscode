@@ -18,3 +18,15 @@ directly as a workspace folder — `sfdx-project.json` names both package direct
 | `Opportunity_Criteria_AfterUpdate` | 1 | Clean binding, and the only one under Opportunity — selecting Opportunity shows "no problems in this SObject" while every other issue above still lists under "elsewhere in this scan". |
 
 Every clean binding is `IsActive__c = true`; nothing here relies on inactive records.
+
+## Application Factory fixtures
+
+Added for the Application Factory explorer (docs/design/0016). All under `pkg1`.
+
+| File | Exercises |
+| --- | --- |
+| `ApplicationFactory_ServiceBinding.PricingService_Impl_A` / `_B` | Priority tie — both bind `IPricingService` at priority 10. Renders as the amber "Resolves today" / "May win instead" pair. |
+| `ApplicationFactory_SelectorBinding.Accounts_Selector_Primary` / `_Legacy` | Distinct priorities (20 vs. 10) on the same `Account` key — a clean Effective/Shadowed pair, no tie. |
+| `ApplicationFactory_SelectorBinding.Tasks_Selector` | `BindingSObject__c = Task` — `unsupported-entity-definition-object`, since `Task` isn't in `ENTITY_DEFINITION_STANDARD_OBJECTS`. |
+| `ApplicationFactory_DomainBinding.Contacts_Domain_A` / `_B` | Two Domain bindings sharing the `Contact` key — `duplicate-domain-sobject`, and both render `Ambiguous` (Domain has no priority to break the tie). |
+| `ApplicationFactory_UnitOfWorkBinding.Account_UnitOfWork` (seq 10), `Contact_UnitOfWork` (seq 20), `Opportunity_UnitOfWork` (seq 20), `Case_UnitOfWork` (no sequence) | Commit order `1st`, `2nd or 3rd` ×2, and one unordered row — plus `sequence-collision` for the tied pair. |
