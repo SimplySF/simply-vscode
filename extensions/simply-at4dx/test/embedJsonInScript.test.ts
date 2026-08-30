@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { embedJsonInScript } from '../src/domainProcessBindingPanel';
+import { embedJsonInScript } from '../src/at4dxExplorerPanel';
 
 // U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) built from character codes rather than
 // written out as an escaped literal in this file's own source, so nothing here reproduces the very
-// character the fix escapes. See embedJsonInScript's own doc comment in domainProcessBindingPanel.ts
+// character the fix escapes. See embedJsonInScript's own doc comment in at4dxExplorerPanel.ts
 // for the full story: a Description__c (or any free-text field a user types, including pasted text)
 // containing either raw character broke VS Code's own webview-loading document.write with a generic
 // "Invalid or unexpected token"/"Invalid regular expression" syntax error -- this is what actually

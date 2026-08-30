@@ -4,7 +4,7 @@
  * unit-tested with plain Vitest (`environment: 'node'`), not just via `@testing-library/svelte`'s
  * jsdom-based component tests. See docs/design/0011.
  */
-import type { DomainProcessBindingIssue, DomainProcessBindingRow, DomainProcessBindingRules, FamilyKey, IndexedIssue, TriggerOperation } from '../types';
+import type { DomainProcessBindingIssue, DomainProcessBindingRow, FamilyKey, IndexedIssue, TriggerOperation } from '../types';
 
 export const FAMILY_ITEMS: { value: FamilyKey; label: string }[] = [
     { value: 'Created', label: 'Created' },
@@ -249,7 +249,13 @@ export function issuesByRecord(issues: DomainProcessBindingIssue[]): Map<string,
     return map;
 }
 
-export function ruleTitle(rules: DomainProcessBindingRules, rule: DomainProcessBindingIssue['rule']): string {
+/**
+ * Generic over the rule-key union so it serves both `DomainProcessBindingRules` (every existing call
+ * site) and `applicationFactoryView.ts`'s `ApplicationFactoryRules` — see docs/design/0016. Inferring
+ * `R` per call site avoids the "index signature missing" error a shared `Record<string, ...>` parameter
+ * type would hit when handed a rules table keyed by a specific rule-name union.
+ */
+export function ruleTitle<R extends string>(rules: Record<R, { title: string }>, rule: R): string {
     return rules[rule]?.title ?? rule;
 }
 

@@ -1,29 +1,50 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import ApplicationFactoryIssuesSection from './ApplicationFactoryIssuesSection.svelte';
+    import ApplicationFactorySections from './ApplicationFactorySections.svelte';
     import BindingForm from './BindingForm.svelte';
     import BindingSections from './BindingSections.svelte';
     import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
+    import UnitOfWorkSections from './UnitOfWorkSections.svelte';
+    import { buildApplicationFactorySections, buildUnitOfWorkRows, partitionBySeverity } from './lib/applicationFactoryView';
     import { FAMILY_ITEMS, availableFamilies, buildSections, headerParts, issuesByRecord, partitionIssues } from './lib/bindingView';
-    import type { BindingFormInitial, DomainProcessBindingRow, DomainProcessBindingRules, FamilyKey, InitialState } from './types';
+    import type { ApplicationFactoryRules, BindingFormInitial, DomainProcessBindingRow, DomainProcessBindingRules, ExplorerKey, FamilyKey, InitialState } from './types';
+    import { postMessage } from './vscodeApi';
 
     let { initial: initialProp }: { initial: InitialState } = $props();
-    // `initial` never changes after mount — every state transition replaces the whole webview
-    // (see docs/design/0011's "re-render model"), so this component is always freshly mounted with a
-    // new `window.__INITIAL_STATE__` rather than receiving updated props in place. Snapshotting the
-    // prop once via `untrack` (rather than reading it directly, which the compiler otherwise flags as
-    // `state_referenced_locally`) makes that "read once" intent explicit instead of a suppressed warning.
+    // `initial` never changes after mount — every state transition (including switching explorer tabs,
+    // see docs/design/0016) replaces the whole webview (see docs/design/0011's "re-render model"), so
+    // this component is always freshly mounted with a new `window.__INITIAL_STATE__` rather than
+    // receiving updated props in place. Snapshotting the prop once via `untrack` (rather than reading it
+    // directly, which the compiler otherwise flags as `state_referenced_locally`) makes that "read once"
+    // intent explicit instead of a suppressed warning.
     const initial = untrack(() => initialProp);
 
-    const rows = initial.kind === 'data' ? initial.rows : [];
-    const issues = initial.kind === 'data' ? initial.issues : [];
-    // Never read when `initial.kind !== 'data'` (every consumer below only renders in the data view) —
-    // the cast just satisfies the type for a value nothing else in this branch will look at.
-    const rules = initial.kind === 'data' ? initial.rules : ({} as DomainProcessBindingRules);
-    const canWrite = initial.kind === 'data';
-    const isLocalScan = initial.kind === 'data' && initial.isLocalScan;
+    const domainProcess = initial.domainProcess;
+    const rows = domainProcess.kind === 'data' ? domainProcess.rows : [];
+    const issues = domainProcess.kind === 'data' ? domainProcess.issues : [];
+    // Never read when `domainProcess.kind !== 'data'` (every consumer below only renders in the data
+    // view) — the cast just satisfies the type for a value nothing else in this branch will look at.
+    const rules = domainProcess.kind === 'data' ? domainProcess.rules : ({} as DomainProcessBindingRules);
+    const canWrite = domainProcess.kind === 'data';
+    const isLocalScan = initial.isLocalScan ?? false;
+
+    const applicationFactory = initial.applicationFactory;
+    const afRules = applicationFactory.kind === 'data' ? applicationFactory.rules : ({} as ApplicationFactoryRules);
+    let afSections = $derived(applicationFactory.kind === 'data' ? buildApplicationFactorySections(applicationFactory.rows) : []);
+    let uowRows = $derived(applicationFactory.kind === 'data' ? buildUnitOfWorkRows(applicationFactory.rows) : []);
+    let afProblems = $derived(applicationFactory.kind === 'data' ? partitionBySeverity(applicationFactory.issues) : { errors: [], warnings: [] });
+    let afBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.length : undefined);
+
+    function selectExplorer(explorer: ExplorerKey): void {
+        if (explorer === initial.active) {
+            return;
+        }
+        postMessage({ command: 'selectExplorer', explorer });
+    }
 
     let sobjects = $derived([...new Set(rows.map((row) => row.sobject))].sort((a, b) => a.localeCompare(b)));
     let sobject = $state(untrack(() => sobjects[0]) ?? '');
@@ -73,77 +94,111 @@
     }
 </script>
 
-<div class="explorer-tabs">
-    <span class="explorer-tab explorer-tab-active">
+<div class="explorer-tabs" role="tablist">
+    <button
+        type="button"
+        role="tab"
+        class="explorer-tab"
+        class:explorer-tab-active={initial.active === 'domainProcess'}
+        aria-selected={initial.active === 'domainProcess'}
+        onclick={() => selectExplorer('domainProcess')}
+    >
         <span class="explorer-tab-icon"><Icon name="domainProcess" /></span>
         Domain Process Bindings
-        {#if initial.kind === 'data' && view === 'list'}
+        {#if domainProcess.kind === 'data' && view === 'list'}
             <span class="explorer-tab-badge">{bindingCount}</span>
         {/if}
-    </span>
-    <span class="explorer-tab explorer-tab-inert" title="Application Factory Bindings is not available yet.">
+    </button>
+    <button
+        type="button"
+        role="tab"
+        class="explorer-tab"
+        class:explorer-tab-active={initial.active === 'applicationFactory'}
+        aria-selected={initial.active === 'applicationFactory'}
+        onclick={() => selectExplorer('applicationFactory')}
+    >
         <span class="explorer-tab-icon"><Icon name="applicationFactory" /></span>
         Application Factory
-        <span class="explorer-tab-soon">Coming soon</span>
-    </span>
-    <span class="explorer-tab explorer-tab-inert" title="Platform Event Distributor is not available yet.">
+        {#if afBindingCount !== undefined}
+            <span class="explorer-tab-badge">{afBindingCount}</span>
+        {/if}
+    </button>
+    <span class="explorer-tab explorer-tab-inert" role="tab" aria-disabled="true" title="Platform Event Distributor is not available yet.">
         <span class="explorer-tab-icon"><Icon name="platformEvent" /></span>
         Platform Events
         <span class="explorer-tab-soon">Coming soon</span>
     </span>
     <span class="explorer-tabs-spacer"></span>
-    {#if initial.kind === 'data'}
+    {#if initial.sourceLabel}
         <span class="explorer-tabs-source" title={initial.sourceLabel}>{initial.sourceLabel}</span>
     {/if}
 </div>
 
-{#if initial.kind === 'data' && view === 'list'}
-    <Toolbar {sobjects} bind:sobject bind:family {familyItems} {canWrite} onNewBinding={openCreateForm} />
-{:else if initial.kind !== 'data'}
-    <div class="toolbar">
-        <label>
-            SObject
-            <select disabled><option>{initial.kind === 'loading' ? 'Loading…' : '—'}</option></select>
-        </label>
-        <label>
-            Trigger Event
-            <select disabled><option>{initial.kind === 'loading' ? 'Loading…' : '—'}</option></select>
-        </label>
-        <span class="spacer"></span>
-        <button disabled>+ New Binding</button>
-    </div>
+{#if initial.active === 'domainProcess'}
+    {#if domainProcess.kind === 'data' && view === 'list'}
+        <Toolbar {sobjects} bind:sobject bind:family {familyItems} {canWrite} onNewBinding={openCreateForm} />
+    {:else if domainProcess.kind !== 'data'}
+        <div class="toolbar">
+            <label>
+                SObject
+                <select disabled><option>{domainProcess.kind === 'loading' ? 'Loading…' : '—'}</option></select>
+            </label>
+            <label>
+                Trigger Event
+                <select disabled><option>{domainProcess.kind === 'loading' ? 'Loading…' : '—'}</option></select>
+            </label>
+            <span class="spacer"></span>
+            <button disabled>+ New Binding</button>
+        </div>
+    {/if}
 {/if}
 
 <div id="content">
-    {#if initial.kind === 'loading'}
-        <p class="status">Scanning workspace for AT4DX bindings…</p>
-    {:else if initial.kind === 'error'}
-        <p class="status error">
-            {#each initial.message.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}
-        </p>
-    {:else if initial.kind === 'empty'}
-        <p class="status">No AT4DX Trigger Action Framework bindings found.</p>
-    {:else if view === 'form'}
-        <BindingForm mode={formMode} initial={formInitial} {rules} scopeSobject={sobject} scopeLabel={familyLabel} onCancel={closeForm} />
-    {:else}
-        {#if header}
-            <div class="header">
-                <div class="header-text">
-                    {#if header.isDomainMethod}
-                        When {header.article} <strong>{header.sobject}</strong> domain method
-                        <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
-                        {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
-                    {:else}
-                        When {header.article} <strong>{header.sobject}</strong> record is
-                        <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
-                        {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
-                    {/if}
+    {#if initial.active === 'domainProcess'}
+        {#if domainProcess.kind === 'loading'}
+            <p class="status">Scanning workspace for AT4DX bindings…</p>
+        {:else if domainProcess.kind === 'error'}
+            <p class="status error">
+                {#each domainProcess.message.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}
+            </p>
+        {:else if domainProcess.kind === 'empty'}
+            <p class="status">No AT4DX Trigger Action Framework bindings found.</p>
+        {:else if view === 'form'}
+            <BindingForm mode={formMode} initial={formInitial} {rules} scopeSobject={sobject} scopeLabel={familyLabel} onCancel={closeForm} />
+        {:else}
+            {#if header}
+                <div class="header">
+                    <div class="header-text">
+                        {#if header.isDomainMethod}
+                            When {header.article} <strong>{header.sobject}</strong> domain method
+                            <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
+                            {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
+                        {:else}
+                            When {header.article} <strong>{header.sobject}</strong> record is
+                            <strong>{header.verb}</strong>, {bindingCount} binding{bindingCount === 1 ? '' : 's'}
+                            {bindingCount === 1 ? 'is' : 'are'} evaluated in order.
+                        {/if}
+                    </div>
+                    <SummaryBar inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} />
                 </div>
-                <SummaryBar inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} />
-            </div>
+            {/if}
+            <BindingSections {sections} issuesByRecord={recordIssues} {rules} onEdit={openEditForm} />
+            <IssuesSection inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} {sobject} clickable={isLocalScan} {rules} />
         {/if}
-        <BindingSections {sections} issuesByRecord={recordIssues} {rules} onEdit={openEditForm} />
-        <IssuesSection inView={issuePartition.inView} elsewhere={issuePartition.elsewhere} {sobject} clickable={isLocalScan} {rules} />
+    {:else if initial.active === 'applicationFactory'}
+        {#if applicationFactory.kind === 'loading'}
+            <p class="status">Scanning workspace for Application Factory bindings…</p>
+        {:else if applicationFactory.kind === 'error'}
+            <p class="status error">
+                {#each applicationFactory.message.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}
+            </p>
+        {:else if applicationFactory.kind === 'empty'}
+            <p class="status">No AT4DX Application Factory bindings found.</p>
+        {:else}
+            <ApplicationFactorySections sections={afSections} />
+            <UnitOfWorkSections rows={uowRows} />
+            <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
+        {/if}
     {/if}
 </div>
 
@@ -169,10 +224,18 @@
         align-items: center;
         gap: 8px;
         padding: 0 14px;
+        background: none;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        font: inherit;
         font-size: 0.95em;
         color: var(--vscode-foreground);
-        border-bottom: 2px solid transparent;
         white-space: nowrap;
+        cursor: pointer;
+    }
+    :global(button.explorer-tab:focus-visible) {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: -2px;
     }
     :global(.explorer-tab-active) {
         border-bottom-color: var(--vscode-focusBorder);
@@ -390,12 +453,12 @@
         justify-content: center;
         justify-self: start;
         padding: 3px 8px;
-        border: 1px solid var(--vscode-charts-yellow);
+        border: 1px solid var(--vscode-charts-orange);
         border-radius: 4px;
         font-family: var(--vscode-editor-font-family);
         font-size: 0.8em;
         letter-spacing: 0.05em;
-        color: var(--vscode-charts-yellow);
+        color: var(--vscode-charts-orange);
         text-transform: uppercase;
         white-space: nowrap;
     }
@@ -877,5 +940,65 @@
     }
     :global(.form-issues) {
         margin-bottom: 12px;
+    }
+
+    /* Application Factory explorer — see docs/design/0016. */
+    :global(.af-row-grid) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 100px 88px 128px 34px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 20px;
+    }
+    :global(.af-row-grid.no-priority) {
+        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 88px 128px 34px;
+    }
+    :global(.uow-row-grid) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1.3fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        padding: 0 20px;
+    }
+    :global(.af-arrow) {
+        color: var(--vscode-descriptionForeground);
+        text-align: center;
+    }
+    :global(.af-priority) {
+        font-family: var(--vscode-editor-font-family);
+    }
+    :global(.af-priority.af-priority-blank) {
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.af-priority.af-priority-tied) {
+        color: var(--vscode-charts-orange);
+    }
+    :global(.af-resolution-chip) {
+        display: inline-flex;
+        align-items: center;
+        justify-self: start;
+        padding: 2px 7px;
+        border: 1px solid var(--vscode-descriptionForeground);
+        border-radius: 3px;
+        font-size: 0.75em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--vscode-descriptionForeground);
+        white-space: nowrap;
+    }
+    :global(.af-resolution-chip.resolves-today),
+    :global(.af-resolution-chip.ambiguous) {
+        border-color: var(--vscode-charts-orange);
+        color: var(--vscode-charts-orange);
+    }
+    :global(.af-tie-banner) {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 20px;
+        background: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+        border-top: 1px solid var(--vscode-editorWarning-foreground);
+        border-bottom: 1px solid var(--vscode-editorWarning-foreground);
+        font-size: 0.9em;
     }
 </style>

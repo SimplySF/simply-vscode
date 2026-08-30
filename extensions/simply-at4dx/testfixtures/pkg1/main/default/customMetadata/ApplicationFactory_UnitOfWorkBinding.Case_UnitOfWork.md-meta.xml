@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" label="Case Unit Of Work" protected="false">
+    <values>
+        <field>BindingSObject__c</field>
+        <value xsi:type="xsd:string">Case</value>
+    </values>
+</CustomMetadata>

@@ -9,8 +9,10 @@ Explore [AT4DX](https://github.com/apex-enterprise-patterns/at4dx) framework bin
 ## Usage
 
 The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's
-different explorers — today only **Domain Process Bindings** is live; **Application Factory** and
-**Platform Events** show as inert `Coming soon` tabs, reserved for later additions.
+different explorers — **Domain Process Bindings** and **Application Factory** are both live;
+**Platform Events** still shows as an inert `Coming soon` tab, reserved for a later addition.
+Application Factory scans lazily: switching to it the first time triggers its own scan against
+whatever source you picked, so opening the panel never pays for a scan you didn't ask to see.
 
 Run **AT4DX: Open Explorer** from the Command Palette. You'll be prompted to:
 
@@ -74,10 +76,33 @@ through deliberately instead of guessing why nothing happened. A successful save
 refreshes the panel immediately, so the new or changed binding (and anything it now flags) shows up
 right away.
 
+### Application Factory bindings
+
+The **Application Factory** tab reads the four `ApplicationFactory_{Service,Selector,Domain,
+UnitOfWork}Binding__mdt` Custom Metadata Types — which Apex class implements which interface, which
+selector/domain handles which SObject, and which SObjects join the shared Unit of Work — grouped into
+one section per binding type, in the order Service, Selector, Domain, Unit of Work. This first release
+is read-only; creating and editing Application Factory bindings from the panel is planned for a later
+update.
+
+Each Service/Selector/Domain row shows its resolution — **Effective** (this is the one AT4DX actually
+uses), **Shadowed** (a higher-priority binding for the same key won instead), or, for Domain, which has
+no priority field to break a tie, **Ambiguous**. Two Service/Selector bindings tied on priority render
+an amber banner over the group, with **Resolves today** on the one AT4DX currently picks and **May win
+instead** on the rest — that's a "this isn't deterministic" notice, not an error, since AT4DX itself
+still resolves one and `binding validate` doesn't fail on it. The Unit of Work section is a commit-order
+list instead — every record contributes, ordered by its sequence (`1st`, `2nd`, ...; a shared sequence
+renders as a shared `2nd or 3rd`-style range; no sequence at all renders as unordered).
+
+A Problems section below the sections lists everything Application Factory validation catches — a
+missing or ambiguous SObject reference, a standard object that can't support a metadata relationship
+(e.g. `Task`), a duplicate `To__c`/SObject/sequence, and so on — grouped errors-then-warnings, with the
+same click-to-open-the-file behavior as the Domain Process explorer's own Issues section.
+
 ## Troubleshooting
 
 Every binding lookup logs a one-line summary (source, duration, outcome) to the
-**AT4DX Domain Process Bindings** output channel (View → Output, then pick it from the dropdown) —
+**AT4DX Explorer** output channel (View → Output, then pick it from the dropdown) —
 no setup needed. If something's failing and you need to share more detail in a bug report, turn on
 the **`simply-at4dx.debug`** setting, reproduce the problem, and copy the channel's contents: with it
 on, entries also include the org/source detail and captured error output. It's off by default since

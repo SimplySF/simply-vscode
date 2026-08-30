@@ -19,7 +19,7 @@ async function main() {
     });
 
     // Compiles the webview's Svelte component tree into the single browser-side bundle
-    // `domainProcessBindingPanel.ts` loads via `webview.asWebviewUri()` — see docs/design/0011.
+    // `at4dxExplorerPanel.ts` loads via `webview.asWebviewUri()` — see docs/design/0011.
     // `css: 'injected'` keeps every component's styles bundled into this one JS file (injected as
     // `<style>` elements at mount time) rather than emitting a second `dist/webview.css` output, so
     // the panel's CSP doesn't need `style-src` widened beyond the `'unsafe-inline'` it already has.
