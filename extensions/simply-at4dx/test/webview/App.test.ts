@@ -331,6 +331,95 @@ describe('App — Application Factory explorer', () => {
         expect(document.querySelectorAll('.af-tie-banner')).toHaveLength(1);
         expect(screen.getByText('Resolves today')).toBeTruthy();
         expect(screen.getByText('May win instead')).toBeTruthy();
+        const bannerText = document.querySelector('.af-tie-banner-text')?.textContent?.replace(/\s+/g, ' ');
+        expect(bannerText).toContain('IPricingService');
+        expect(bannerText).toContain('both at priority');
+        expect(bannerText).toContain('overwrites one map entry with the other');
+        expect(bannerText).toContain('Give one a higher priority to make it deterministic');
+    });
+
+    it('a shadowed row with a blank priority shows a SHADOWED badge and "blank sorts lowest", not a generic Shadowed dot', () => {
+        render(App, {
+            props: {
+                initial: state({
+                    active: 'applicationFactory',
+                    applicationFactory: {
+                        kind: 'data',
+                        rows: [
+                            afRow({ bindingType: 'Selector', developerName: 'A', key: 'Account', to: 'PremiumAccountsSelector', priority: 20, effective: true }),
+                            afRow({ bindingType: 'Selector', developerName: 'B', key: 'Account', to: 'AccountsSelector', priority: undefined, effective: false }),
+                        ],
+                        issues: [],
+                        rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
+                    },
+                }),
+            },
+        });
+
+        expect(screen.getByText('WINS')).toBeTruthy();
+        expect(screen.getByText('SHADOWED')).toBeTruthy();
+        expect(screen.getByText('blank sorts lowest')).toBeTruthy();
+        expect(screen.queryByText('Shadowed')).toBeNull();
+    });
+
+    it('renders the Unit of Work toolbar, a collision banner for a tied pair, and amber Sequence/Commits cells', () => {
+        render(App, {
+            props: {
+                initial: state({
+                    active: 'applicationFactory',
+                    applicationFactory: {
+                        kind: 'data',
+                        rows: [
+                            afRow({ bindingType: 'UnitOfWork', developerName: 'Account_UOW', key: 'Account', to: undefined, sequence: 10, effective: true }),
+                            afRow({ bindingType: 'UnitOfWork', developerName: 'Fish_UOW', key: 'Fish__c', to: undefined, sequence: 20, effective: true }),
+                            afRow({ bindingType: 'UnitOfWork', developerName: 'Widget_UOW', key: 'Widget__c', to: undefined, sequence: 20, effective: true }),
+                        ],
+                        issues: [],
+                        rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
+                    },
+                }),
+            },
+        });
+
+        const toolbarText = document.querySelector('.uow-toolbar-text')?.textContent?.replace(/\s+/g, ' ');
+        expect(toolbarText).toContain('Drag to reorder — each move is one');
+        expect(toolbarText).toContain('binding update --sequence');
+        expect(screen.getByText('⚠ 1 warning')).toBeTruthy();
+        expect(document.querySelectorAll('.af-tie-banner')).toHaveLength(1);
+        const bannerText = document.querySelector('.af-tie-banner-text')?.textContent?.replace(/\s+/g, ' ');
+        expect(bannerText).toContain('sequence-collision');
+        expect(bannerText).toContain('BindingSequence__c 20');
+        expect(bannerText).toContain('Both SObjects are registered');
+        expect(document.querySelectorAll('.af-priority-tied')).toHaveLength(2);
+        expect(document.querySelectorAll('.uow-commits-tied')).toHaveLength(2);
+        // Both tied rows share the ordinal range, not a single position.
+        expect(screen.getAllByText('2nd or 3rd')).toHaveLength(2);
+    });
+
+    it('two Unit of Work rows with no sequence at all show no banner and read unordered', () => {
+        render(App, {
+            props: {
+                initial: state({
+                    active: 'applicationFactory',
+                    applicationFactory: {
+                        kind: 'data',
+                        rows: [
+                            afRow({ bindingType: 'UnitOfWork', developerName: 'A_UOW', key: 'Account', to: undefined, sequence: undefined, effective: true }),
+                            afRow({ bindingType: 'UnitOfWork', developerName: 'B_UOW', key: 'Contact', to: undefined, sequence: undefined, effective: true }),
+                        ],
+                        issues: [],
+                        rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
+                    },
+                }),
+            },
+        });
+
+        expect(document.querySelectorAll('.af-tie-banner')).toHaveLength(0);
+        expect(screen.queryByText(/warning/)).toBeNull();
+        expect(screen.getAllByText('unordered — no sequence set')).toHaveLength(2);
     });
 });
 

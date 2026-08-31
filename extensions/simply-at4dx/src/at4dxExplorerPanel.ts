@@ -270,6 +270,7 @@ export class At4dxExplorerPanel {
                 input?: BindingFormPayload | ApplicationFactoryFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
+                moves?: Array<{ developerName: string; sequence: number }>;
             }) => {
                 if (message.command === 'openClass' && message.classToInject) {
                     void openApexClass(message.classToInject);
@@ -283,6 +284,8 @@ export class At4dxExplorerPanel {
                     void this.submitApplicationFactoryBinding(message.mode, message.input as ApplicationFactoryFormPayload, Boolean(message.force));
                 } else if (message.command === 'selectExplorer' && message.explorer) {
                     void this.selectExplorer(message.explorer);
+                } else if (message.command === 'reorderUnitOfWork' && Array.isArray(message.moves)) {
+                    void this.reorderUnitOfWork(message.moves);
                 }
             },
             null,
@@ -394,6 +397,46 @@ export class At4dxExplorerPanel {
             this.render({ ...this.state, applicationFactory });
         } catch (error) {
             void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
+        }
+    }
+
+    /**
+     * Handles the webview's `reorderUnitOfWork` message: `UnitOfWorkSections.svelte`'s drag-and-drop
+     * already computed the minimal diff (`planUnitOfWorkReorder`), so this is one `updateBinding` call
+     * per moved record. Per AT4DX Bindings Redesign.dc.html turn 13b/HANDOFF-04 §8: don't try to roll
+     * back a partial failure — report which records didn't write and re-scan once at the end, so the
+     * panel reflects the actual on-disk state rather than an optimistic one.
+     */
+    private async reorderUnitOfWork(moves: Array<{ developerName: string; sequence: number }>): Promise<void> {
+        if (this.state.applicationFactory.kind !== 'data' || !this.state.target || moves.length === 0) {
+            return;
+        }
+        const target = this.state.target;
+
+        const failures: string[] = [];
+        for (const move of moves) {
+            try {
+                const outcome = await updateApplicationFactoryBinding({ bindingType: 'UnitOfWork', developerName: move.developerName, sequence: move.sequence }, target, this.logger);
+                if (outcome.kind === 'blocked') {
+                    failures.push(`${move.developerName}: blocked by validation`);
+                }
+            } catch (error) {
+                failures.push(`${move.developerName}: ${error instanceof At4dxCliError ? error.message : (error as Error).message}`);
+            }
+        }
+
+        try {
+            const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
+            const applicationFactory: ExplorerState<ApplicationFactoryData> =
+                rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+            this.render({ ...this.state, applicationFactory });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: formatReadError(error, 'rescanning Application Factory bindings') });
+            return;
+        }
+
+        if (failures.length > 0) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: `Some records couldn't be reordered:\n${failures.join('\n')}` });
         }
     }
 

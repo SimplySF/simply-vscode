@@ -119,16 +119,20 @@ the library twice:
 
 | State | Renders | When |
 | --- | --- | --- |
-| Effective | Green dot, `Effective` | `effective: true`, no tie. |
-| Shadowed | Muted, `Shadowed` | `effective: false`. A higher `Priority__c` won. |
-| Resolves today / May win instead | Amber, an **amber row banner**, `RESOLVES TODAY` on the winner and `MAY WIN INSTEAD` on the others | Two Service/Selector rows tie on `Priority__c`. |
+| Effective | Green dot, `Effective`; Priority cell adds a green `WINS` badge | `effective: true`, no tie. |
+| Shadowed | `blank sorts lowest` when the row's own priority is unset; Priority cell adds a grey `SHADOWED` badge | `effective: false`. A higher `Priority__c` won. |
+| Resolves today / May win instead | Amber, an **amber row banner naming the tied key and priority verbatim** (`AT4DX overwrites one map entry with the other, so the last record loaded wins…`), `RESOLVES TODAY` on the winner and `MAY WIN INSTEAD` on the others | Two Service/Selector rows tie on `Priority__c`. |
 | Ambiguous | Amber, `Ambiguous` | `row.ambiguous` — Domain only, which has no priority field to break the tie. |
 | Always | Neutral, no resolution column at all | UnitOfWork. |
 
 A priority tie is **amber, never red, and never an error**. There is no `validate` rule for it,
 `resolveBindings` still names a winner, and `binding validate` exits zero. The UI's job is to say
 "this is not deterministic — give one a higher priority", not "this is broken". Red is reserved for
-the `error`-severity rules in `BINDING_RULES`.
+the `error`-severity rules in `BINDING_RULES`. Every amber surface in this explorer — tie banners,
+`RESOLVES TODAY`, `Ambiguous`, the Unit of Work collision banner — derives from the single
+`--vscode-charts-orange` token at 11%/28% opacity (`color-mix`), never a validation-colored token like
+`--vscode-inputValidation-warningBackground`, which is a different hue in most themes. See
+`SPEC-CONVENTIONS.md` in the design project for the full rationale.
 
 ### Problems
 
@@ -178,17 +182,27 @@ fields, because the CMDT has exactly three: Developer Name, Binding SObject, and
 Sequence. `to`, `priority` and `bindingInterface` are not hidden-but-tolerated — `createBinding`
 throws `type-field-mismatch` for each, so the form must never send them.
 
-**As shipped, reordering is a Sequence number field on the standard create/edit form, not
-drag-and-drop.** HANDOFF-04 itself left the reorder interaction undecided ("whether the reorder
-renumbers by tens or inserts fractional sequences" was an open question, not a settled design), and
-native HTML5 drag-and-drop has no keyboard equivalent — a real gap in a panel that otherwise gives every
-other interactive element `role`/`tabindex`/`onkeydown` treatment. Editing the Sequence field directly
-is exactly how Domain Process's own `Execution_Order__c` is already reordered today (there is no
-drag-to-reorder there either), so this keeps the two explorers' editing model consistent instead of
-introducing a one-off bespoke widget for a single field. The live "resulting binding" preview computes
-where the entered sequence would land (`previewCommitPosition`) against every other Unit of Work row
-already in the scan, so the user sees the effect before saving. Revisit true drag-and-drop if editing
-the number directly proves painful in practice.
+**Reordering supports both a drag handle and editing the Sequence field directly** — the design
+(turn 13b) draws both a `⋮⋮` drag handle and a `✎` edit affordance on the same row, and the panel now
+builds both: dragging a `UnitOfWorkSections.svelte` row renumbers the whole sequenced group by tens
+(`planUnitOfWorkReorder`) and posts one `updateBinding` call per record whose value actually changed
+(`reorderUnitOfWork` in `at4dxExplorerPanel.ts`); the pencil icon still opens the standard form with its
+Commit Sequence field, which stays the keyboard-accessible path native HTML5 drag-and-drop has no
+equivalent for. The live "resulting binding" preview computes where a typed sequence would land
+(`previewCommitPosition`) against every other Unit of Work row already in the scan. An earlier revision
+of this doc shipped Sequence-field editing only, reasoning that HANDOFF-04 itself hadn't settled the
+reorder interaction — `AT4DX Bindings Redesign.dc.html` turns 12/13 and their `REVIEW-02`/
+`SPEC-CONVENTIONS.md` follow-up made the intended interaction and its exact copy/visual states concrete
+enough to build both.
+
+A shared sequence renders a **`sequence-collision` banner** immediately above the first tied row (not
+above the section) — `⚠ sequence-collision — two records share BindingSequence__c N. Both SObjects are
+registered; only their order relative to each other is indeterminate.` — and every row in that group
+gets its Sequence and Commits cells in `--vscode-charts-orange`, with Commits reading the ordinal
+*range* (`2nd or 3rd`) rather than asserting a single position. A toolbar above the column header names
+the mechanism (`Drag to reorder — each move is one binding update --sequence.`) and counts collision
+*groups*, not rows, in an amber `⚠ N warning` badge. Two records with no sequence at all are never
+flagged — blank is the ordinary unordered default, not a conflict.
 
 A shared `BindingSequence__c` is `sequence-collision`, a **warning**. The consuming Apex
 (`ApplicationSObjectUnitOfWorkDIProvider`) adds every resolved SObjectType with no throw, so both

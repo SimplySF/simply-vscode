@@ -996,20 +996,22 @@
         margin-bottom: 12px;
     }
 
-    /* Application Factory explorer — see docs/design/0016. */
+    /* Application Factory explorer — see docs/design/0016 and AT4DX Bindings Redesign.dc.html turns 12/13.
+       Grid tracks and colors here are copied literally from the prototype, per SPEC-CONVENTIONS.md rules
+       2 and 3 — don't round a width or swap in a token that merely looks similar. */
     :global(.af-row-grid) {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 100px 88px 128px 34px;
+        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 100px 88px 128px 30px;
         align-items: center;
         gap: 12px;
         padding: 0 20px;
     }
     :global(.af-row-grid.no-priority) {
-        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 88px 128px 34px;
+        grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 88px 128px 30px;
     }
     :global(.uow-row-grid) {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1.3fr) minmax(0, 1fr) 34px;
+        grid-template-columns: 26px minmax(0, 1fr) 104px minmax(0, 1fr) 150px 30px;
         align-items: center;
         gap: 12px;
         padding: 0 20px;
@@ -1019,6 +1021,9 @@
         text-align: center;
     }
     :global(.af-priority) {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font-family: var(--vscode-editor-font-family);
     }
     :global(.af-priority.af-priority-blank) {
@@ -1026,6 +1031,28 @@
     }
     :global(.af-priority.af-priority-tied) {
         color: var(--vscode-charts-orange);
+    }
+    :global(.af-priority.af-priority-wins) {
+        font-weight: 700;
+    }
+    :global(.af-priority-badge) {
+        font: 500 0.7em/1.4 var(--vscode-font-family);
+        padding: 2px 4px;
+        border-radius: 2px;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+    :global(.af-priority-badge-wins) {
+        background: var(--vscode-charts-green);
+        color: #14300f;
+    }
+    :global(.af-priority-badge-shadowed) {
+        background: rgba(255, 255, 255, 0.09);
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.af-resolution-note) {
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
     }
     :global(.af-resolution-chip) {
         display: inline-flex;
@@ -1045,15 +1072,67 @@
         border-color: var(--vscode-charts-orange);
         color: var(--vscode-charts-orange);
     }
+    :global(.mono) {
+        font-family: var(--vscode-editor-font-family);
+    }
+    :global(.mono-strong) {
+        font-family: var(--vscode-editor-font-family);
+        font-weight: 600;
+    }
     :global(.af-tie-banner) {
         display: flex;
         align-items: center;
         gap: 9px;
-        padding: 6px 20px;
-        background: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
-        border-top: 1px solid var(--vscode-editorWarning-foreground);
-        border-bottom: 1px solid var(--vscode-editorWarning-foreground);
-        font-size: 0.9em;
+        height: 30px;
+        padding: 0 20px;
+        background: color-mix(in srgb, var(--vscode-charts-orange) 11%, transparent);
+        border-top: 1px solid color-mix(in srgb, var(--vscode-charts-orange) 28%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--vscode-charts-orange) 28%, transparent);
+        font-size: 0.85em;
+    }
+    :global(.af-tie-banner-icon) {
+        color: var(--vscode-charts-orange);
+        flex-shrink: 0;
+    }
+    :global(.af-tie-banner-text) {
+        color: color-mix(in srgb, var(--vscode-charts-orange) 55%, var(--vscode-foreground));
+    }
+    :global(.uow-toolbar) {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.uow-toolbar-text) {
+        font-size: 1em;
+        line-height: 1.45;
+        color: var(--vscode-foreground);
+    }
+    :global(.uow-toolbar-spacer) {
+        flex: 1;
+    }
+    :global(.uow-toolbar-warning) {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85em;
+        color: var(--vscode-charts-orange);
+        white-space: nowrap;
+    }
+    :global(.uow-drag-handle) {
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+        cursor: grab;
+    }
+    :global(.uow-row-dragging) {
+        opacity: 0.5;
+    }
+    :global(.uow-commits-tied) {
+        color: var(--vscode-charts-orange);
+    }
+    :global(.uow-commits-blank) {
+        color: var(--vscode-descriptionForeground);
     }
 
     /* Application Factory create/edit form (stage 2) — see docs/design/0016. */

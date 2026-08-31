@@ -46,8 +46,18 @@
         <span></span>
     {/if}
     {#if showPriority}
-        <span class="af-priority" class:af-priority-blank={row.priority === undefined} class:af-priority-tied={row.resolution.kind === 'tie-winner' || row.resolution.kind === 'tie-other'}>
+        <span
+            class="af-priority"
+            class:af-priority-blank={row.priority === undefined}
+            class:af-priority-tied={row.resolution.kind === 'tie-winner' || row.resolution.kind === 'tie-other'}
+            class:af-priority-wins={row.resolution.kind === 'effective' && row.priority !== undefined}
+        >
             {row.priority ?? '—'}
+            {#if row.resolution.kind === 'effective' && row.priority !== undefined}
+                <span class="af-priority-badge af-priority-badge-wins">WINS</span>
+            {:else if row.resolution.kind === 'shadowed'}
+                <span class="af-priority-badge af-priority-badge-shadowed">SHADOWED</span>
+            {/if}
         </span>
     {/if}
     <span title={row.source}>{row.source}</span>
@@ -55,7 +65,11 @@
         {#if row.resolution.kind === 'effective'}
             <span class="status-indicator status-active"><span class="status-dot"></span>Effective</span>
         {:else if row.resolution.kind === 'shadowed'}
-            <span class="status-indicator"><span class="status-dot"></span>Shadowed</span>
+            {#if row.priority === undefined}
+                <span class="af-resolution-note">blank sorts lowest</span>
+            {:else}
+                <span class="status-indicator"><span class="status-dot"></span>Shadowed</span>
+            {/if}
         {:else if row.resolution.kind === 'tie-winner'}
             <span class="af-resolution-chip resolves-today">Resolves today</span>
         {:else if row.resolution.kind === 'tie-other'}

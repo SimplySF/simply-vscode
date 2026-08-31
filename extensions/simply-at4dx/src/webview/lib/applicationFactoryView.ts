@@ -103,6 +103,12 @@ function resolveRows(bindingType: BindingType, rows: At4dxBindingRow[]): Applica
     return resolved;
 }
 
+/** The priority every row in a tie group shares, for the tie banner's copy (`AT4DX Bindings Redesign.dc.html` turn 12a: "both at priority **10**"). `'blank'` when the tie is between two rows that both have no priority set at all. */
+export function tiedPriorityLabel(rows: { priority?: number }[]): string {
+    const priority = rows[0]?.priority;
+    return priority === undefined ? 'blank' : String(priority);
+}
+
 /** Groups `rows` (already flat, in `resolveBindings`'s order) into the sections the panel renders, in `SECTION_ORDER`. A binding type with no records produces no section. Excludes UnitOfWork — see `buildUnitOfWorkRows`. */
 export function buildApplicationFactorySections(rows: At4dxBindingRow[]): ApplicationFactorySection[] {
     const sections: ApplicationFactorySection[] = [];
@@ -145,13 +151,88 @@ export function groupsByKey<T extends { key: string }>(rows: T[]): { key: string
 export type UnitOfWorkViewRow = At4dxBindingRow & {
     /** `'1st'`, `'2nd or 3rd'` for a tied rank, `undefined` when no sequence is set — never invent a position for an unsequenced row. */
     commitPosition?: string;
+    /** `true` when this row shares its `sequence` with at least one other row — a `sequence-collision`. Drives the amber Sequence/Commits cells and the collision banner. See AT4DX Bindings Redesign.dc.html turn 13b. */
+    tied: boolean;
 };
 
-/** UnitOfWork's rows, in `resolveBindings`'s order (ascending by sequence, unsequenced last — see `at4dxResolve.ts`), each annotated with its commit position. */
+/** Contiguous-by-value groups of `rows` sharing a defined `sequence` — a `sequence-collision`. Unsequenced rows never form a group (blank is the ordinary unordered default, never flagged). */
+function sequenceCollisionGroups(rows: At4dxBindingRow[]): { sequence: number; rows: At4dxBindingRow[] }[] {
+    const sequenced = rows.filter((row) => row.sequence !== undefined).sort((a, b) => a.sequence! - b.sequence!);
+    const groups: { sequence: number; rows: At4dxBindingRow[] }[] = [];
+    let index = 0;
+    while (index < sequenced.length) {
+        let end = index;
+        while (end + 1 < sequenced.length && sequenced[end + 1].sequence === sequenced[index].sequence) {
+            end += 1;
+        }
+        if (end > index) {
+            groups.push({ sequence: sequenced[index].sequence!, rows: sequenced.slice(index, end + 1) });
+        }
+        index = end + 1;
+    }
+    return groups;
+}
+
+/** UnitOfWork's rows, in `resolveBindings`'s order (ascending by sequence, unsequenced last — see `at4dxResolve.ts`), each annotated with its commit position and whether it's part of a sequence collision. */
 export function buildUnitOfWorkRows(rows: At4dxBindingRow[]): UnitOfWorkViewRow[] {
     const uowRows = rows.filter((row) => row.bindingType === 'UnitOfWork');
     const positions = commitPositions(uowRows);
-    return uowRows.map((row) => ({ ...row, commitPosition: positions.get(recordKey(row)) }));
+    const tiedKeys = new Set(sequenceCollisionGroups(uowRows).flatMap((group) => group.rows.map(recordKey)));
+    return uowRows.map((row) => ({ ...row, commitPosition: positions.get(recordKey(row)), tied: tiedKeys.has(recordKey(row)) }));
+}
+
+/**
+ * Groups of consecutive tied rows sharing a sequence, from an already-`buildUnitOfWorkRows`-annotated
+ * list — how `UnitOfWorkSections.svelte` decides where to render the collision banner (once per group,
+ * immediately above its first row) and how many to count in the toolbar's "N warning".
+ */
+export function unitOfWorkCollisionGroups(rows: UnitOfWorkViewRow[]): { sequence: number; rows: UnitOfWorkViewRow[] }[] {
+    const groups: { sequence: number; rows: UnitOfWorkViewRow[] }[] = [];
+    for (const row of rows) {
+        if (!row.tied) {
+            continue;
+        }
+        const last = groups[groups.length - 1];
+        if (last && last.sequence === row.sequence) {
+            last.rows.push(row);
+        } else {
+            groups.push({ sequence: row.sequence!, rows: [row] });
+        }
+    }
+    return groups;
+}
+
+/**
+ * Computes the minimal `updateBinding` calls a Unit of Work drag-and-drop reorder needs: moves
+ * `draggedDeveloperName` to `dropIndex` in `rows`' display order, renumbers by tens (`10, 20, 30, …`)
+ * every row that already had a sequence plus the dragged row itself, and returns only the ones whose
+ * sequence actually changed. An unsequenced row not being dragged is left untouched — a drag is how a
+ * row gets a sequence in the first place, not something that happens to it as a side effect of someone
+ * else's move. See AT4DX Bindings Redesign.dc.html turn 13b and docs/design/0016.
+ *
+ * `dropIndex` is the target row's own index in `rows` (before removal) — inserting the dragged item
+ * there after it's spliced out of its old position lands it immediately after the target when dragging
+ * downward and immediately before it when dragging upward, with no direction-specific adjustment needed.
+ */
+export function planUnitOfWorkReorder(rows: At4dxBindingRow[], draggedDeveloperName: string, dropIndex: number): { developerName: string; sequence: number }[] {
+    const fromIndex = rows.findIndex((row) => row.developerName === draggedDeveloperName);
+    if (fromIndex === -1 || fromIndex === dropIndex) {
+        return [];
+    }
+
+    const reordered = [...rows];
+    const [dragged] = reordered.splice(fromIndex, 1);
+    reordered.splice(dropIndex, 0, dragged);
+
+    const toRenumber = reordered.filter((row) => row.sequence !== undefined || row.developerName === draggedDeveloperName);
+    const moves: { developerName: string; sequence: number }[] = [];
+    toRenumber.forEach((row, index) => {
+        const sequence = (index + 1) * 10;
+        if (row.sequence !== sequence) {
+            moves.push({ developerName: row.developerName, sequence });
+        }
+    });
+    return moves;
 }
 
 function recordKey(row: At4dxBindingRow): string {

@@ -8,7 +8,10 @@ import {
     isCustomObjectApiName,
     ordinal,
     partitionBySeverity,
+    planUnitOfWorkReorder,
     previewCommitPosition,
+    tiedPriorityLabel,
+    unitOfWorkCollisionGroups,
 } from '../../src/webview/lib/applicationFactoryView';
 import type { At4dxBindingRow, BindingIssue } from '../../src/webview/types';
 
@@ -186,6 +189,92 @@ describe('commitPositions / buildUnitOfWorkRows', () => {
         expect(uowRows).toHaveLength(2);
         expect(uowRows.find((r) => r.developerName === 'A')!.commitPosition).toBe('1st');
         expect(uowRows.find((r) => r.developerName === 'B')!.commitPosition).toBe('2nd');
+    });
+
+    it('marks two rows sharing a sequence as tied; a solo sequence is not tied', () => {
+        const uowRows = buildUnitOfWorkRows([uowRow('A', 10), uowRow('B', 20), uowRow('C', 20)]);
+
+        expect(uowRows.find((r) => r.developerName === 'A')!.tied).toBe(false);
+        expect(uowRows.find((r) => r.developerName === 'B')!.tied).toBe(true);
+        expect(uowRows.find((r) => r.developerName === 'C')!.tied).toBe(true);
+    });
+
+    it('two rows with no sequence at all are never tied — blank is the ordinary unordered default', () => {
+        const uowRows = buildUnitOfWorkRows([uowRow('A', undefined), uowRow('B', undefined)]);
+
+        expect(uowRows.every((r) => !r.tied)).toBe(true);
+    });
+});
+
+describe('unitOfWorkCollisionGroups', () => {
+    function uowRow(developerName: string, sequence?: number): At4dxBindingRow {
+        return row({ bindingType: 'UnitOfWork', developerName, key: developerName, to: undefined, sequence, effective: true });
+    }
+
+    it('groups the tied rows into one group, keyed by the shared sequence', () => {
+        const uowRows = buildUnitOfWorkRows([uowRow('A', 10), uowRow('B', 20), uowRow('C', 20)]);
+
+        const groups = unitOfWorkCollisionGroups(uowRows);
+
+        expect(groups).toHaveLength(1);
+        expect(groups[0].sequence).toBe(20);
+        expect(groups[0].rows.map((r) => r.developerName)).toEqual(['B', 'C']);
+    });
+
+    it('produces no group when nothing is tied', () => {
+        const uowRows = buildUnitOfWorkRows([uowRow('A', 10), uowRow('B', 20), uowRow('C', undefined)]);
+
+        expect(unitOfWorkCollisionGroups(uowRows)).toEqual([]);
+    });
+});
+
+describe('planUnitOfWorkReorder', () => {
+    function uowRow(developerName: string, sequence?: number): At4dxBindingRow {
+        return row({ bindingType: 'UnitOfWork', developerName, key: developerName, to: undefined, sequence, effective: true });
+    }
+
+    it('moving the first row after the second renumbers only the two that actually swapped', () => {
+        const rows = [uowRow('A', 10), uowRow('B', 20), uowRow('C', 30)];
+
+        const moves = planUnitOfWorkReorder(rows, 'A', 1);
+
+        expect(moves.sort((a, b) => a.developerName.localeCompare(b.developerName))).toEqual([
+            { developerName: 'A', sequence: 20 },
+            { developerName: 'B', sequence: 10 },
+        ]);
+    });
+
+    it('dropping a row back onto its own position is a no-op', () => {
+        const rows = [uowRow('A', 10), uowRow('B', 20)];
+
+        expect(planUnitOfWorkReorder(rows, 'A', 0)).toEqual([]);
+    });
+
+    it('dragging an unsequenced row into the sequenced group gives it a sequence without touching unrelated unsequenced rows', () => {
+        const rows = [uowRow('A', 10), uowRow('B', 20), uowRow('Unsequenced1'), uowRow('Unsequenced2')];
+
+        const moves = planUnitOfWorkReorder(rows, 'Unsequenced1', 0);
+
+        // Unsequenced1 is inserted before A and renumbered along with the sequenced group; Unsequenced2
+        // never had a sequence and isn't being dragged, so it must not appear in the moves at all.
+        expect(moves.find((m) => m.developerName === 'Unsequenced2')).toBeUndefined();
+        expect(moves.find((m) => m.developerName === 'Unsequenced1')).toEqual({ developerName: 'Unsequenced1', sequence: 10 });
+        expect(moves.find((m) => m.developerName === 'A')).toEqual({ developerName: 'A', sequence: 20 });
+        expect(moves.find((m) => m.developerName === 'B')).toEqual({ developerName: 'B', sequence: 30 });
+    });
+
+    it('returns no moves for a developer name not present in rows', () => {
+        expect(planUnitOfWorkReorder([uowRow('A', 10)], 'Nonexistent', 0)).toEqual([]);
+    });
+});
+
+describe('tiedPriorityLabel', () => {
+    it('reads the shared priority off any row in the tie group', () => {
+        expect(tiedPriorityLabel([{ priority: 10 }, { priority: 10 }])).toBe('10');
+    });
+
+    it('reads "blank" when the tied rows share no priority at all', () => {
+        expect(tiedPriorityLabel([{ priority: undefined }, { priority: undefined }])).toBe('blank');
     });
 });
 

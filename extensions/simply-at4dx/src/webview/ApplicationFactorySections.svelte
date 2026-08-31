@@ -1,6 +1,6 @@
 <script lang="ts">
     import ApplicationFactoryRow from './ApplicationFactoryRow.svelte';
-    import { groupsByKey } from './lib/applicationFactoryView';
+    import { groupsByKey, tiedPriorityLabel } from './lib/applicationFactoryView';
     import type { ApplicationFactorySection, ApplicationFactoryViewRow } from './lib/applicationFactoryView';
 
     let {
@@ -37,7 +37,11 @@
             {#each groupsByKey(section.rows) as group (group.key)}
                 {#if isTiedGroup(group.rows)}
                     <div class="af-tie-banner">
-                        ⚠ Tied on priority — AT4DX's resolution order for <strong>{group.key}</strong> isn't guaranteed to stay the same across deploys.
+                        <span class="af-tie-banner-icon">⚠</span>
+                        <span class="af-tie-banner-text">
+                            <span class="mono-strong">{group.key}</span> both at priority <span class="mono-strong">{tiedPriorityLabel(group.rows)}</span> — AT4DX
+                            overwrites one map entry with the other, so the last record loaded wins. Give one a higher priority to make it deterministic.
+                        </span>
                     </div>
                 {/if}
                 {#each group.rows as row (row.developerName + row.source)}
