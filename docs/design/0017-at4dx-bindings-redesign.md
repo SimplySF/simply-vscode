@@ -1,6 +1,6 @@
 # 0017 — AT4DX Bindings Redesign
 
-**Status:** Planned (Stages 1–3 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40), Stage 2 in [PR #41](https://github.com/SimplySF/simply-vscode/pull/41); Stage 3 pending PR/review; Stage 4 not started)
+**Status:** Planned (Stages 1–4 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40), Stage 2 in [PR #41](https://github.com/SimplySF/simply-vscode/pull/41), Stage 3 in [PR #42](https://github.com/SimplySF/simply-vscode/pull/42); Stage 4 pending PR/review — set this line to `Implemented (PR #N)` once it merges, per 0016's own convention for a multi-PR doc)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-31
 
@@ -281,6 +281,36 @@ inclusion contributes nothing and showing it would contradict the "queries again
 these field sets" framing. `FieldsetName__c` uniqueness is **org-wide** (per 3f), so the combobox's
 duplicate check must run against the *whole* scan's inclusions, not just this SObject's.
 
+**Implementation note (Stage 4, landed):**
+
+- **Add/Remove write independently of the main Create/Save action, and never trigger a full panel
+  re-render.** Every other write in this panel (a binding, a sequence batch) ends in a full rescan and
+  `render()`, which remounts the whole webview (docs/design/0011) — fine when the write closes the form
+  anyway, wrong here, since the canvas's own framing ("adding one here queues a second write; the
+  selector is created either way") means the drawer needs to *stay open*. `at4dxExplorerPanel.ts`'s new
+  `submitFieldSetInclusion` writes, re-scans only field set inclusions, patches the fresh list into
+  `this.state.applicationFactory` in place (so the next unrelated render stays consistent) — but posts a
+  **targeted** message (`fieldSetInclusionsUpdated` / `fieldSetInclusionBlocked` /
+  `fieldSetInclusionError`) back to the still-mounted drawer instead of calling `render()`. The drawer
+  keeps its own local copy of the inclusion list, seeded once and updated only by that message.
+- **No combobox with real options — a plain text field.** The library has no way to enumerate an
+  SObject's actual FieldSet API names (that's org-describe metadata `simply-aep-core` doesn't scan);
+  "combobox" in the canvas's own copy is read as "a text field with an Add button," matching every other
+  free-text field already in this drawer (class names, SObject names) rather than implying a live
+  picklist this stage can't back.
+- **No Developer Name field for a field set inclusion, by design, not by omission.** The canvas's own
+  "Add" mockups (2a section 3, 3a section 3) never show one — just the field set name and an Add button —
+  so one is generated (`suggestFieldSetInclusionDeveloperName`, `lib/fieldSetInclusionView.ts`): a
+  sanitized `SObject_FieldSet_Inclusion` name, numerically suffixed on a collision. The user never sees
+  or edits it.
+- **No field count per field set** (the canvas's "6 fields"/"3 fields" in 3a's inclusion rows). The
+  library exposes no FieldSet field-membership data at all — only the inclusion record itself
+  (`fieldsetName`, `isActive`, source). Each row shows the field set's API name and its package/org
+  source, nothing else.
+- **No "1 will be created, 0 deleted" pending-diff summary** (3a's own footer note) — since Add/Remove
+  write immediately rather than staging, there's nothing pending to summarize by the time the drawer
+  would show one.
+
 ## Alternatives considered
 
 **Shipping 1b as a real second view (a view-mode toggle on the SObject Bindings tab).** Rejected — the
@@ -358,20 +388,33 @@ Implementation note above)**
     at the end carrying a one-render-only `lastBatchResult` (saved/total counts, which SObject failed).
 14. `src/webview/types.ts` — `SequenceBatchUpdate`/`SequenceBatchResult`, and `InitialState.lastBatchResult`.
 
-**Stage 4 — field set inclusions**
+**Stage 4 — field set inclusions (landed)**
 
-15. `src/applicationFactoryCli.ts` — add `getFieldSetInclusions`/`createFieldSetInclusion`/
-    `updateFieldSetInclusion` wrappers, mirroring the existing binding read/write wrapper pattern.
-16. `src/webview/FieldSetInclusionList.svelte` — new, nested in `ApplicationFactoryForm.svelte`'s
-    Selector-only section 3 (per Stage 2's own "shared library, not a merged component" note above).
-17. `src/at4dxExplorerPanel.ts` — new `submitFieldSetInclusion` message handler.
+15. `src/applicationFactoryCli.ts` — `getFieldSetInclusions`/`createSelectorFieldSetInclusion`/
+    `updateSelectorFieldSetInclusion`, mirroring the existing binding read/write wrapper pattern
+    (dynamic `import()`, `BindingWriteError`-style `blocked`/thrown-error split — here
+    `FieldSetInclusionWriteError`).
+16. `src/webview/lib/fieldSetInclusionView.ts` — new: pure filtering/counting/grouping (there's no
+    priority/resolution logic to derive here, unlike `applicationFactoryView.ts` — every active record
+    contributes simultaneously) plus `suggestFieldSetInclusionDeveloperName`.
+17. `src/webview/ApplicationFactoryForm.svelte` — new section 3 (Selector only): a local copy of the
+    inclusion list, an Add row, and a Remove (✕) per row — landed inline in the existing component rather
+    than a separate `FieldSetInclusionList.svelte`, consistent with Stage 2's "shared library, not a
+    merged component" call; the section is small enough that splitting it out would be indirection, not
+    reuse.
+18. `src/webview/SObjectBindingCard.svelte`/`SObjectBindingsSheet.svelte` — the Selector row's "N field
+    sets" text, previously always blank (Stage 1's own deferred-to-Stage-4 note), now reads from the
+    scan's real inclusion count.
+19. `src/at4dxExplorerPanel.ts` — new `submitFieldSetInclusion` message handler, and a shared
+    `scanApplicationFactory` helper (bindings + field set inclusions together) every write handler now
+    calls, replacing each one's own separate `getApplicationFactoryBindings` call.
 
 **Docs, per stage**
 
-18. Update this doc's Status line per stage as it lands (`Planned` after Stage 1, `Implemented (PR #N)`
+20. Update this doc's Status line per stage as it lands (`Planned` after Stage 1, `Implemented (PR #N)`
     once Stage 4 does — matching 0016's own convention for a doc spanning multiple PRs).
-19. `extensions/simply-at4dx/README.md` — rewritten Usage section once Stage 1 lands (tab names change
-    user-visibly).
+21. `extensions/simply-at4dx/README.md` — rewritten Usage section once Stage 1 lands (tab names change
+    user-visibly), and again once Stage 4 does.
 
 ## Testing
 
@@ -396,21 +439,33 @@ Mirrors 0016's split between derivation unit tests and component tests; new surf
   banners. No dedicated host-side test for `submitSequenceBatch` itself, matching this codebase's
   existing convention of not unit-testing `at4dxExplorerPanel.ts`'s other write handlers
   (`submitBinding`/`submitApplicationFactoryBinding` have none either) — covered by the Manual pass below.
-- **Stage 4**: field-set-inclusion create/toggle round trip against `testfixtures/`; org-wide (not
-  per-SObject) duplicate-`FieldsetName__c` check.
+- **Stage 4** (landed): `fieldSetInclusionView.test.ts` — active-only filtering, per-SObject counting, the
+  `no field sets`/`1 field set`/`N field sets` wording, and developer-name suggestion (sanitization,
+  collision suffixing, the 40-character cap). `applicationFactoryCli.test.ts` extended with
+  `getFieldSetInclusions`/`createSelectorFieldSetInclusion`/`updateSelectorFieldSetInclusion` coverage
+  mirroring the existing binding tests (local/org scans, the org-`missing`-flag path, blocked vs. thrown
+  writes). `App.test.ts` extended: the section renders only for the Selector segment, Add/Remove post the
+  right payloads, and — the one behavior genuinely new to this stage —
+  `fieldSetInclusionsUpdated`/`fieldSetInclusionBlocked`/`fieldSetInclusionError` all update the
+  still-open drawer **without** it closing, unlike every other write in this panel. No dedicated
+  host-side test for `submitFieldSetInclusion`, same convention as Stage 3's `submitSequenceBatch`.
 - **Manual** (F5), each stage: confirm the tab strip / card sheet / drawer / drag / inclusions against
   `testfixtures/`, plus one connected-org pass per stage before it's marked `Implemented`.
 
 ## Open questions
 
-- **5a's "declared but unbound interface" / "bound to a class that no longer exists" rows** — not
-  confirmed buildable against the current library (see Behavior's Service Bindings section). Resolve
-  before Stage 1 implementation reaches that part, or ship Stage 1 without them and file a follow-up.
+- *(Resolved)* **5a's "declared but unbound interface" / "bound to a class that no longer exists"
+  rows** — the library has no way to enumerate a declared-but-unbound interface, confirmed once Stage 1
+  actually shipped. Those two sections were left out of the Service Bindings tab; a future doc can revisit
+  if the library grows the necessary read (e.g. from interface metadata scanning).
 - **Rename** (deviation 6) — deliberately left locked here; revisit once/if the library grows an atomic
   rename. Not blocking.
 - **Domain Process band-drag** (4a) — deferred, not designed; its own "failure state needs its own
   design" note stays unresolved until someone picks it up as a dedicated follow-on doc.
-- **Whether Stage 1 ships all four grid states in one PR or splits further** (e.g. cards-read-only first,
-  gap/Add-link affordances second) — a call for whoever implements it, given the 920px/560px mockups
-  bundle a lot into "Stage 1"; splitting further is fine as long as each split keeps the doc's own
-  card-row-state table intact end to end before being called done.
+- *(Resolved)* **Whether Stage 1 ships all four grid states in one PR or splits further** — it shipped
+  as one PR ([#40](https://github.com/SimplySF/simply-vscode/pull/40)), keeping every card-row state from
+  the doc's own table intact.
+- **No Delete affordance, anywhere, for any binding type or field set inclusion** (deviations 2, and the
+  Stage 4 "no delete" note) — remains open until `simply-aep-core` grows a delete function. Not blocking;
+  every "remove" in this panel is deactivation, which the doc treats as the honest option given what the
+  library actually supports today.

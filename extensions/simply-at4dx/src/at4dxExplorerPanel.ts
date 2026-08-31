@@ -17,13 +17,22 @@ import {
 import {
     applicationFactoryLocalObjectName,
     createApplicationFactoryBinding,
+    createSelectorFieldSetInclusion,
     getApplicationFactoryBindings,
+    getFieldSetInclusions,
     updateApplicationFactoryBinding,
+    updateSelectorFieldSetInclusion,
     type ApplicationFactoryRules,
     type At4dxBindingRow,
     type BindingIssue,
     type CreateBindingInput,
+    type CreateFieldSetInclusionInput,
+    type FieldSetInclusionIssue,
+    type FieldSetInclusionRuleInfo,
+    type FieldSetInclusionIssueRule,
+    type RawFieldSetInclusionRecord,
     type UpdateBindingInput,
+    type UpdateFieldSetInclusionInput,
 } from './applicationFactoryCli';
 import type { Logger } from './logger';
 
@@ -49,6 +58,23 @@ type ApplicationFactoryData = {
     issues: BindingIssue[];
     rules: ApplicationFactoryRules;
     standardObjects: string[];
+    /** `SelectorConfig_FieldSetInclusion__mdt` records — stage 4, see docs/design/0017. Scanned alongside the bindings themselves so the SObject Bindings sheet's own Selector rows can show a real field-set count, not just the Selector drawer's nested list. */
+    fieldSetInclusions: RawFieldSetInclusionRecord[];
+    fieldSetInclusionIssues: FieldSetInclusionIssue[];
+    fieldSetInclusionRules: Record<FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo>;
+};
+
+/**
+ * The Selector drawer's "add a field set" / "remove" field values as posted on submit (stage 4 — see
+ * docs/design/0017). Create needs `sobject`/`fieldsetName`; update (the "✕ remove" action, which sets
+ * `isActive: false` rather than deleting — the library has no delete) only ever needs `isActive`.
+ */
+type FieldSetInclusionFormPayload = {
+    developerName: string;
+    sobject?: string;
+    sobjectAlternate?: boolean;
+    fieldsetName?: string;
+    isActive?: boolean;
 };
 
 /**
@@ -279,8 +305,8 @@ export class At4dxExplorerPanel {
                 command: string;
                 classToInject?: string;
                 index?: number;
-                mode?: 'create' | 'edit';
-                input?: BindingFormPayload | ApplicationFactoryFormPayload;
+                mode?: 'create' | 'edit' | 'update';
+                input?: BindingFormPayload | ApplicationFactoryFormPayload | FieldSetInclusionFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
                 updates?: SequenceBatchUpdate[];
@@ -292,13 +318,15 @@ export class At4dxExplorerPanel {
                 } else if (message.command === 'openApplicationFactoryIssue' && typeof message.index === 'number') {
                     void this.openApplicationFactoryIssue(message.index);
                 } else if (message.command === 'submitBinding' && message.mode && message.input) {
-                    void this.submitBinding(message.mode, message.input as BindingFormPayload, Boolean(message.force));
+                    void this.submitBinding(message.mode as 'create' | 'edit', message.input as BindingFormPayload, Boolean(message.force));
                 } else if (message.command === 'submitApplicationFactoryBinding' && message.mode && message.input) {
-                    void this.submitApplicationFactoryBinding(message.mode, message.input as ApplicationFactoryFormPayload, Boolean(message.force));
+                    void this.submitApplicationFactoryBinding(message.mode as 'create' | 'edit', message.input as ApplicationFactoryFormPayload, Boolean(message.force));
                 } else if (message.command === 'selectExplorer' && message.explorer) {
                     void this.selectExplorer(message.explorer);
                 } else if (message.command === 'submitSequenceBatch' && Array.isArray(message.updates)) {
                     void this.submitSequenceBatch(message.updates);
+                } else if (message.command === 'submitFieldSetInclusion' && (message.mode === 'create' || message.mode === 'update') && message.input) {
+                    void this.submitFieldSetInclusion(message.mode, message.input as FieldSetInclusionFormPayload, Boolean(message.force));
                 }
             },
             null,
@@ -329,8 +357,8 @@ export class At4dxExplorerPanel {
 
     /**
      * Switches the active tab. The Application Factory explorer scans lazily — the first switch to it
-     * triggers `getApplicationFactoryBindings` and re-renders when that resolves; switching back and
-     * forth afterward just flips `active` against already-scanned data, no repeat org round trip. See
+     * triggers `scanApplicationFactory` and re-renders when that resolves; switching back and forth
+     * afterward just flips `active` against already-scanned data, no repeat org round trip. See
      * docs/design/0016.
      */
     private async selectExplorer(explorer: ExplorerKey): Promise<void> {
@@ -340,14 +368,44 @@ export class At4dxExplorerPanel {
             const target = this.state.target;
             this.render(this.state);
             try {
-                const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
-                this.state.applicationFactory =
-                    rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+                this.state.applicationFactory = await this.scanApplicationFactory(target);
             } catch (error) {
                 this.state.applicationFactory = { kind: 'error', message: formatReadError(error, 'reading Application Factory bindings') };
             }
         }
         this.render(this.state);
+    }
+
+    /**
+     * Scans both Application Factory bindings and field set inclusions (stage 4 — see
+     * docs/design/0017) — the one scan every write handler below re-runs after a successful write, and
+     * `selectExplorer` runs once on the tab's first visit. Field set inclusions are scanned alongside
+     * the bindings themselves so the SObject Bindings sheet's Selector rows can show a real field-set
+     * count, not just the Selector drawer's own nested list.
+     *
+     * A field-set-inclusion scan failure degrades gracefully (logged, treated as zero inclusions) rather
+     * than failing the whole explorer — inclusions are a supplementary feature layered on top of the
+     * bindings themselves, not something the rest of the tab depends on to function. A *bindings* scan
+     * failure still propagates and fails the whole tab, same as before this stage.
+     */
+    private async scanApplicationFactory(target: BindingSource): Promise<ExplorerState<ApplicationFactoryData>> {
+        const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
+
+        let fieldSetInclusions: RawFieldSetInclusionRecord[] = [];
+        let fieldSetInclusionIssues: FieldSetInclusionIssue[] = [];
+        let fieldSetInclusionRules: Record<FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo> = {} as Record<FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo>;
+        try {
+            const fieldSetScan = await getFieldSetInclusions(target, this.logger);
+            fieldSetInclusions = fieldSetScan.records;
+            fieldSetInclusionIssues = fieldSetScan.issues;
+            fieldSetInclusionRules = fieldSetScan.rules;
+        } catch (error) {
+            this.logger?.log(`field set inclusion scan failed, continuing without it: ${(error as Error).message}`, { verbose: true });
+        }
+
+        return rows.length === 0 && issues.length === 0 && fieldSetInclusions.length === 0
+            ? { kind: 'empty' }
+            : { kind: 'data', rows, issues, rules, standardObjects, fieldSetInclusions, fieldSetInclusionIssues, fieldSetInclusionRules };
     }
 
     /**
@@ -404,9 +462,7 @@ export class At4dxExplorerPanel {
                 return;
             }
 
-            const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
-            const applicationFactory: ExplorerState<ApplicationFactoryData> =
-                rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+            const applicationFactory = await this.scanApplicationFactory(target);
             this.render({ ...this.state, applicationFactory });
         } catch (error) {
             void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
@@ -446,12 +502,49 @@ export class At4dxExplorerPanel {
         }
 
         try {
-            const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
-            const applicationFactory: ExplorerState<ApplicationFactoryData> =
-                rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+            const applicationFactory = await this.scanApplicationFactory(target);
             this.render({ ...this.state, applicationFactory }, { lastBatchResult: { savedCount, totalCount: updates.length, failed } });
         } catch (error) {
             void this.panel.webview.postMessage({ command: 'writeError', message: formatReadError(error, 'reading Application Factory bindings') });
+        }
+    }
+
+    /**
+     * Handles the webview's `submitFieldSetInclusion` message (stage 4 — see docs/design/0017). Unlike
+     * every other write in this panel, this never triggers `render()` — a full re-render remounts the
+     * whole webview (see docs/design/0011), which would close whatever Selector drawer the user was
+     * still in the middle of editing. Instead: write, re-scan *just* field set inclusions, patch the
+     * fresh list into `this.state.applicationFactory` in place (so the *next* unrelated render is still
+     * consistent), and post a targeted message back to the still-mounted drawer with the fresh list —
+     * the same "update in place, don't remount" pattern `writeBlocked`/`writeError` already use for a
+     * blocked or failed write on the main binding form.
+     */
+    private async submitFieldSetInclusion(mode: 'create' | 'update', input: FieldSetInclusionFormPayload, force: boolean): Promise<void> {
+        if (this.state.applicationFactory.kind !== 'data' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+
+        try {
+            const outcome =
+                mode === 'create'
+                    ? await createSelectorFieldSetInclusion({ ...(input as CreateFieldSetInclusionInput), force }, target, this.logger)
+                    : await updateSelectorFieldSetInclusion({ ...(input as UpdateFieldSetInclusionInput), force }, target, this.logger);
+
+            if (outcome.kind === 'blocked') {
+                void this.panel.webview.postMessage({ command: 'fieldSetInclusionBlocked', issues: outcome.issues });
+                return;
+            }
+
+            const { records, issues, rules } = await getFieldSetInclusions(target, this.logger);
+            if (this.state.applicationFactory.kind === 'data') {
+                this.state.applicationFactory.fieldSetInclusions = records;
+                this.state.applicationFactory.fieldSetInclusionIssues = issues;
+                this.state.applicationFactory.fieldSetInclusionRules = rules;
+            }
+            void this.panel.webview.postMessage({ command: 'fieldSetInclusionsUpdated', records });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'fieldSetInclusionError', message: formatWriteError(error) });
         }
     }
 

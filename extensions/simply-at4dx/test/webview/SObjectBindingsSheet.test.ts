@@ -21,7 +21,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
 
     it('shows Move Up/Down buttons only for cards with a real Unit of Work binding, disabled at the boundaries', () => {
         render(SObjectBindingsSheet, {
-            props: { rows: [...rows, { bindingType: 'Selector', developerName: 'S', label: 'S', key: 'Widget__c', to: 'WidgetSelector', source: 'local', effective: true } as At4dxBindingRow], domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() },
+            props: { rows: [...rows, { bindingType: 'Selector', developerName: 'S', label: 'S', key: 'Widget__c', to: 'WidgetSelector', source: 'local', effective: true } as At4dxBindingRow], domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() },
         });
 
         // Widget__c has no Unit of Work binding — no reorder controls at all.
@@ -37,7 +37,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
     });
 
     it('stages a pending change and shows the Save bar when Move Down is clicked, with no pending change beforehand', async () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         expect(screen.queryByText(/pending change/)).toBeNull();
 
@@ -50,7 +50,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
     });
 
     it('Revert clears every staged move', async () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         await fireEvent.click(screen.getByLabelText('Move Account later in the commit order'));
         expect(screen.getByText(/1 pending change/)).toBeTruthy();
@@ -60,7 +60,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
     });
 
     it('Save posts submitSequenceBatch with the moved card\'s new sequence, keyed by developerName and sobject', async () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         await fireEvent.click(screen.getByLabelText('Move Account later in the commit order'));
         await fireEvent.click(screen.getByText('Save commit order'));
@@ -72,7 +72,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
     });
 
     it('a round trip (down then up) reports no pending change', async () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         await fireEvent.click(screen.getByLabelText('Move Account later in the commit order'));
         await fireEvent.click(screen.getByLabelText('Move Account earlier in the commit order'));
@@ -81,7 +81,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
     });
 
     it('renders no reorder controls at all when canWrite is false', () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: false, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: false, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         expect(screen.queryByLabelText('Move Account earlier in the commit order')).toBeNull();
         expect(document.querySelector('.pcb-bar')).toBeNull();
@@ -89,7 +89,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
 
     it('shows a sequence-collision banner between two cards sharing a sequence, without blocking the sheet', () => {
         render(SObjectBindingsSheet, {
-            props: { rows: [uowRow('AccountUOW', 'Account', 10), uowRow('FishUOW', 'Fish__c', 10)], domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() },
+            props: { rows: [uowRow('AccountUOW', 'Account', 10), uowRow('FishUOW', 'Fish__c', 10)], domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() },
         });
 
         expect(screen.getByText(/sequence-collision/)).toBeTruthy();
@@ -99,14 +99,14 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
 
     it('reports a successful batch result banner once', () => {
         render(SObjectBindingsSheet, {
-            props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: { savedCount: 2, totalCount: 2 }, onEdit: vi.fn(), onAdd: vi.fn() },
+            props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: { savedCount: 2, totalCount: 2 }, onEdit: vi.fn(), onAdd: vi.fn() },
         });
 
         expect(document.querySelector('.pcb-batch-result.ok')?.textContent).toContain('Saved 2 of 2');
     });
 
     it('recovers from a writeError while saving — stops "Saving…" and shows the message', async () => {
-        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
+        render(SObjectBindingsSheet, { props: { rows, domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() } });
 
         await fireEvent.click(screen.getByLabelText('Move Account later in the commit order'));
         await fireEvent.click(screen.getByText('Save commit order'));
@@ -124,7 +124,7 @@ describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {
         render(SObjectBindingsSheet, {
             props: {
                 rows,
-                domainProcessRows: undefined,
+                domainProcessRows: undefined, fieldSetInclusions: [],
                 canWrite: true,
                 lastBatchResult: { savedCount: 1, totalCount: 3, failed: { sobject: 'Fish__c', message: 'Deploy failed.' } },
                 onEdit: vi.fn(),

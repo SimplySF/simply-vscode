@@ -1,6 +1,7 @@
 <script lang="ts">
     import Icon from './Icon.svelte';
     import type { SObjectBindingCard } from './lib/sobjectBindingsView';
+    import { fieldSetCountLabel } from './lib/fieldSetInclusionView';
     import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
     import { postMessage } from './vscodeApi';
 
@@ -8,6 +9,7 @@
         card,
         canWrite,
         domainProcessBindingCount,
+        fieldSetCount,
         onEdit,
         onAdd,
         canReorder = false,
@@ -25,6 +27,8 @@
         canWrite: boolean;
         /** Count of this SObject's Domain Process bindings, from the other explorer's own scan — `undefined` while that scan hasn't resolved yet. See docs/design/0017. */
         domainProcessBindingCount: number | undefined;
+        /** Active field set inclusions for this SObject (Stage 4) — shared across every Selector row on the card, since inclusions are SObject-scoped rather than tied to one binding. */
+        fieldSetCount: number;
         onEdit: (row: ApplicationFactoryViewRow | UnitOfWorkViewRow) => void;
         onAdd: (bindingType: 'Domain' | 'UnitOfWork', sobject: string) => void;
         /** Whether this card has a real Unit of Work binding and so takes part in commit-order drag/keyboard reordering (Stage 3). */
@@ -139,8 +143,7 @@
                 <span class="row-class" role="button" tabindex="0" title={row.to} onclick={() => openClass(row.to)} onkeydown={(e) => classKeydown(row.to, e)}>
                     {row.to}
                 </span>
-                <!-- Field set count is Stage 4 (docs/design/0017) — field set inclusion data isn't scanned yet. -->
-                <span class="sb-detail"></span>
+                <span class="sb-detail">{fieldSetCountLabel(fieldSetCount)}</span>
                 <span class="sb-value-badge">
                     <span class="af-priority" class:af-priority-blank={row.priority === undefined}>{row.priority ?? '—'}</span>
                     {#if row.resolution.kind === 'effective'}

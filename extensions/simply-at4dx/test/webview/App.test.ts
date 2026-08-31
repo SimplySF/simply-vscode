@@ -299,7 +299,7 @@ describe('App — Application Factory explorer', () => {
                         rows: [afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
-                        standardObjects: [],
+                        standardObjects: [], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules,
                     },
                 }),
             },
@@ -316,7 +316,7 @@ describe('App — Application Factory explorer', () => {
             props: {
                 initial: state({
                     active: 'applicationFactory',
-                    applicationFactory: { kind: 'data', rows: [afRow()], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [] },
+                    applicationFactory: { kind: 'data', rows: [afRow()], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules },
                 }),
             },
         });
@@ -337,7 +337,7 @@ describe('App — Application Factory explorer', () => {
                         rows: [afRow(), afRow({ developerName: 'B' }), afRow({ bindingType: 'Selector', developerName: 'C', key: 'Account', to: 'AccountsSelector' })],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
-                        standardObjects: [],
+                        standardObjects: [], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules,
                     },
                 }),
             },
@@ -362,7 +362,7 @@ describe('App — Application Factory explorer', () => {
                         ],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
-                        standardObjects: [],
+                        standardObjects: [], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules,
                     },
                 }),
             },
@@ -384,7 +384,7 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
             rows: [afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
             issues: [],
             rules: {} as ApplicationFactoryRules,
-            standardObjects: ['Account'],
+            standardObjects: ['Account'], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules,
         },
     });
 
@@ -474,6 +474,132 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
     });
 });
 
+describe('App — field set inclusions (stage 4)', () => {
+    function fieldSetInclusion(overrides: Record<string, unknown> = {}) {
+        return {
+            developerName: 'Account_TierFields',
+            label: 'Account Tier Fields',
+            sobject: 'Account',
+            sobjectField: 'primary',
+            fieldsetName: 'AccountTierFields',
+            isActive: true,
+            source: 'local',
+            ...overrides,
+        };
+    }
+
+    const initial: InitialState = state({
+        active: 'applicationFactory',
+        applicationFactory: {
+            kind: 'data',
+            rows: [
+                afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 }),
+                afRow({ bindingType: 'Domain', developerName: 'AccountsDomainBinding', key: 'Account', to: 'Accounts' }),
+            ],
+            issues: [],
+            rules: {} as ApplicationFactoryRules,
+            standardObjects: ['Account'],
+            fieldSetInclusions: [fieldSetInclusion()],
+            fieldSetInclusionIssues: [],
+            fieldSetInclusionRules: {} as ApplicationFactoryRules,
+        },
+    });
+
+    it('shows the section, listing existing inclusions, only for the Selector segment', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]); // the Selector row
+
+        expect(screen.getByText('Field set inclusions')).toBeTruthy();
+        expect(screen.getByText('AccountTierFields')).toBeTruthy();
+    });
+
+    it('hides the section entirely when editing the Domain binding on the same SObject', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[1]); // the Domain row
+
+        expect(screen.queryByText('Field set inclusions')).toBeNull();
+    });
+
+    it('Add posts submitFieldSetInclusion create with a suggested developer name and no bindingType field', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+        await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'BillingSummary' } });
+        await fireEvent.click(screen.getByText('Add'));
+
+        expect(postMessage).toHaveBeenCalledWith({
+            command: 'submitFieldSetInclusion',
+            mode: 'create',
+            input: { developerName: 'Account_BillingSummary_Inclusion', sobject: 'Account', sobjectAlternate: false, fieldsetName: 'BillingSummary' },
+        });
+    });
+
+    it('Remove posts submitFieldSetInclusion update with isActive: false', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+        await fireEvent.click(screen.getByLabelText('Remove AccountTierFields'));
+
+        expect(postMessage).toHaveBeenCalledWith({
+            command: 'submitFieldSetInclusion',
+            mode: 'update',
+            input: { developerName: 'Account_TierFields', isActive: false },
+        });
+    });
+
+    it('fieldSetInclusionsUpdated updates the list in place — the drawer stays open, unlike a binding save', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+        await fireEvent.click(screen.getByLabelText('Remove AccountTierFields'));
+
+        window.dispatchEvent(new MessageEvent('message', { data: { command: 'fieldSetInclusionsUpdated', records: [] } }));
+        await Promise.resolve();
+
+        expect(screen.getByText('Edit selector binding')).toBeTruthy(); // still open
+        expect(screen.queryByText('AccountTierFields')).toBeNull();
+    });
+
+    it('fieldSetInclusionBlocked shows the wiring-problem panel without closing the drawer', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+        await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'DupeFields' } });
+        await fireEvent.click(screen.getByText('Add'));
+
+        window.dispatchEvent(
+            new MessageEvent('message', { data: { command: 'fieldSetInclusionBlocked', issues: [{ severity: 'error', rule: 'duplicate-fieldset-name', message: 'Already used.' }] } }),
+        );
+        await Promise.resolve();
+
+        expect(screen.getByText('This would introduce a wiring problem')).toBeTruthy();
+        expect(screen.getByText('Already used.')).toBeTruthy();
+        expect(screen.getByText('Edit selector binding')).toBeTruthy();
+    });
+
+    it('fieldSetInclusionError shows the error text without closing the drawer', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+        await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'BillingSummary' } });
+        await fireEvent.click(screen.getByText('Add'));
+
+        window.dispatchEvent(new MessageEvent('message', { data: { command: 'fieldSetInclusionError', message: 'Could not reach the org.' } }));
+        await Promise.resolve();
+
+        expect(screen.getByText('Could not reach the org.')).toBeTruthy();
+        expect(screen.getByText('Edit selector binding')).toBeTruthy();
+    });
+
+    it('shows the real field-set count on the SObject Bindings sheet\'s Selector row', async () => {
+        render(App, { props: { initial } });
+
+        expect(screen.getByText('1 field set')).toBeTruthy();
+    });
+});
+
 describe('App — Application Factory Unit of Work create/edit (stage 3)', () => {
     const initial: InitialState = state({
         active: 'applicationFactory',
@@ -482,7 +608,7 @@ describe('App — Application Factory Unit of Work create/edit (stage 3)', () =>
             rows: [afRow({ bindingType: 'UnitOfWork', developerName: 'AccountUnitOfWork', key: 'Account', to: undefined, sequence: 10, effective: true })],
             issues: [],
             rules: {} as ApplicationFactoryRules,
-            standardObjects: ['Account'],
+            standardObjects: ['Account'], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules,
         },
     });
 

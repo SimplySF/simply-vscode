@@ -3,7 +3,19 @@
     import BindingSObjectField from './BindingSObjectField.svelte';
     import { developerNameValid, ruleTitle } from './lib/bindingView';
     import { applicationFactoryDrawerCopy } from './lib/bindingDrawerCopy';
-    import type { ApplicationFactoryFormInitial, ApplicationFactoryFormPayload, ApplicationFactoryRules, At4dxBindingRow, BindingIssue, DomainProcessBindingRow, WritableBindingType } from './types';
+    import { activeFieldSetInclusionsForSObject, fieldSetCountLabel, suggestFieldSetInclusionDeveloperName } from './lib/fieldSetInclusionView';
+    import type {
+        ApplicationFactoryFormInitial,
+        ApplicationFactoryFormPayload,
+        ApplicationFactoryRules,
+        At4dxBindingRow,
+        BindingIssue,
+        DomainProcessBindingRow,
+        FieldSetInclusionIssue,
+        FieldSetInclusionFormPayload,
+        RawFieldSetInclusionRecord,
+        WritableBindingType,
+    } from './types';
     import { postMessage } from './vscodeApi';
 
     let {
@@ -13,6 +25,7 @@
         standardObjects,
         allRows,
         domainProcessRows,
+        fieldSetInclusions,
         onCancel,
     }: {
         mode: 'create' | 'edit';
@@ -23,6 +36,8 @@
         allRows: At4dxBindingRow[];
         /** The Domain Process explorer's own rows, for the Domain drawer's "N process bindings resolve through it" sentence — `undefined` while that (separately-scanned) explorer hasn't resolved yet. */
         domainProcessRows: DomainProcessBindingRow[] | undefined;
+        /** `SelectorConfig_FieldSetInclusion__mdt` records — Selector's own section 3 (Stage 4). See docs/design/0017. */
+        fieldSetInclusions: RawFieldSetInclusionRecord[];
         onCancel: () => void;
     } = $props();
 
@@ -73,21 +88,82 @@
     let pendingForce = $state(false);
     let saving = $state(false);
 
+    // Field set inclusions (Selector only, Stage 4) — a *local* copy, seeded once and updated in place by
+    // `fieldSetInclusionsUpdated` below, never by a prop change (this drawer is never handed updated
+    // props in place — see the "read once" comment above). Kept separate from the main binding's own
+    // save/blocked/error state: adding or removing a field set is its own independent write (see canvas
+    // 2a's own "queues a second write; the selector is created either way"), not part of the main
+    // Create/Save action, so it never touches `saving`/`blockedIssues`/`formError`.
+    let localFieldSetInclusions = $state(untrack(() => fieldSetInclusions));
+    let activeInclusions = $derived(activeFieldSetInclusionsForSObject(localFieldSetInclusions, sobject));
+    let newFieldsetName = $state('');
+    let addingFieldSet = $state(false);
+    let removingDeveloperName = $state<string | undefined>(undefined);
+    let fieldSetError = $state<string | undefined>(undefined);
+    let fieldSetBlockedIssues = $state<FieldSetInclusionIssue[] | undefined>(undefined);
+
     $effect(() => {
         function onMessage(event: MessageEvent): void {
-            const message = event.data as { command?: string; issues?: BindingIssue[]; message?: string };
+            const message = event.data as {
+                command?: string;
+                issues?: BindingIssue[] | FieldSetInclusionIssue[];
+                message?: string;
+                records?: RawFieldSetInclusionRecord[];
+            };
             if (message.command === 'writeBlocked') {
                 saving = false;
                 pendingForce = true;
-                blockedIssues = message.issues ?? [];
+                blockedIssues = (message.issues as BindingIssue[]) ?? [];
             } else if (message.command === 'writeError') {
                 saving = false;
                 formError = message.message ?? '';
+            } else if (message.command === 'fieldSetInclusionsUpdated') {
+                addingFieldSet = false;
+                removingDeveloperName = undefined;
+                fieldSetError = undefined;
+                fieldSetBlockedIssues = undefined;
+                newFieldsetName = '';
+                localFieldSetInclusions = message.records ?? [];
+            } else if (message.command === 'fieldSetInclusionBlocked') {
+                addingFieldSet = false;
+                removingDeveloperName = undefined;
+                fieldSetBlockedIssues = (message.issues as FieldSetInclusionIssue[]) ?? [];
+            } else if (message.command === 'fieldSetInclusionError') {
+                addingFieldSet = false;
+                removingDeveloperName = undefined;
+                fieldSetError = message.message ?? '';
             }
         }
         window.addEventListener('message', onMessage);
         return () => window.removeEventListener('message', onMessage);
     });
+
+    function addFieldSet(): void {
+        const trimmedFieldsetName = newFieldsetName.trim();
+        const trimmedSobject = sobject.trim();
+        if (!trimmedFieldsetName || !trimmedSobject) {
+            return;
+        }
+        fieldSetError = undefined;
+        fieldSetBlockedIssues = undefined;
+        addingFieldSet = true;
+        const existingNames = new Set(localFieldSetInclusions.map((record) => record.developerName));
+        const payload: FieldSetInclusionFormPayload = {
+            developerName: suggestFieldSetInclusionDeveloperName(trimmedSobject, trimmedFieldsetName, existingNames),
+            sobject: trimmedSobject,
+            sobjectAlternate,
+            fieldsetName: trimmedFieldsetName,
+        };
+        postMessage({ command: 'submitFieldSetInclusion', mode: 'create', input: payload });
+    }
+
+    function removeFieldSet(developerName: string): void {
+        fieldSetError = undefined;
+        fieldSetBlockedIssues = undefined;
+        removingDeveloperName = developerName;
+        const payload: FieldSetInclusionFormPayload = { developerName, isActive: false };
+        postMessage({ command: 'submitFieldSetInclusion', mode: 'update', input: payload });
+    }
 
     function fieldError(id: string): string | undefined {
         return fieldErrors[id];
@@ -319,4 +395,64 @@
             {/if}
         </div>
     </div>
+
+    {#if bindingType === 'Selector'}
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="form-section-badge">3</span>
+                <span class="form-section-title">Field set inclusions</span>
+                <span class="form-hint">optional</span>
+            </div>
+            <div class="fsi-body">
+                {#if fieldSetBlockedIssues}
+                    <div class="section issues form-issues">
+                        <div class="section-header"><span class="section-title">This would introduce a wiring problem</span></div>
+                        {#each fieldSetBlockedIssues as issue, i (i)}
+                            <div class="issue" class:error={issue.severity === 'error'} class:warning={issue.severity !== 'error'}>
+                                <span class="issue-icon" class:error={issue.severity === 'error'} class:warning={issue.severity !== 'error'}>⚠</span>
+                                <span class="issue-title">{issue.rule}</span>
+                                <span class="issue-message">{issue.message}</span>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+                {#if fieldSetError}
+                    <div class="form-error">{fieldSetError}</div>
+                {/if}
+                {#if activeInclusions.length === 0}
+                    <p class="empty fsi-empty">{fieldSetCountLabel(0)} — queries against {sobject.trim() || 'this SObject'} return every field.</p>
+                {:else}
+                    <ul class="fsi-list">
+                        {#each activeInclusions as inclusion (inclusion.developerName)}
+                            <li class="fsi-row">
+                                <span class="fsi-name">{inclusion.fieldsetName}</span>
+                                <span class="fsi-source">{inclusion.source}</span>
+                                <button
+                                    type="button"
+                                    class="fsi-remove"
+                                    disabled={removingDeveloperName === inclusion.developerName}
+                                    title="Remove {inclusion.fieldsetName}"
+                                    aria-label="Remove {inclusion.fieldsetName}"
+                                    onclick={() => removeFieldSet(inclusion.developerName)}>✕</button
+                                >
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+                <div class="fsi-add-row">
+                    <input
+                        type="text"
+                        aria-label="Field set API name"
+                        placeholder="Add a field set on {sobject.trim() || 'this SObject'}"
+                        bind:value={newFieldsetName}
+                        disabled={addingFieldSet || !sobject.trim()}
+                    />
+                    <button type="button" class="secondary" disabled={addingFieldSet || !newFieldsetName.trim() || !sobject.trim()} onclick={addFieldSet}>
+                        {addingFieldSet ? 'Adding…' : 'Add'}
+                    </button>
+                </div>
+                <span class="form-hint fsi-note">Inclusions are their own records and their own command, so they save independently of the binding above.</span>
+            </div>
+        </div>
+    {/if}
 </div>
