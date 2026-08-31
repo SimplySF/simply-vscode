@@ -53,11 +53,12 @@ afterEach(() => {
 });
 
 describe('App — explorer tab strip', () => {
-    it('renders all three explorers, with only Platform Events inert', () => {
+    it('renders all four explorers, with only Platform Events inert', () => {
         render(App, { props: { initial: state() } });
 
         expect(screen.getByText('Domain Process Bindings')).toBeTruthy();
-        expect(screen.getByText('Application Factory')).toBeTruthy();
+        expect(screen.getByText('SObject Bindings')).toBeTruthy();
+        expect(screen.getByText('Service Bindings')).toBeTruthy();
         expect(screen.getByText('Platform Events')).toBeTruthy();
         expect(screen.getAllByText('Coming soon')).toHaveLength(1);
     });
@@ -74,10 +75,18 @@ describe('App — explorer tab strip', () => {
         expect(document.querySelector('.explorer-tab-badge')).toBeNull();
     });
 
-    it('posts selectExplorer when the Application Factory tab is clicked', async () => {
+    it('posts selectExplorer (applicationFactory) when the SObject Bindings tab is clicked', async () => {
         render(App, { props: { initial: state() } });
 
-        await fireEvent.click(screen.getByText('Application Factory'));
+        await fireEvent.click(screen.getByText('SObject Bindings'));
+
+        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory' });
+    });
+
+    it('posts selectExplorer (applicationFactory) when the Service Bindings tab is clicked', async () => {
+        render(App, { props: { initial: state() } });
+
+        await fireEvent.click(screen.getByText('Service Bindings'));
 
         expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory' });
     });
@@ -86,6 +95,14 @@ describe('App — explorer tab strip', () => {
         render(App, { props: { initial: state() } });
 
         await fireEvent.click(screen.getByText('Domain Process Bindings'));
+
+        expect(postMessage).not.toHaveBeenCalled();
+    });
+
+    it('switches between SObject Bindings and Service Bindings without re-posting selectExplorer once applicationFactory is already active', async () => {
+        render(App, { props: { initial: state({ active: 'applicationFactory', applicationFactory: { kind: 'empty' } }) } });
+
+        await fireEvent.click(screen.getByText('Service Bindings'));
 
         expect(postMessage).not.toHaveBeenCalled();
     });
@@ -272,14 +289,14 @@ describe('App — Application Factory explorer', () => {
         expect(screen.getByText('No AT4DX Application Factory bindings found.')).toBeTruthy();
     });
 
-    it('renders a section per binding type present, with the resolved implementation, and no SObject/Trigger Event dropdowns', () => {
+    it('renders a card per SObject on the SObject Bindings tab, with the resolved implementation, and no SObject/Trigger Event dropdowns', () => {
         render(App, {
             props: {
                 initial: state({
                     active: 'applicationFactory',
                     applicationFactory: {
                         kind: 'data',
-                        rows: [afRow(), afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
+                        rows: [afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
                         standardObjects: [],
@@ -288,28 +305,51 @@ describe('App — Application Factory explorer', () => {
             },
         });
 
-        expect(screen.getByText('Service')).toBeTruthy();
-        expect(screen.getByText('Selector')).toBeTruthy();
-        expect(screen.getByText('PricingServiceImpl')).toBeTruthy();
+        expect(screen.getByText('Account')).toBeTruthy();
         expect(screen.getByText('AccountsSelector')).toBeTruthy();
         expect(screen.getByText('+ New Binding')).toBeTruthy();
         expect(document.querySelector('.toolbar select')).toBeNull();
     });
 
-    it('shows the binding count as a badge on the Application Factory tab', () => {
+    it('renders Service bindings on the Service Bindings tab, not the SObject Bindings tab', async () => {
         render(App, {
             props: {
                 initial: state({
-                    applicationFactory: { kind: 'data', rows: [afRow(), afRow({ developerName: 'B' })], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [] },
+                    active: 'applicationFactory',
+                    applicationFactory: { kind: 'data', rows: [afRow()], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [] },
                 }),
             },
         });
 
-        const afTab = screen.getByText('Application Factory').closest('button');
-        expect(afTab?.querySelector('.explorer-tab-badge')?.textContent).toBe('2');
+        expect(screen.queryByText('PricingServiceImpl')).toBeNull();
+
+        await fireEvent.click(screen.getByText('Service Bindings'));
+
+        expect(screen.getByText('PricingServiceImpl')).toBeTruthy();
     });
 
-    it('renders the tie banner once for two Service rows tied on priority, with RESOLVES TODAY / MAY WIN INSTEAD chips', () => {
+    it('shows the binding count as a badge on each of the SObject Bindings and Service Bindings tabs', () => {
+        render(App, {
+            props: {
+                initial: state({
+                    applicationFactory: {
+                        kind: 'data',
+                        rows: [afRow(), afRow({ developerName: 'B' }), afRow({ bindingType: 'Selector', developerName: 'C', key: 'Account', to: 'AccountsSelector' })],
+                        issues: [],
+                        rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
+                    },
+                }),
+            },
+        });
+
+        const sobjectTab = screen.getByText('SObject Bindings').closest('button');
+        expect(sobjectTab?.querySelector('.explorer-tab-badge')?.textContent).toBe('1');
+        const serviceTab = screen.getByText('Service Bindings').closest('button');
+        expect(serviceTab?.querySelector('.explorer-tab-badge')?.textContent).toBe('2');
+    });
+
+    it('renders the tie banner once for two Service rows tied on priority, with RESOLVES TODAY / MAY WIN INSTEAD chips', async () => {
         render(App, {
             props: {
                 initial: state({
@@ -327,6 +367,8 @@ describe('App — Application Factory explorer', () => {
                 }),
             },
         });
+
+        await fireEvent.click(screen.getByText('Service Bindings'));
 
         expect(document.querySelectorAll('.af-tie-banner')).toHaveLength(1);
         expect(screen.getByText('Resolves today')).toBeTruthy();

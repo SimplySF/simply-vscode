@@ -1,5 +1,5 @@
 <script lang="ts">
-    type IconName = 'crown' | 'edit' | 'async' | 'domainProcess' | 'applicationFactory' | 'platformEvent';
+    type IconName = 'crown' | 'edit' | 'async' | 'domainProcess' | 'sobjectBindings' | 'applicationFactory' | 'platformEvent';
 
     let { name }: { name: IconName } = $props();
 </script>
@@ -20,6 +20,13 @@
 {:else if name === 'domainProcess'}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
         <path d="M8 1.3 14.2 8 8 14.7 1.8 8Z" />
+    </svg>
+{:else if name === 'sobjectBindings'}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1.5" y="1.5" width="6" height="6" rx="1" />
+        <rect x="8.5" y="1.5" width="6" height="6" rx="1" />
+        <rect x="1.5" y="8.5" width="6" height="6" rx="1" />
+        <rect x="8.5" y="8.5" width="6" height="6" rx="1" />
     </svg>
 {:else if name === 'applicationFactory'}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">

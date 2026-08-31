@@ -2,20 +2,20 @@
     import { untrack } from 'svelte';
     import ApplicationFactoryForm from './ApplicationFactoryForm.svelte';
     import ApplicationFactoryIssuesSection from './ApplicationFactoryIssuesSection.svelte';
-    import ApplicationFactorySections from './ApplicationFactorySections.svelte';
     import BindingForm from './BindingForm.svelte';
     import BindingSections from './BindingSections.svelte';
     import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
+    import ServiceBindingsSection from './ServiceBindingsSection.svelte';
+    import SObjectBindingsSheet from './SObjectBindingsSheet.svelte';
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
-    import UnitOfWorkSections from './UnitOfWorkSections.svelte';
-    import { applicationFactoryRowToFormInitial, buildApplicationFactorySections, buildUnitOfWorkRows, partitionBySeverity } from './lib/applicationFactoryView';
+    import { applicationFactoryRowToFormInitial, partitionBySeverity } from './lib/applicationFactoryView';
     import { FAMILY_ITEMS, availableFamilies, buildSections, headerParts, issuesByRecord, partitionIssues } from './lib/bindingView';
+    import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
     import type {
         ApplicationFactoryFormInitial,
         ApplicationFactoryRules,
-        At4dxBindingRow,
         BindingFormInitial,
         DomainProcessBindingRow,
         DomainProcessBindingRules,
@@ -47,10 +47,20 @@
     const afRules = applicationFactory.kind === 'data' ? applicationFactory.rules : ({} as ApplicationFactoryRules);
     const afCanWrite = applicationFactory.kind === 'data';
     const afStandardObjects = applicationFactory.kind === 'data' ? applicationFactory.standardObjects : [];
-    let afSections = $derived(applicationFactory.kind === 'data' ? buildApplicationFactorySections(applicationFactory.rows) : []);
-    let uowRows = $derived(applicationFactory.kind === 'data' ? buildUnitOfWorkRows(applicationFactory.rows) : []);
-    let afProblems = $derived(applicationFactory.kind === 'data' ? partitionBySeverity(applicationFactory.issues) : { errors: [], warnings: [] });
-    let afBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.length : undefined);
+
+    // The "Application Factory" tab from docs/design/0016 is now two tabs — SObject Bindings and Service
+    // Bindings — sharing the one lazily-triggered scan (`initial.active` stays 'applicationFactory' on
+    // the host side; `afTab` is purely a client-side rendering choice, reset on every full re-render the
+    // same way `afView` already is). See docs/design/0017.
+    let afTab = $state<'sobject' | 'service'>('sobject');
+    let sobjectBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType !== 'Service').length : undefined);
+    let serviceBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType === 'Service').length : undefined);
+    let afIssuesForTab = $derived(
+        applicationFactory.kind === 'data'
+            ? applicationFactory.issues.filter((issue) => (afTab === 'service' ? issue.bindingType === 'Service' : issue.bindingType !== 'Service'))
+            : [],
+    );
+    let afProblems = $derived(partitionBySeverity(afIssuesForTab));
 
     function selectExplorer(explorer: ExplorerKey): void {
         if (explorer === initial.active) {
@@ -59,17 +69,37 @@
         postMessage({ command: 'selectExplorer', explorer });
     }
 
+    function selectSObjectBindingsTab(): void {
+        afTab = 'sobject';
+        selectExplorer('applicationFactory');
+    }
+
+    function selectServiceBindingsTab(): void {
+        afTab = 'service';
+        selectExplorer('applicationFactory');
+    }
+
     let afView = $state<'list' | 'form'>('list');
     let afFormMode = $state<'create' | 'edit'>('create');
     let afFormInitial = $state<ApplicationFactoryFormInitial>({});
 
     function openCreateApplicationFactoryForm(): void {
         afFormMode = 'create';
-        afFormInitial = {};
+        // No SObject-keyed type is a natural default on the Service Bindings tab (Service has none), so
+        // Service is only preset there; the SObject Bindings tab leaves the type to whichever the form's
+        // own segmented control defaults to — see docs/design/0017's Stage 1 scoping (the split-button
+        // type menu, 1c, is Stage 2 work).
+        afFormInitial = afTab === 'service' ? { bindingType: 'Service' } : {};
         afView = 'form';
     }
 
-    function openEditApplicationFactoryForm(row: At4dxBindingRow): void {
+    function openAddGapBinding(bindingType: 'Domain' | 'UnitOfWork', sobject: string): void {
+        afFormMode = 'create';
+        afFormInitial = { bindingType, sobject };
+        afView = 'form';
+    }
+
+    function openEditApplicationFactoryForm(row: ApplicationFactoryViewRow | UnitOfWorkViewRow): void {
         afFormMode = 'edit';
         afFormInitial = applicationFactoryRowToFormInitial(row);
         afView = 'form';
@@ -146,14 +176,28 @@
         type="button"
         role="tab"
         class="explorer-tab"
-        class:explorer-tab-active={initial.active === 'applicationFactory'}
-        aria-selected={initial.active === 'applicationFactory'}
-        onclick={() => selectExplorer('applicationFactory')}
+        class:explorer-tab-active={initial.active === 'applicationFactory' && afTab === 'sobject'}
+        aria-selected={initial.active === 'applicationFactory' && afTab === 'sobject'}
+        onclick={selectSObjectBindingsTab}
+    >
+        <span class="explorer-tab-icon"><Icon name="sobjectBindings" /></span>
+        SObject Bindings
+        {#if sobjectBindingCount !== undefined && afView === 'list'}
+            <span class="explorer-tab-badge">{sobjectBindingCount}</span>
+        {/if}
+    </button>
+    <button
+        type="button"
+        role="tab"
+        class="explorer-tab"
+        class:explorer-tab-active={initial.active === 'applicationFactory' && afTab === 'service'}
+        aria-selected={initial.active === 'applicationFactory' && afTab === 'service'}
+        onclick={selectServiceBindingsTab}
     >
         <span class="explorer-tab-icon"><Icon name="applicationFactory" /></span>
-        Application Factory
-        {#if afBindingCount !== undefined && afView === 'list'}
-            <span class="explorer-tab-badge">{afBindingCount}</span>
+        Service Bindings
+        {#if serviceBindingCount !== undefined && afView === 'list'}
+            <span class="explorer-tab-badge">{serviceBindingCount}</span>
         {/if}
     </button>
     <span class="explorer-tab explorer-tab-inert" role="tab" aria-disabled="true" title="Platform Event Distributor is not available yet.">
@@ -248,9 +292,17 @@
                 existingUnitOfWorkRows={applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType === 'UnitOfWork') : []}
                 onCancel={closeApplicationFactoryForm}
             />
+        {:else if afTab === 'sobject'}
+            <SObjectBindingsSheet
+                rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
+                domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
+                canWrite={afCanWrite}
+                onEdit={openEditApplicationFactoryForm}
+                onAdd={openAddGapBinding}
+            />
+            <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
         {:else}
-            <ApplicationFactorySections sections={afSections} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
-            <UnitOfWorkSections rows={uowRows} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
+            <ServiceBindingsSection rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
             <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
         {/if}
     {/if}
@@ -1054,6 +1106,153 @@
         border-top: 1px solid var(--vscode-editorWarning-foreground);
         border-bottom: 1px solid var(--vscode-editorWarning-foreground);
         font-size: 0.9em;
+    }
+
+    /* SObject Bindings sheet (Stage 1) — see docs/design/0017. */
+    :global(.sb-sheet) {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+    :global(.sb-card) {
+        background: var(--vscode-sideBar-background);
+        border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    :global(.sb-card-header) {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.sb-card-sobject) {
+        font-family: var(--vscode-editor-font-family);
+        font-weight: 700;
+    }
+    :global(.sb-card-spacer) {
+        flex: 1;
+    }
+    :global(.sb-card-count) {
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.sb-gap-pill) {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border: 1px solid var(--vscode-charts-orange);
+        border-radius: 999px;
+        font-size: 0.78em;
+        color: var(--vscode-charts-orange);
+        white-space: nowrap;
+    }
+    :global(.sb-row) {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr) 150px 100px 30px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+        height: 38px;
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.sb-row-gap) {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr) 30px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+        height: 38px;
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.sb-detail) {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.sb-value-badge) {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    :global(.sb-gap-message) {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.sb-gap-warning) {
+        color: var(--vscode-charts-orange);
+    }
+    :global(.sb-add-link) {
+        justify-self: end;
+        background: none;
+        border: 0;
+        padding: 0;
+        color: var(--vscode-textLink-foreground);
+        font: inherit;
+        font-size: 0.9em;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    :global(.row-class-static) {
+        color: var(--vscode-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.af-type-pill) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: start;
+        padding: 3px 8px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.78em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    :global(.af-type-selector) {
+        border-color: var(--vscode-charts-blue);
+        color: var(--vscode-charts-blue);
+    }
+    :global(.af-type-domain) {
+        /* Literal hex, not a vscode token — see SPEC-CONVENTIONS.md's "colors are derivations" rule. */
+        border-color: #c586c0;
+        color: #c586c0;
+    }
+    :global(.af-type-uow) {
+        border-color: var(--vscode-charts-orange);
+        color: var(--vscode-charts-orange);
+    }
+    :global(.af-type-pill-dashed) {
+        border-style: dashed;
+    }
+    :global(.sb-badge) {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.72em;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+    }
+    :global(.sb-badge-wins) {
+        background: var(--vscode-charts-green);
+        color: #14300f;
+    }
+    :global(.sb-badge-shadowed) {
+        background: rgba(255, 255, 255, 0.09);
+        color: var(--vscode-descriptionForeground);
     }
 
     /* Application Factory create/edit form (stage 2) — see docs/design/0016. */

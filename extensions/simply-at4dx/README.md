@@ -9,10 +9,11 @@ Explore [AT4DX](https://github.com/apex-enterprise-patterns/at4dx) framework bin
 ## Usage
 
 The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's
-different explorers — **Domain Process Bindings** and **Application Factory** are both live;
-**Platform Events** still shows as an inert `Coming soon` tab, reserved for a later addition.
-Application Factory scans lazily: switching to it the first time triggers its own scan against
-whatever source you picked, so opening the panel never pays for a scan you didn't ask to see.
+different explorers — **Domain Process Bindings**, **SObject Bindings**, and **Service Bindings** are
+all live; **Platform Events** still shows as an inert `Coming soon` tab, reserved for a later addition.
+SObject Bindings and Service Bindings share one lazily-triggered Application Factory scan: switching to
+either the first time triggers it against whatever source you picked, and switching between the two
+afterward never re-scans.
 
 Run **AT4DX: Open Explorer** from the Command Palette. You'll be prompted to:
 
@@ -76,34 +77,43 @@ through deliberately instead of guessing why nothing happened. A successful save
 refreshes the panel immediately, so the new or changed binding (and anything it now flags) shows up
 right away.
 
-### Application Factory bindings
+### SObject Bindings and Service Bindings
 
-The **Application Factory** tab reads the four `ApplicationFactory_{Service,Selector,Domain,
-UnitOfWork}Binding__mdt` Custom Metadata Types — which Apex class implements which interface, which
-selector/domain handles which SObject, and which SObjects join the shared Unit of Work — grouped into
-one section per binding type, in the order Service, Selector, Domain, Unit of Work. Click **+ New
-Binding** to create a binding of any of the four types, or the pencil icon on any row to edit one — the
-form picks up the same wiring-problem/**Save Anyway** contract the Domain Process form already uses. A
-Selector, Domain, or Unit of Work binding's SObject field flags a standard object that can't support a
-metadata relationship (e.g. `Task`) in red with a **"Use … as an alternate name"** action, rather than
-blocking the save outright — the underlying eligibility table is explicitly best-effort. A Unit of Work
-binding's only extra field is an optional Commit Sequence number; the create/edit form's live preview
-shows where it would land in the commit order (`1st`, `2nd`, ...) against every other Unit of Work
-binding already in the scan, so reordering is editing that number rather than dragging a row.
+These two tabs read the four `ApplicationFactory_{Service,Selector,Domain,UnitOfWork}Binding__mdt`
+Custom Metadata Types — which Apex class implements which interface, which selector/domain handles which
+SObject, and which SObjects join the shared Unit of Work. See
+[0017](../../docs/design/0017-at4dx-bindings-redesign.md) for the full design and its staging.
 
-Each Service/Selector/Domain row shows its resolution — **Effective** (this is the one AT4DX actually
-uses), **Shadowed** (a higher-priority binding for the same key won instead), or, for Domain, which has
-no priority field to break a tie, **Ambiguous**. Two Service/Selector bindings tied on priority render
-an amber banner over the group, with **Resolves today** on the one AT4DX currently picks and **May win
-instead** on the rest — that's a "this isn't deterministic" notice, not an error, since AT4DX itself
-still resolves one and `binding validate` doesn't fail on it. The Unit of Work section is a commit-order
-list instead — every record contributes, ordered by its sequence (`1st`, `2nd`, ...; a shared sequence
-renders as a shared `2nd or 3rd`-style range; no sequence at all renders as unordered).
+**SObject Bindings** groups Selector, Domain, and Unit of Work bindings into one card per SObject (any
+SObject wired into at least one of the three). A card names its SObject, an "N gap(s)" indicator when
+it's missing a Domain or a Unit of Work binding (Selector has no such floor — an SObject can have zero,
+one, or several), and lists its bindings: each Selector row's priority and **WINS**/**SHADOWED** status
+(the same resolution AT4DX itself computes — a higher `Priority__c` wins, a blank sorts lowest), each
+Domain row's bound implementation, and the Unit of Work row's commit position and sequence. A missing
+Domain or Unit of Work binding renders as its own row with an **Add** link, prefilled with the type and
+SObject already fixed. Click **+ New Binding** to create a binding of any type from an empty toolbar
+button, or the pencil icon on any row to edit it — the form picks up the same wiring-problem/**Save
+Anyway** contract the Domain Process form already uses. A Selector, Domain, or Unit of Work binding's
+SObject field flags a standard object that can't support a metadata relationship (e.g. `Task`) in red
+with a **"Use … as an alternate name"** action, rather than blocking the save outright — the underlying
+eligibility table is explicitly best-effort.
 
-A Problems section below the sections lists everything Application Factory validation catches — a
-missing or ambiguous SObject reference, a standard object that can't support a metadata relationship
-(e.g. `Task`), a duplicate `To__c`/SObject/sequence, and so on — grouped errors-then-warnings, with the
-same click-to-open-the-file behavior as the Domain Process explorer's own Issues section.
+**Service Bindings** is a flat interface → implementation table. Each row shows its resolution —
+**Effective** (this is the one AT4DX actually uses), **Shadowed** (a higher-priority binding for the same
+interface won instead) — with priority the deciding field, same as Selector's. Two bindings tied on
+priority render an amber banner over the group, with **Resolves today** on the one AT4DX currently picks
+and **May win instead** on the rest — that's a "this isn't deterministic" notice, not an error, since
+AT4DX itself still resolves one and `binding validate` doesn't fail on it.
+
+Drag-and-drop reordering and field set inclusions are designed in 0017 but not yet built — commit order
+is still edited via the Unit of Work binding's Commit Sequence number field, whose live preview shows
+where it would land (`1st`, `2nd`, ...) against every other Unit of Work binding already in the scan.
+
+A Problems section below each tab lists what Application Factory validation catches for that tab's own
+binding types — a missing or ambiguous SObject reference, a standard object that can't support a
+metadata relationship (e.g. `Task`), a duplicate `To__c`/SObject/sequence, and so on — grouped
+errors-then-warnings, with the same click-to-open-the-file behavior as the Domain Process explorer's own
+Issues section.
 
 ## Troubleshooting
 
