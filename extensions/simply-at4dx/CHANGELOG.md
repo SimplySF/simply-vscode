@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.15.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.14.0...simply-at4dx-v2.15.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** shared drawer copy for create/edit forms ([#41](https://github.com/SimplySF/simply-vscode/issues/41)) ([5712007](https://github.com/SimplySF/simply-vscode/commit/57120073781ab8e457982b656177ab3bef4ddc29))
+
 # [simply-at4dx-v2.14.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.13.0...simply-at4dx-v2.14.0) (2026-08-31)
 
 
