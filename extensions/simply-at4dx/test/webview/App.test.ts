@@ -221,6 +221,16 @@ describe('App — Domain Process data', () => {
         expect(developerNameInput.value).toBe('A');
         expect(developerNameInput.disabled).toBe(true);
     });
+
+    it('renders the Domain Process drawer as a narrow panel over the still-visible bindings list', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+
+        expect(document.querySelector('.drawer-panel')).toBeTruthy();
+        expect(document.querySelector('.drawer-backdrop')).toBeTruthy();
+        expect(document.querySelector('#content .row-class')?.textContent).toBe('AClass'); // the list row behind it stays rendered
+    });
 });
 
 describe('App — the New Binding toolbar and the create/edit form are mutually exclusive', () => {
@@ -408,8 +418,9 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         // primary "+ New Binding" action on screen at a time. See docs/design/0016's original rule and
         // docs/design/0017's breadcrumb addition.
         expect(document.querySelector('.toolbar')).toBeNull();
-        const domainSegment = document.querySelector<HTMLButtonElement>('#fBindingType .segmented-option.selected');
-        expect(domainSegment?.textContent?.trim()).toBe('Domain');
+        // No in-drawer control to switch away from the chosen type — see docs/design/0017.
+        expect(document.getElementById('fBindingType')).toBeNull();
+        expect(document.querySelector('.drawer-panel .af-type-pill')?.textContent?.trim()).toBe('DOMAIN');
     });
 
     it("Service Bindings tab's + New Binding has no menu — it opens the create form directly, defaulting to Service", async () => {
@@ -422,7 +433,7 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         expect(document.getElementById('fBindingInterface')).toBeTruthy();
     });
 
-    it('opens the edit form prefilled from the clicked row, with the segmented control disabled', async () => {
+    it('opens the edit form prefilled from the clicked row, with no control to switch its type', async () => {
         render(App, { props: { initial } });
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
@@ -433,9 +444,7 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         expect(developerNameInput.disabled).toBe(true);
         const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
         expect(sobjectInput.value).toBe('Account');
-        for (const segment of document.querySelectorAll<HTMLButtonElement>('#fBindingType .segmented-option')) {
-            expect(segment.disabled).toBe(true);
-        }
+        expect(document.getElementById('fBindingType')).toBeNull();
     });
 
     it('renders the entry-point breadcrumb, a solid type pill, and no CLI preview in edit mode', async () => {
@@ -505,6 +514,46 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         expect(screen.queryByRole('menu')).toBeNull();
         expect(screen.getByText('+ New Binding')).toBeTruthy();
     });
+
+    it('never renders a control to switch binding type — the type menu chose it, once, before the drawer opened', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByRole('menuitem', { name: /^Unit of Work/ }));
+
+        expect(document.getElementById('fBindingType')).toBeNull();
+        expect(screen.queryByText('Service')).toBeNull();
+        expect(screen.queryByText('Domain')).toBeNull();
+    });
+
+    it('renders the create drawer as a narrow panel over the still-visible SObject Bindings sheet, not a full-screen replacement', async () => {
+        render(App, { props: { initial } });
+
+        // The card behind the drawer (Account, from `initial`'s own Selector row) stays in the DOM —
+        // this is the whole point of an overlay drawer rather than swapping out the list. See
+        // docs/design/0017's "does not cover the entire screen" fix.
+        expect(document.querySelector('.sb-sheet')).toBeTruthy();
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByRole('menuitem', { name: /^Selector/ }));
+
+        expect(document.querySelector('.drawer-panel')).toBeTruthy();
+        expect(document.querySelector('.drawer-backdrop')).toBeTruthy();
+        expect(document.querySelector('.sb-sheet')).toBeTruthy(); // still there, behind the overlay
+    });
+
+    it('closes the drawer when the backdrop is clicked, same as Cancel', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByRole('menuitem', { name: /^Selector/ }));
+        expect(document.querySelector('.drawer-panel')).toBeTruthy();
+
+        await fireEvent.click(document.querySelector('.drawer-backdrop') as HTMLElement);
+
+        expect(document.querySelector('.drawer-panel')).toBeNull();
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
+    });
 });
 
 describe('App — field set inclusions (stage 4)', () => {
@@ -560,7 +609,7 @@ describe('App — field set inclusions (stage 4)', () => {
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
         await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'BillingSummary' } });
-        await fireEvent.click(screen.getByText('Add'));
+        await fireEvent.click(document.querySelector('.fsi-add-row button') as HTMLButtonElement);
 
         expect(postMessage).toHaveBeenCalledWith({
             command: 'submitFieldSetInclusion',
@@ -600,7 +649,7 @@ describe('App — field set inclusions (stage 4)', () => {
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
         await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'DupeFields' } });
-        await fireEvent.click(screen.getByText('Add'));
+        await fireEvent.click(document.querySelector('.fsi-add-row button') as HTMLButtonElement);
 
         window.dispatchEvent(
             new MessageEvent('message', { data: { command: 'fieldSetInclusionBlocked', issues: [{ severity: 'error', rule: 'duplicate-fieldset-name', message: 'Already used.' }] } }),
@@ -617,7 +666,7 @@ describe('App — field set inclusions (stage 4)', () => {
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
         await fireEvent.input(screen.getByLabelText('Field set API name'), { target: { value: 'BillingSummary' } });
-        await fireEvent.click(screen.getByText('Add'));
+        await fireEvent.click(document.querySelector('.fsi-add-row button') as HTMLButtonElement);
 
         window.dispatchEvent(new MessageEvent('message', { data: { command: 'fieldSetInclusionError', message: 'Could not reach the org.' } }));
         await Promise.resolve();

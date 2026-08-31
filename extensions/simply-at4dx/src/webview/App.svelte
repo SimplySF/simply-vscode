@@ -23,6 +23,7 @@
         ExplorerKey,
         FamilyKey,
         InitialState,
+        WritableBindingType,
     } from './types';
     import { postMessage } from './vscodeApi';
 
@@ -85,14 +86,14 @@
     let afFormInitial = $state<ApplicationFactoryFormInitial>({});
 
     /**
-     * Opens the create drawer. `bindingType` comes from `NewBindingMenu`'s own choice on the SObject
-     * Bindings tab (Selector/Domain/Unit of Work — canvas 1c); the Service Bindings tab has no menu to
-     * choose from (Service is the only type there), so it's always omitted and Service is preset instead.
-     * See docs/design/0017's Stage 1 Behavior section.
+     * Opens the create drawer, always with a fixed `bindingType` — `NewBindingMenu`'s own choice on the
+     * SObject Bindings tab (Selector/Domain/Unit of Work — canvas 1c), or `'Service'` on the Service
+     * Bindings tab, which has no menu to choose from (Service is the only type there). The drawer never
+     * lets you switch types afterward — see docs/design/0017's Stage 1 Behavior section.
      */
-    function openCreateApplicationFactoryForm(bindingType?: 'Selector' | 'Domain' | 'UnitOfWork'): void {
+    function openCreateApplicationFactoryForm(bindingType: WritableBindingType): void {
         afFormMode = 'create';
-        afFormInitial = afTab === 'service' ? { bindingType: 'Service' } : bindingType ? { bindingType } : {};
+        afFormInitial = { bindingType };
         afView = 'form';
     }
 
@@ -236,9 +237,9 @@
         <div class="toolbar">
             <span class="spacer"></span>
             {#if afTab === 'sobject'}
-                <NewBindingMenu onSelect={(bindingType) => openCreateApplicationFactoryForm(bindingType)} />
+                <NewBindingMenu onSelect={openCreateApplicationFactoryForm} />
             {:else}
-                <button onclick={() => openCreateApplicationFactoryForm()}>+ New Binding</button>
+                <button onclick={() => openCreateApplicationFactoryForm('Service')}>+ New Binding</button>
             {/if}
         </div>
     {:else if applicationFactory.kind !== 'data'}
@@ -253,7 +254,7 @@
     {/if}
 {/if}
 
-<div id="content">
+<div id="content" inert={(initial.active === 'domainProcess' && view === 'form') || (initial.active === 'applicationFactory' && afView === 'form')}>
     {#if initial.active === 'domainProcess'}
         {#if domainProcess.kind === 'loading'}
             <p class="status">Scanning workspace for AT4DX bindings…</p>
@@ -263,8 +264,6 @@
             </p>
         {:else if domainProcess.kind === 'empty'}
             <p class="status">No AT4DX Trigger Action Framework bindings found.</p>
-        {:else if view === 'form'}
-            <BindingForm mode={formMode} initial={formInitial} {rules} scopeSobject={sobject} scopeLabel={familyLabel} onCancel={closeForm} />
         {:else}
             {#if header}
                 <div class="header">
@@ -294,17 +293,6 @@
             </p>
         {:else if applicationFactory.kind === 'empty'}
             <p class="status">No AT4DX Application Factory bindings found.</p>
-        {:else if afView === 'form'}
-            <ApplicationFactoryForm
-                mode={afFormMode}
-                initial={afFormInitial}
-                rules={afRules}
-                standardObjects={afStandardObjects}
-                allRows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
-                domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
-                fieldSetInclusions={applicationFactory.kind === 'data' ? applicationFactory.fieldSetInclusions : []}
-                onCancel={closeApplicationFactoryForm}
-            />
         {:else if afTab === 'sobject'}
             <SObjectBindingsSheet
                 rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
@@ -323,6 +311,28 @@
     {/if}
 </div>
 
+{#if (initial.active === 'domainProcess' && view === 'form') || (initial.active === 'applicationFactory' && afView === 'form')}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="drawer-backdrop" onclick={initial.active === 'domainProcess' ? closeForm : closeApplicationFactoryForm}></div>
+    <div class="drawer-panel" role="dialog" aria-modal="true">
+        {#if initial.active === 'domainProcess'}
+            <BindingForm mode={formMode} initial={formInitial} {rules} scopeSobject={sobject} scopeLabel={familyLabel} onCancel={closeForm} />
+        {:else}
+            <ApplicationFactoryForm
+                mode={afFormMode}
+                initial={afFormInitial}
+                rules={afRules}
+                standardObjects={afStandardObjects}
+                allRows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
+                domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
+                fieldSetInclusions={applicationFactory.kind === 'data' ? applicationFactory.fieldSetInclusions : []}
+                onCancel={closeApplicationFactoryForm}
+            />
+        {/if}
+    </div>
+{/if}
+
 <style>
     :global(body) {
         font-family: var(--vscode-font-family);
@@ -330,6 +340,27 @@
         color: var(--vscode-foreground);
         background: var(--vscode-editor-background);
         padding: 16px;
+    }
+    /* Create/edit drawer — a panel, not a full-screen replacement of the list behind it (canvas Turns
+       2-4 draw every drawer at 520-560px, floating over the sheet). */
+    :global(.drawer-backdrop) {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 100;
+    }
+    :global(.drawer-panel) {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: min(520px, 100vw);
+        padding: 16px;
+        background: var(--vscode-editor-background);
+        border-left: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+        overflow-y: auto;
+        z-index: 101;
     }
     :global(.explorer-tabs) {
         display: flex;

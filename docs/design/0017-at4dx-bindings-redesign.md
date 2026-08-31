@@ -208,6 +208,26 @@ rendering it through the same CSS classes (`.form-context-bar`, `.form-breadcrum
 (`bindingDrawerCopy.test.ts`), which is what the canvas actually cared about; the component split is an
 implementation detail the canvas doesn't speak to.
 
+**Correction (post-Stage-2, caught in review):** two things shipped wrong relative to the canvas and
+were fixed after the fact, once 1c's menu (above) made them visible in practice:
+
+- **`ApplicationFactoryForm.svelte` kept the pre-canvas "Binding Type" segmented control**, letting a
+  user switch Service/Selector/Domain/Unit of Work *inside* the drawer even after arriving via a specific
+  entry point. No canvas mockup (2a–3c) shows one — every one of them treats the type as already decided
+  by whichever entry point opened the drawer. Now that 1c's own type menu (see the correction below)
+  makes the type explicit before the drawer ever opens, the control was removed outright; `bindingType`
+  is a fixed value read from `initial.bindingType` once, not `$state`.
+- **Both drawers rendered full-width, replacing the list entirely**, instead of the canvas's own
+  520–560px floating panel (every one of Turns 2–4's mockups draws the drawer at that width, over the
+  sheet, not stretched to it). Fixed by moving `<ApplicationFactoryForm>`/`<BindingForm>` out of the
+  `#content` conditional into a `position: fixed` right-anchored `.drawer-panel` (`width: min(520px,
+  100vw)`) with a `.drawer-backdrop` behind it — the list stays mounted and visible underneath rather
+  than being unmounted while the drawer is open, and `#content` gets `inert` while a drawer is open so
+  keyboard focus can't leak into now-hidden-behind-the-backdrop content. Clicking the backdrop cancels,
+  same as the drawer's own Cancel/Discard button. This is a shared `App.svelte`-level change, not
+  per-drawer — `BindingForm.svelte`'s own drawer got it too, even though 4b/4c's canvas turn wasn't the
+  one that prompted the fix.
+
 Two further scope cuts, both left for a later pass rather than blocking this one:
 
 - **No "unsaved changes" dirty-state marker.** The canvas shows an amber dot once any field changes in
