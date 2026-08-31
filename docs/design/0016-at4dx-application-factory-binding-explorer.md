@@ -1,6 +1,6 @@
 # 0016 — AT4DX Application Factory Binding Explorer
 
-**Status:** Planned — stages 1–2 (read-only list + Problems; Service/Selector/Domain create/edit) implemented; stage 3 (UnitOfWork write + commit-order reorder) not yet built
+**Status:** Implemented (PRs [#36](https://github.com/SimplySF/simply-vscode/pull/36), [#37](https://github.com/SimplySF/simply-vscode/pull/37), and the stage-3 PR) — see "Implementation plan" for the one deliberate deviation: commit-order reorder ships as a Sequence field on the standard edit form, not drag-and-drop.
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-30
 
@@ -178,8 +178,17 @@ fields, because the CMDT has exactly three: Developer Name, Binding SObject, and
 Sequence. `to`, `priority` and `bindingInterface` are not hidden-but-tolerated — `createBinding`
 throws `type-field-mismatch` for each, so the form must never send them.
 
-Drag-to-reorder in the commit-order section is **one `updateBinding` call per moved record**, sending
-only `{ bindingType: 'UnitOfWork', developerName, sequence }`.
+**As shipped, reordering is a Sequence number field on the standard create/edit form, not
+drag-and-drop.** HANDOFF-04 itself left the reorder interaction undecided ("whether the reorder
+renumbers by tens or inserts fractional sequences" was an open question, not a settled design), and
+native HTML5 drag-and-drop has no keyboard equivalent — a real gap in a panel that otherwise gives every
+other interactive element `role`/`tabindex`/`onkeydown` treatment. Editing the Sequence field directly
+is exactly how Domain Process's own `Execution_Order__c` is already reordered today (there is no
+drag-to-reorder there either), so this keeps the two explorers' editing model consistent instead of
+introducing a one-off bespoke widget for a single field. The live "resulting binding" preview computes
+where the entered sequence would land (`previewCommitPosition`) against every other Unit of Work row
+already in the scan, so the user sees the effect before saving. Revisit true drag-and-drop if editing
+the number directly proves painful in practice.
 
 A shared `BindingSequence__c` is `sequence-collision`, a **warning**. The consuming Apex
 (`ApplicationSObjectUnitOfWorkDIProvider`) adds every resolved SObjectType with no throw, so both
@@ -252,8 +261,10 @@ Files, in the order they'd be written. Mechanics, exact signatures and CSS are i
 
 **Stage 3 — UnitOfWork**
 
-11. `ApplicationFactoryForm.svelte` — the `unit-of-work` branch (three fields, no `to`/`priority`).
-12. `UnitOfWorkSections.svelte` — drag-to-reorder, emitting one update per moved row.
+11. `ApplicationFactoryForm.svelte` — the `unit-of-work` branch (three fields, no `to`/`priority`), plus
+    `previewCommitPosition` for the live "commits Nth of M" preview.
+12. `UnitOfWorkSections.svelte` — an edit (pencil) affordance per row, opening the same form. Reordering
+    is editing the Sequence field, not drag-and-drop — see Alternatives considered.
 
 **Docs, per `docs/design/README.md`**
 
@@ -300,7 +311,8 @@ the other explorer, and a scan failure in one explorer doesn't blank the other.
 - Local scan and org scan both populate all four sections.
 - An org with no Application Factory bindings but with Domain Process bindings shows an empty
   Application Factory tab, not an error.
-- Drag a Unit of Work card, confirm the written `BindingSequence__c` in the `.md-meta.xml`.
+- Edit a Unit of Work binding's Commit Sequence field and save; confirm the written `BindingSequence__c`
+  in the `.md-meta.xml` and that the list's commit-position labels update after the rescan.
 
 ## Open questions
 
@@ -319,6 +331,7 @@ the other explorer, and a scan failure in one explorer doesn't blank the other.
 - **Field set inclusions** (`SelectorConfig_FieldSetInclusion__mdt`) are a separate CMDT family with
   their own command pair, their own rules table, and an `IsActive__c` flag. Prototype `9a` nests them
   under their selector. Deliberately out of scope here; wants its own doc.
-- **Does `simply-at4dx.debug`'s output channel name still read "AT4DX Domain Process Bindings"?**
-  `formatWriteError` hard-codes that string in its hint copy, but the channel is actually created as
-  "AT4DX Explorer". Pre-existing inconsistency, worth fixing while touching that function.
+- *(Resolved)* **Did `simply-at4dx.debug`'s output channel name still read "AT4DX Domain Process
+  Bindings"?** Fixed in stage 1 — `formatWriteError`/`formatReadError`/the `simply-at4dx.debug` setting
+  description, and `extension.ts`'s own `errorMessage`, all say "AT4DX Explorer" now, matching the
+  channel `extension.ts` actually creates.

@@ -8,6 +8,7 @@ import {
     isCustomObjectApiName,
     ordinal,
     partitionBySeverity,
+    previewCommitPosition,
 } from '../../src/webview/lib/applicationFactoryView';
 import type { At4dxBindingRow, BindingIssue } from '../../src/webview/types';
 
@@ -216,6 +217,54 @@ describe('applicationFactoryRowToFormInitial', () => {
         const initial = applicationFactoryRowToFormInitial(row({ bindingType: 'Domain', key: 'Account', keyField: 'primary', to: 'Accounts' }));
 
         expect(initial.sobjectAlternate).toBe(false);
+    });
+
+    it('maps a UnitOfWork row\'s key/sequence to sobject/sequence, with no to or priority', () => {
+        const initial = applicationFactoryRowToFormInitial(row({ bindingType: 'UnitOfWork', key: 'Account', keyField: 'primary', to: undefined, sequence: 10 }));
+
+        expect(initial).toMatchObject({ bindingType: 'UnitOfWork', sobject: 'Account', sobjectAlternate: false, sequence: 10 });
+        expect(initial.to).toBeUndefined();
+        expect(initial.priority).toBeUndefined();
+    });
+});
+
+describe('previewCommitPosition', () => {
+    function uowRow(developerName: string, sequence?: number): At4dxBindingRow {
+        return row({ bindingType: 'UnitOfWork', developerName, key: developerName, to: undefined, sequence, effective: true });
+    }
+
+    it('previews a new record landing after two existing ones', () => {
+        const existing = [uowRow('A', 10), uowRow('B', 20)];
+
+        const preview = previewCommitPosition(existing, undefined, 30);
+
+        expect(preview).toEqual({ label: '3rd', total: 3 });
+    });
+
+    it('previews an unsequenced new record as unordered', () => {
+        const existing = [uowRow('A', 10)];
+
+        const preview = previewCommitPosition(existing, undefined, undefined);
+
+        expect(preview.label).toBe('unordered — no sequence set');
+        expect(preview.total).toBe(2);
+    });
+
+    it('excludes the record being edited from the "existing" comparison set', () => {
+        const existing = [uowRow('A', 10), uowRow('B', 20)];
+
+        // Editing A down to sequence 30 should not count A against itself.
+        const preview = previewCommitPosition(existing, 'A', 30);
+
+        expect(preview).toEqual({ label: '2nd', total: 2 });
+    });
+
+    it('previews a tie when the entered sequence matches an existing one', () => {
+        const existing = [uowRow('A', 10)];
+
+        const preview = previewCommitPosition(existing, undefined, 10);
+
+        expect(preview.label).toBe('1st or 2nd');
     });
 });
 

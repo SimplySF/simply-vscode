@@ -13,7 +13,7 @@ export type {
 export type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, BindingIssueRule, BindingType, WritableBindingType } from '../applicationFactoryCli';
 
 import type { DomainProcessBindingIssue, DomainProcessBindingRow, DomainProcessBindingRules, DomainProcessType, ProcessContext, TriggerOperation } from '../at4dxCli';
-import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue } from '../applicationFactoryCli';
+import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, WritableBindingType } from '../applicationFactoryCli';
 
 /** Which explorer the tab strip has active — see docs/design/0016. Part of `PanelState`/`InitialState`, not client-side state, so a write-triggered re-render doesn't bounce the user back to the Domain Process tab. */
 export type ExplorerKey = 'domainProcess' | 'applicationFactory';
@@ -73,26 +73,30 @@ export type BindingFormPayload = {
 };
 
 /**
- * `ApplicationFactoryForm`'s field values as posted on submit (stage 2 — see docs/design/0016).
- * `bindingType` excludes `UnitOfWork`, which has an entirely different field set and is stage 3. Fields
- * vary by `bindingType` — the form builds this object from a per-type whitelist rather than sending
- * whatever every field happens to hold, so a stale value left over from switching the segmented control
- * never reaches the host. Mirrors `at4dxExplorerPanel.ts`'s own `ApplicationFactoryFormPayload`.
+ * `ApplicationFactoryForm`'s field values as posted on submit (stage 2 Service/Selector/Domain, stage 3
+ * UnitOfWork — see docs/design/0016). Fields vary by `bindingType` — the form builds this object from a
+ * per-type whitelist rather than sending whatever every field happens to hold, so a stale value left
+ * over from switching the segmented control never reaches the host (`to`/`priority` are meaningless for
+ * UnitOfWork, `sequence` is meaningless for everything else). Mirrors `at4dxExplorerPanel.ts`'s own
+ * `ApplicationFactoryFormPayload`.
  */
 export type ApplicationFactoryFormPayload = {
-    bindingType: 'Service' | 'Selector' | 'Domain';
+    bindingType: WritableBindingType;
     developerName: string;
     label?: string;
-    to: string;
+    /** Required for Service/Selector/Domain; never sent for UnitOfWork, which has no `To__c` field. */
+    to?: string;
     bindingInterface?: string;
     sobject?: string;
     sobjectAlternate?: boolean;
     priority?: number;
+    /** UnitOfWork only — commit order. */
+    sequence?: number;
 };
 
 /** What `ApplicationFactoryForm` can be opened with — either the toolbar's current selection (create, effectively empty) or a full `At4dxBindingRow` (edit). Every field optional since a create prefill supplies none of them. */
 export type ApplicationFactoryFormInitial = Partial<{
-    bindingType: 'Service' | 'Selector' | 'Domain';
+    bindingType: WritableBindingType;
     developerName: string;
     label: string;
     to: string;
@@ -100,6 +104,7 @@ export type ApplicationFactoryFormInitial = Partial<{
     sobject: string;
     sobjectAlternate: boolean;
     priority: number;
+    sequence: number;
 }>;
 
 export type FamilyKey = 'Created' | 'Updated' | 'Deleted' | 'Undeleted' | 'DomainMethod';
