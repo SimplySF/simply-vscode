@@ -139,12 +139,23 @@ Field-set-inclusion sub-rows (Stage 4) nest under a Selector row exactly as 3a s
 Stage 4 exists to populate them.
 
 **Implementation note (Stage 1, landed):** 1a's row grid also carries a 6th "status" column (a green dot
-+ "Active" per binding row). Deviation 1 already establishes there's no `isActive` field for any
-Application Factory binding type — as shipped, that column is dropped entirely rather than kept as
-permanently-empty space; the card row grid is `104px minmax(0,1fr) 150px 100px 30px` (five tracks: type
-pill / class-or-status link / detail / value+badge / edit), and a gap row is `104px minmax(0,1fr) 30px`
-(pill / message / Add). Selector's field-set count ("N field sets") is also blank as shipped — that data
-isn't scanned until Stage 4.
++ "Active" per binding row). A gap row is `104px minmax(0,1fr) 30px` (pill / message / Add) — nothing to
+show as active for a binding that doesn't exist yet. Selector's field-set count ("N field sets") was
+blank as shipped in this stage — that data wasn't scanned until Stage 4.
+
+**Correction (post-Stage-4, caught in review):** the status column was initially dropped outright,
+reasoning that deviation 1's "no `isActive` field" finding meant there was nothing honest to show there.
+That conflated two different things: an `isActive` field is something a form could *write* — and indeed
+there's none to write, so the drawer never grew an Active checkbox (deviation 1 stands). But the status
+column here is read-only and unconditional — every row reaching this component already came back from
+`resolveBindings`, so it exists and resolves; there's no "inactive" *result* state for Selector/Domain/
+Unit of Work to distinguish it from. The column is back (`SObjectBindingCard.svelte`, grid restored to
+`104px minmax(0,1fr) 150px 100px 92px 30px`), rendering a static "Active" label on every real row,
+matching 1a's own mockup — it was never actually in tension with deviation 1, just miscategorized under
+it. Caught alongside a second, related bug in the same review: **WINS/SHADOWED (and the tie chips) were
+rendering even for a solo Selector** with nothing to compete against — canvas 1a's own Fish__c example
+shows no badge at all in that case, just the priority value. Both badge sets are now conditioned on the
+card actually having more than one Selector row.
 
 The **+ New Binding** split button (1c) replaces the flat toolbar's plain button: primary action opens
 the type-choice menu (Selector/Domain/Unit of Work, each with 1c's exact multiplicity copy), landing in
