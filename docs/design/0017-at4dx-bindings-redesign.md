@@ -121,6 +121,17 @@ written in code (`Domain Process Bindings | SObject Bindings | Service Bindings 
 rather than this section's own documented order. Fixed in `App.svelte` — SObject Bindings, the tab this
 whole redesign is centered on, now leads the strip as specified above.
 
+**Correction (post-#47):** the panel's *default* tab on open (`PanelState.active`, `at4dxExplorerPanel.ts`)
+was never revisited when the strip itself was reordered — it stayed `'domainProcess'`, left over from
+before this redesign existed. SObject Bindings is now the default (`initialPanelState()`'s `active:
+'applicationFactory'`, paired with `App.svelte`'s own `afTab` already defaulting to `'sobject'`). Since
+Application Factory scans lazily and previously only started on the user's first click into that tab (see
+"SObject Bindings sheet" below), making it the *default* tab meant that click would never come —
+`at4dxExplorerPanel.ts`'s `setData` (called once the eagerly-scanned Domain Process data resolves and
+hands over the `BindingSource` `target` both scans need) now also starts the Application Factory scan
+when it's the active tab, via a `triggerApplicationFactoryScanIfNeeded` helper shared with
+`selectExplorer`.
+
 ### SObject Bindings sheet (Stage 1, card layout)
 
 One card per SObject that has at least one Selector, Domain, or Unit of Work binding, in the order

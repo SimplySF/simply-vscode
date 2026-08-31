@@ -125,8 +125,9 @@ type PanelState = {
     target?: BindingSource;
 };
 
+/** SObject Bindings (the `applicationFactory` explorer's own default sub-tab — see `App.svelte`'s `afTab`) is the panel's default view — see docs/design/0017. Domain Process Bindings still scans eagerly regardless (`extension.ts`'s `showExplorer`), so switching to it never re-triggers a scan; Application Factory scans lazily once `setData` hands over the `target` it needs — see `triggerApplicationFactoryScanIfNeeded`. */
 function initialPanelState(): PanelState {
-    return { active: 'domainProcess', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
+    return { active: 'applicationFactory', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
 }
 
 /**
@@ -268,7 +269,13 @@ export class At4dxExplorerPanel {
         At4dxExplorerPanel.currentPanel = new At4dxExplorerPanel(panel, logger, extensionUri);
     }
 
-    /** Sets the Domain Process explorer's data — the result of `extension.ts`'s initial scan. */
+    /**
+     * Sets the Domain Process explorer's data — the result of `extension.ts`'s initial scan, which always
+     * runs regardless of which tab is active. Also the first point the panel *has* a `target` to scan
+     * Application Factory bindings with — since SObject Bindings (an Application Factory sub-tab) is the
+     * default active tab, this is what starts that scan, not a `selectExplorer` message the user's first
+     * click would otherwise send (there's no click when the tab is already the one showing).
+     */
     public static setData(rows: DomainProcessBindingRow[], issues: DomainProcessBindingIssue[], rules: DomainProcessBindingRules, target: BindingSource): void {
         const current = At4dxExplorerPanel.currentPanel;
         if (!current) {
@@ -276,6 +283,7 @@ export class At4dxExplorerPanel {
         }
         current.state.target = target;
         current.render({ ...current.state, domainProcess: { kind: 'data', rows, issues, rules } });
+        void current.triggerApplicationFactoryScanIfNeeded();
     }
 
     public static showError(message: string): void {
@@ -363,15 +371,25 @@ export class At4dxExplorerPanel {
      */
     private async selectExplorer(explorer: ExplorerKey): Promise<void> {
         this.state.active = explorer;
+        this.render(this.state);
+        await this.triggerApplicationFactoryScanIfNeeded();
+    }
 
-        if (explorer === 'applicationFactory' && this.state.applicationFactory.kind === 'loading' && this.state.target) {
-            const target = this.state.target;
-            this.render(this.state);
-            try {
-                this.state.applicationFactory = await this.scanApplicationFactory(target);
-            } catch (error) {
-                this.state.applicationFactory = { kind: 'error', message: formatReadError(error, 'reading Application Factory bindings') };
-            }
+    /**
+     * Starts the Application Factory scan the first time it's needed — either the user's first switch to
+     * that tab (`selectExplorer`), or, since it's the panel's default tab (see `initialPanelState`), as
+     * soon as `setData` hands over the `target` the scan needs. A no-op once the scan has started or
+     * finished (`applicationFactory.kind !== 'loading'`) or before `target` is known.
+     */
+    private async triggerApplicationFactoryScanIfNeeded(): Promise<void> {
+        if (this.state.active !== 'applicationFactory' || this.state.applicationFactory.kind !== 'loading' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+        try {
+            this.state.applicationFactory = await this.scanApplicationFactory(target);
+        } catch (error) {
+            this.state.applicationFactory = { kind: 'error', message: formatReadError(error, 'reading Application Factory bindings') };
         }
         this.render(this.state);
     }

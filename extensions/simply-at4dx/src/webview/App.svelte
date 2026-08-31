@@ -1331,6 +1331,10 @@
         height: 28px;
         color: var(--vscode-descriptionForeground);
         font-size: 0.85em;
+        /* Lighter than an ordinary binding row — these are supplementary detail nested under the
+           Selector row above them, not a binding in their own right. Same de-emphasis technique as
+           `.row.inactive`'s opacity, just a lighter touch since these rows are always "active". */
+        opacity: 0.75;
     }
     :global(.sb-fsi-connector) {
         justify-self: end;
