@@ -4,7 +4,7 @@
     import SObjectBindingCard from './SObjectBindingCard.svelte';
     import { ordinal } from './lib/applicationFactoryView';
     import { initReorder, moveDown, moveTo, moveUp, pendingChanges, revert, type ReorderState } from './lib/dragReorder';
-    import { fieldSetCountBySObject } from './lib/fieldSetInclusionView';
+    import { activeFieldSetInclusionsForSObject } from './lib/fieldSetInclusionView';
     import { buildSObjectBindingCards, type SObjectBindingCard as SObjectBindingCardData } from './lib/sobjectBindingsView';
     import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
     import type { At4dxBindingRow, DomainProcessBindingRow, RawFieldSetInclusionRecord, SequenceBatchResult } from './types';
@@ -32,7 +32,15 @@
     } = $props();
 
     let cards = $derived(buildSObjectBindingCards(rows));
-    let fieldSetCounts = $derived(fieldSetCountBySObject(fieldSetInclusions));
+
+    /** Active field set inclusions, grouped by SObject — rendered as nested rows under a card's Selector row(s), canvas 3a's own "nest under a Selector row" treatment (docs/design/0017's Stage 4). */
+    let fieldSetInclusionsBySObject = $derived.by(() => {
+        const bySObject = new Map<string, RawFieldSetInclusionRecord[]>();
+        for (const card of cards) {
+            bySObject.set(card.sobject, activeFieldSetInclusionsForSObject(fieldSetInclusions, card.sobject));
+        }
+        return bySObject;
+    });
 
     let domainProcessCountBySObject = $derived.by(() => {
         const counts = new Map<string, number>();
@@ -213,7 +221,7 @@
                 {card}
                 {canWrite}
                 domainProcessBindingCount={domainProcessRows ? (domainProcessCountBySObject.get(card.sobject) ?? 0) : undefined}
-                fieldSetCount={fieldSetCounts.get(card.sobject) ?? 0}
+                fieldSetInclusions={fieldSetInclusionsBySObject.get(card.sobject) ?? []}
                 {onEdit}
                 {onAdd}
                 {canReorder}

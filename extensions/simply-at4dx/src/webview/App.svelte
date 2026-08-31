@@ -166,20 +166,6 @@
         type="button"
         role="tab"
         class="explorer-tab"
-        class:explorer-tab-active={initial.active === 'domainProcess'}
-        aria-selected={initial.active === 'domainProcess'}
-        onclick={() => selectExplorer('domainProcess')}
-    >
-        <span class="explorer-tab-icon"><Icon name="domainProcess" /></span>
-        Domain Process Bindings
-        {#if domainProcess.kind === 'data' && view === 'list'}
-            <span class="explorer-tab-badge">{bindingCount}</span>
-        {/if}
-    </button>
-    <button
-        type="button"
-        role="tab"
-        class="explorer-tab"
         class:explorer-tab-active={initial.active === 'applicationFactory' && afTab === 'sobject'}
         aria-selected={initial.active === 'applicationFactory' && afTab === 'sobject'}
         onclick={selectSObjectBindingsTab}
@@ -188,6 +174,20 @@
         SObject Bindings
         {#if sobjectBindingCount !== undefined && afView === 'list'}
             <span class="explorer-tab-badge">{sobjectBindingCount}</span>
+        {/if}
+    </button>
+    <button
+        type="button"
+        role="tab"
+        class="explorer-tab"
+        class:explorer-tab-active={initial.active === 'domainProcess'}
+        aria-selected={initial.active === 'domainProcess'}
+        onclick={() => selectExplorer('domainProcess')}
+    >
+        <span class="explorer-tab-icon"><Icon name="domainProcess" /></span>
+        Domain Process Bindings
+        {#if domainProcess.kind === 'data' && view === 'list'}
+            <span class="explorer-tab-badge">{bindingCount}</span>
         {/if}
     </button>
     <button
@@ -1325,6 +1325,27 @@
     :global(.sb-badge-shadowed) {
         background: rgba(255, 255, 255, 0.09);
         color: var(--vscode-descriptionForeground);
+    }
+    /* Field set inclusion sub-rows, nested under a card's last Selector row (canvas 3a) — see docs/design/0017. */
+    :global(.sb-fsi-row) {
+        height: 28px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.85em;
+    }
+    :global(.sb-fsi-connector) {
+        justify-self: end;
+        padding-right: 4px;
+    }
+    :global(.sb-fsi-name) {
+        font-family: var(--vscode-editor-font-family);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.sb-fsi-source) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* Drag-and-drop reordering (Stage 3) — see docs/design/0017. */

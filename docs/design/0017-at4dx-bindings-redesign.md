@@ -1,6 +1,6 @@
 # 0017 — AT4DX Bindings Redesign
 
-**Status:** Planned (Stages 1–4 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40), Stage 2 in [PR #41](https://github.com/SimplySF/simply-vscode/pull/41), Stage 3 in [PR #42](https://github.com/SimplySF/simply-vscode/pull/42); Stage 4 pending PR/review — set this line to `Implemented (PR #N)` once it merges, per 0016's own convention for a multi-PR doc)
+**Status:** Implemented (Stage 1 in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40), Stage 2 in [PR #41](https://github.com/SimplySF/simply-vscode/pull/41), Stage 3 in [PR #42](https://github.com/SimplySF/simply-vscode/pull/42), Stage 4 in [PR #43](https://github.com/SimplySF/simply-vscode/pull/43); review follow-ups in [PR #44](https://github.com/SimplySF/simply-vscode/pull/44), [PR #45](https://github.com/SimplySF/simply-vscode/pull/45), [PR #46](https://github.com/SimplySF/simply-vscode/pull/46))
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-31
 
@@ -116,6 +116,11 @@ first-visit behavior (0016) carries over to both new tabs, sharing the *same* un
 is purely a rendering change, not a second scan) so switching between SObject Bindings and Service
 Bindings never re-fetches.
 
+**Correction (caught in review, post-#46):** Stage 1 landed the tab strip in the order it happened to be
+written in code (`Domain Process Bindings | SObject Bindings | Service Bindings | Platform Events`)
+rather than this section's own documented order. Fixed in `App.svelte` — SObject Bindings, the tab this
+whole redesign is centered on, now leads the strip as specified above.
+
 ### SObject Bindings sheet (Stage 1, card layout)
 
 One card per SObject that has at least one Selector, Domain, or Unit of Work binding, in the order
@@ -137,6 +142,15 @@ pill / class link / detail text / value+badge / status / edit icon), copied verb
 
 Field-set-inclusion sub-rows (Stage 4) nest under a Selector row exactly as 3a shows — deferred until
 Stage 4 exists to populate them.
+
+**Correction (caught in review, post-#46):** what Stage 4 actually shipped for this cell was a
+`fieldSetCountLabel` summary ("N field sets") in the Selector row's own detail column, not the nested
+sub-rows this section calls for — a scope narrowing that was recorded in the Stage 4 implementation note
+below but never reconciled back up against this paragraph's own spec. Fixed: `SObjectBindingCard.svelte`
+now renders one `sb-fsi-row` per active field set inclusion, nested directly under the card's last
+Selector row (inclusions are SObject-scoped, not tied to one specific Selector binding, so they nest once
+per card regardless of `selectorCount`), each showing the field set's API name and source — matching 3a.
+The Selector row's own detail column is blank again, the same as it was pre-Stage-4.
 
 **Implementation note (Stage 1, landed):** 1a's row grid also carries a 6th "status" column (a green dot
 + "Active" per binding row). A gap row is `104px minmax(0,1fr) 30px` (pill / message / Add) — nothing to
