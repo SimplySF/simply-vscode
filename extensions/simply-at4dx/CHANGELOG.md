@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.14.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.13.0...simply-at4dx-v2.14.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** split SObject Bindings and Service Bindings into their own tabs ([#40](https://github.com/SimplySF/simply-vscode/issues/40)) ([5777b1a](https://github.com/SimplySF/simply-vscode/commit/5777b1af337e1c9d8518cdf123378e6f6c81ad4a))
+
 # [simply-at4dx-v2.13.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.12.0...simply-at4dx-v2.13.0) (2026-08-31)
 
 
