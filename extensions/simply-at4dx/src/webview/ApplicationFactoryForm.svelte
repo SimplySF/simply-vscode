@@ -51,7 +51,11 @@
     // open time, same as `mode`/`initial` — which entry point this is doesn't change as the user types.
     const prefilledFromGap = untrack(() => Boolean(initial.sobject) || Boolean(initial.bindingInterface));
 
-    let bindingType = $state<WritableBindingType>(initial.bindingType ?? 'Service');
+    // Fixed for the life of the drawer — the entry point (the New Binding type menu, a card's own "Add"
+    // link, or which row's edit icon was clicked) always decides the type before the drawer ever opens
+    // now; there's no in-form control to change it. See docs/design/0017 and canvas 2a-3c, none of which
+    // draw a type switcher inside the drawer itself.
+    const bindingType: WritableBindingType = initial.bindingType ?? 'Service';
     let developerName = $state(initial.developerName ?? '');
     let label = $state(initial.label ?? '');
     let to = $state(initial.to ?? '');
@@ -298,24 +302,6 @@
             <span class="form-section-title">Identity</span>
         </div>
         <div class="form-grid">
-            <div class="form-field">
-                <label for="fBindingType">Binding Type</label>
-                <div class="segmented" id="fBindingType" role="group" aria-label="Binding Type">
-                    <button type="button" class="segmented-option" class:selected={bindingType === 'Service'} disabled={isEdit} onclick={() => (bindingType = 'Service')}>
-                        Service
-                    </button>
-                    <button type="button" class="segmented-option" class:selected={bindingType === 'Selector'} disabled={isEdit} onclick={() => (bindingType = 'Selector')}>
-                        Selector
-                    </button>
-                    <button type="button" class="segmented-option" class:selected={bindingType === 'Domain'} disabled={isEdit} onclick={() => (bindingType = 'Domain')}>
-                        Domain
-                    </button>
-                    <button type="button" class="segmented-option" class:selected={bindingType === 'UnitOfWork'} disabled={isEdit} onclick={() => (bindingType = 'UnitOfWork')}>
-                        Unit of Work
-                    </button>
-                </div>
-            </div>
-
             <div class="form-field">
                 <label for="fDeveloperName">Developer Name <span class="required-marker">*</span></label>
                 {#if isEdit}
