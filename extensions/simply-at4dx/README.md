@@ -61,12 +61,16 @@ no local file to open.
 Click **+ New Binding** in the panel toolbar to add a binding, prefilled with the SObject and Trigger
 Event you're currently viewing, or click the pencil icon on any row to edit that binding. The toolbar
 and its **+ New Binding** button are hidden the whole time either form is open, so there's never more
-than one primary action on screen. Either opens a form for every `DomainProcessBinding__mdt` field,
-grouped into three sections — Identity, When it runs, What it does — with a live sentence above them
-showing the binding you're about to save (e.g. "When an Account is Created, run the Action
-`AssignOwner.cls` at order `10.3` during Trigger Execution"), recomputed as you type. Developer Name
-is fixed once you're editing an existing record, since renaming one is really a delete-and-recreate
-from Salesforce's own perspective.
+than one primary action on screen. A breadcrumb under the header names the scope the binding is locked
+to and its Action/Criteria type; while creating, a monospace line under the "resulting binding" sentence
+previews the equivalent `domain-process-binding create` command. Either opens a form for every
+`DomainProcessBinding__mdt` field, grouped into three sections — Identity, When it runs, What it does —
+with a live sentence above them showing the binding you're about to save (e.g. "When an Account is
+Created, run the Action `AssignOwner.cls` at order `10.3` during Trigger Execution"), recomputed as you
+type. Developer Name is fixed once you're editing an existing record, since renaming one is really a
+delete-and-recreate from Salesforce's own perspective. **Execute asynchronously** only appears for an
+Action — a Criteria row has no async concept, so the checkbox (and any stale value on an existing
+record) is hidden and cleared rather than shown disabled.
 
 Saving writes to whatever you picked when you opened the panel: a local folder gets its
 `.md-meta.xml` file created or updated on disk; a connected org gets the equivalent record deployed
@@ -108,6 +112,13 @@ AT4DX itself still resolves one and `binding validate` doesn't fail on it.
 Drag-and-drop reordering and field set inclusions are designed in 0017 but not yet built — commit order
 is still edited via the Unit of Work binding's Commit Sequence number field, whose live preview shows
 where it would land (`1st`, `2nd`, ...) against every other Unit of Work binding already in the scan.
+
+Every create/edit form's breadcrumb names its type (Selector/Domain/Unit of Work/Service) and how it was
+opened — free-typed from the toolbar, or fixed from a card's own **Add** link — and a monospace line
+previews the equivalent `binding create` command while creating. The "resulting binding" sentence itself
+reflects live priority competition: creating or editing a Selector or Service binding that shares its key
+with another one already in the scan says so — who wins, who's tied, or who shadows whom — the same
+resolution AT4DX itself computes.
 
 A Problems section below each tab lists what Application Factory validation catches for that tab's own
 binding types — a missing or ambiguous SObject reference, a standard object that can't support a

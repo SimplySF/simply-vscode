@@ -1,6 +1,6 @@
 # 0017 — AT4DX Bindings Redesign
 
-**Status:** Planned (Stage 1 implemented, pending PR/review; Stages 2–4 not started)
+**Status:** Planned (Stages 1–2 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40); Stage 2 pending PR/review; Stages 3–4 not started)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-31
 
@@ -187,6 +187,30 @@ the same payload the form already builds), no new host-side capability needed.
 Binding-SObject-field acceptance states (3e, all 4) already match `BindingSObjectField.svelte` as
 shipped — no change needed there.
 
+**Implementation note (Stage 2, landed):** shipped as a shared *copy library*
+(`lib/bindingDrawerCopy.ts`), not a single physically-merged `BindingDrawer.svelte`. The five field-sets
+(Service/Selector/Domain/UnitOfWork/Domain-Process) have almost nothing in common below the chrome —
+different required fields, different validation, different payload shapes — so forcing them into one
+component would mean a wall of `{#if bindingType === ...}` branches with no real duplication removed.
+`ApplicationFactoryForm.svelte` and `BindingForm.svelte` stay separate components, each computing its
+own `DrawerCopy` (title/breadcrumb/type pill/RESULTING BINDING/CLI preview) from the shared library and
+rendering it through the same CSS classes (`.form-context-bar`, `.form-breadcrumb-bar`,
+`.form-preview`, `.form-cli-preview`) — the *visual system* is shared and verbatim-tested
+(`bindingDrawerCopy.test.ts`), which is what the canvas actually cared about; the component split is an
+implementation detail the canvas doesn't speak to.
+
+Two further scope cuts, both left for a later pass rather than blocking this one:
+
+- **No "unsaved changes" dirty-state marker.** The canvas shows an amber dot once any field changes in
+  edit mode (3a/3c/4c). Tracking dirtiness cleanly across every field in both forms is a real feature on
+  its own, orthogonal to the copy/breadcrumb work this stage is about — revisit alongside a future editing
+  pass rather than bolting it on here.
+- **The RESULTING BINDING priority-competition sentence is a template, not a literal reproduction of the
+  canvas's worked examples.** It's computed live from whatever's actually in the scan (via
+  `priorityCompetition`), so it says the right thing for any data — but the specific class names in the
+  canvas's own screenshots ("wins ... over `PremiumAccountsSelector`") are examples of the *shape*, not
+  strings to hardcode. `bindingDrawerCopy.test.ts` asserts the shape against synthetic fixtures instead.
+
 ### Drag-and-drop with a keyboard equivalent (Stage 3)
 
 0016 shipped Sequence-as-a-field specifically because "native HTML5 drag-and-drop has no keyboard
@@ -267,16 +291,22 @@ adjust during implementation where an existing name reads better.
    once their content has moved into the two new views (or keep `ApplicationFactoryRow.svelte` if the
    card's binding rows reuse its grid — decide during implementation).
 
-**Stage 2 — shared drawer**
+**Stage 2 — shared drawer copy (landed as a shared library, not a merged component — see the
+Implementation note above)**
 
-6. `src/webview/BindingDrawer.svelte` — new, replacing `ApplicationFactoryForm.svelte` and
-   `BindingForm.svelte`'s rendering (both keep posting the same `submitBinding`/
-   `submitApplicationFactoryBinding` messages — no host-side change).
-7. `src/webview/lib/bindingDrawerCopy.ts` — new: per-type header/breadcrumb/RESULTING BINDING/CLI-preview
-   string builders, so the copy (verbatim from the canvas) lives in one tested module instead of inline
-   in the component.
-8. Delete `ApplicationFactoryForm.svelte`; fold `BindingForm.svelte`'s Domain-Process-specific fields into
-   `BindingDrawer.svelte`'s type-conditional sections.
+6. `src/webview/lib/bindingDrawerCopy.ts` — new: `applicationFactoryDrawerCopy`/`domainProcessDrawerCopy`,
+   pure functions returning `{ title, breadcrumbLead, typePillLabel, typePillClass, breadcrumbSuffix,
+   resultingBinding, cliPreview }`. `resultingBinding` is a `CopySegment[]` (plain/bold/mono), not a
+   pre-formatted string with markdown-style markers — every segment can carry user-typed text (a class or
+   SObject name), so it has to render through Svelte's own auto-escaping interpolation rather than
+   `{@html}`, which would be an XSS opening. `priorityCompetition` is the shared live-resolution helper
+   (wins/ties/shadowed) both `Service` and `Selector` copy uses.
+7. `src/webview/ApplicationFactoryForm.svelte` — restyled header/breadcrumb/RESULTING BINDING/CLI-preview
+   from `bindingDrawerCopy`; `existingUnitOfWorkRows` prop widened to `allRows` (the whole AF scan, so
+   Service/Selector's competition sentence and Domain's process-binding count can be computed) plus a new
+   `domainProcessRows` prop for that count.
+8. `src/webview/BindingForm.svelte` — same restyle; the old separate `.form-scope-strip` ("Scope locked
+   while creating:" + two pills) is retired in favor of the unified breadcrumb bar all drawers now share.
 
 **Stage 3 — drag-and-drop**
 
@@ -310,9 +340,13 @@ Mirrors 0016's split between derivation unit tests and component tests; new surf
   Domain "not bound" gap never appears for an SObject with no Selector/UnitOfWork either (i.e. gap
   detection is genuinely per-binding-type-presence, not "card exists therefore assume all 3 gaps").
   `SObjectBindingCard`/`ServiceBindingsSection` component tests for each row state table above.
-- **Stage 2**: `bindingDrawerCopy.test.ts` — every type's header/breadcrumb/RESULTING BINDING string,
-  asserted verbatim per `SPEC-CONVENTIONS.md`'s "copy is the spec" rule. Confirm no `isActive`/delete
-  affordance renders for any Application Factory type.
+- **Stage 2** (landed): `bindingDrawerCopy.test.ts` — every type's header/breadcrumb/RESULTING BINDING
+  wording and priority-competition clause (wins/ties/shadowed), and the CLI-preview string, asserted
+  against the flattened segment text. `App.test.ts`/`BindingForm.test.ts` extended to assert the new
+  breadcrumb/type-pill/CLI-preview markup renders and that dashed-vs-solid tracks create-vs-edit. No test
+  asserts an `isActive`/delete affordance, since none is ever rendered for an Application Factory type
+  (nothing to assert the *absence* of beyond the existing "no such element" component tests already
+  covering the form's full field set).
 - **Stage 3**: `dragReorder.test.ts` — stage/commit/revert transitions, sequence recomputation, a
   collision (two cards sharing a sequence) never blocks staging or saving. Partial-failure path: second
   of three saves throws, first stays saved, third never attempted, all three states visible in the bar.
