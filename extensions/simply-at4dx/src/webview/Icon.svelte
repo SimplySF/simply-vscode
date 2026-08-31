@@ -1,5 +1,5 @@
 <script lang="ts">
-    type IconName = 'crown' | 'edit' | 'async' | 'domainProcess' | 'sobjectBindings' | 'applicationFactory' | 'platformEvent';
+    type IconName = 'crown' | 'edit' | 'async' | 'domainProcess' | 'sobjectBindings' | 'applicationFactory' | 'platformEvent' | 'moveUp' | 'moveDown';
 
     let { name }: { name: IconName } = $props();
 </script>
@@ -31,6 +31,14 @@
 {:else if name === 'applicationFactory'}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
         <path d="M2 4.5h12M2 8h12M2 11.5h12" />
+    </svg>
+{:else if name === 'moveUp'}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3v10M4 7l4-4 4 4" />
+    </svg>
+{:else if name === 'moveDown'}
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3v10M4 9l4 4 4-4" />
     </svg>
 {:else if name === 'platformEvent'}
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">

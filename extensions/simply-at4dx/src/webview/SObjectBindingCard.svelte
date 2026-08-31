@@ -10,6 +10,16 @@
         domainProcessBindingCount,
         onEdit,
         onAdd,
+        canReorder = false,
+        commitPosition,
+        canMoveUp = false,
+        canMoveDown = false,
+        dragging = false,
+        onMoveUp,
+        onMoveDown,
+        onDragStart,
+        onDragEnd,
+        onDropOn,
     }: {
         card: SObjectBindingCard;
         canWrite: boolean;
@@ -17,7 +27,35 @@
         domainProcessBindingCount: number | undefined;
         onEdit: (row: ApplicationFactoryViewRow | UnitOfWorkViewRow) => void;
         onAdd: (bindingType: 'Domain' | 'UnitOfWork', sobject: string) => void;
+        /** Whether this card has a real Unit of Work binding and so takes part in commit-order drag/keyboard reordering (Stage 3). */
+        canReorder?: boolean;
+        /** This card's live commit position ("1st", "2nd", ...), reflecting any staged-but-unsaved moves — `undefined` when `canReorder` is false. */
+        commitPosition?: string;
+        canMoveUp?: boolean;
+        canMoveDown?: boolean;
+        /** Whether this card is the one currently being pointer-dragged — highlights it, matching 1a's mid-drag state. */
+        dragging?: boolean;
+        onMoveUp?: () => void;
+        onMoveDown?: () => void;
+        onDragStart?: () => void;
+        onDragEnd?: () => void;
+        /** Fires when another card is dropped on this one. */
+        onDropOn?: () => void;
     } = $props();
+
+    function dragOver(event: DragEvent): void {
+        if (canReorder) {
+            event.preventDefault();
+        }
+    }
+
+    function drop(event: DragEvent): void {
+        if (!canReorder) {
+            return;
+        }
+        event.preventDefault();
+        onDropOn?.();
+    }
 
     function openClass(classToInject: string | undefined): void {
         if (classToInject) {
@@ -46,14 +84,52 @@
     }
 </script>
 
-<div class="sb-card">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="sb-card" class:sb-card-dragging={dragging} ondragover={dragOver} ondrop={drop}>
     <div class="sb-card-header">
+        {#if canReorder}
+            <!--
+                Mouse/pointer-only, deliberately: the Move Up/Down buttons right next to this handle are
+                the keyboard-operable equivalent (see docs/design/0017's Stage 3) — the drag handle itself
+                is hidden from the accessibility tree rather than given a redundant, not-actually-operable
+                keyboard affordance of its own.
+            -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span
+                class="sb-drag-handle"
+                title="Drag to reorder"
+                aria-hidden="true"
+                draggable="true"
+                ondragstart={() => onDragStart?.()}
+                ondragend={() => onDragEnd?.()}>⣿</span
+            >
+            <span class="sb-move-buttons">
+                <button
+                    type="button"
+                    class="sb-move-btn"
+                    disabled={!canMoveUp}
+                    title="Move {card.sobject} earlier in the commit order"
+                    aria-label="Move {card.sobject} earlier in the commit order"
+                    onclick={() => onMoveUp?.()}><Icon name="moveUp" /></button
+                >
+                <button
+                    type="button"
+                    class="sb-move-btn"
+                    disabled={!canMoveDown}
+                    title="Move {card.sobject} later in the commit order"
+                    aria-label="Move {card.sobject} later in the commit order"
+                    onclick={() => onMoveDown?.()}><Icon name="moveDown" /></button
+                >
+            </span>
+        {/if}
         <span class="sb-card-sobject">{card.sobject}</span>
         {#if card.gapCount > 0}
             <span class="sb-gap-pill">⚠ {card.gapCount} gap{card.gapCount === 1 ? '' : 's'}</span>
         {/if}
         <span class="sb-card-spacer"></span>
-        <span class="sb-card-count">{card.bindingCount} binding{card.bindingCount === 1 ? '' : 's'}</span>
+        <span class="sb-card-count">
+            {#if commitPosition}commits {commitPosition} · {/if}{card.bindingCount} binding{card.bindingCount === 1 ? '' : 's'}
+        </span>
     </div>
     {#each card.rows as cardRow, i (i)}
         {#if cardRow.kind === 'selector'}

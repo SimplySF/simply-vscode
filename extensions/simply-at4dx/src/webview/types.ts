@@ -46,7 +46,19 @@ export type InitialState = {
     isLocalScan?: boolean;
     /** A short display form of the scan's `BindingSource` — an org username, or a workspace-relative source path — shown in the explorer tab strip. See docs/design/0014. */
     sourceLabel?: string;
+    /**
+     * The outcome of the most recent `submitSequenceBatch` — present only on the one render immediately
+     * following it (see `at4dxExplorerPanel.ts`'s `render`), so `SObjectBindingsSheet.svelte` can report
+     * what happened without it lingering on a later, unrelated re-render. See docs/design/0017's Stage 3.
+     */
+    lastBatchResult?: SequenceBatchResult;
 };
+
+/** One `UnitOfWork` binding's new `BindingSequence__c`, as the SObject Bindings sheet's "Save commit order" bar posts it. Mirrors `at4dxExplorerPanel.ts`'s own `SequenceBatchUpdate`. */
+export type SequenceBatchUpdate = { developerName: string; sobject: string; sequence: number };
+
+/** How many of a `submitSequenceBatch`'s pending moves actually saved (of how many were staged), and, if it stopped early, which SObject failed and why. Mirrors `at4dxExplorerPanel.ts`'s own `SequenceBatchResult`. */
+export type SequenceBatchResult = { savedCount: number; totalCount: number; failed?: { sobject: string; message: string } };
 
 /**
  * The create/edit form's field values as posted to the host on submit — see docs/design/0009. Mirrors

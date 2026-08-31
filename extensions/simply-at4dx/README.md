@@ -109,9 +109,21 @@ priority render an amber banner over the group, with **Resolves today** on the o
 and **May win instead** on the rest — that's a "this isn't deterministic" notice, not an error, since
 AT4DX itself still resolves one and `binding validate` doesn't fail on it.
 
-Drag-and-drop reordering and field set inclusions are designed in 0017 but not yet built — commit order
-is still edited via the Unit of Work binding's Commit Sequence number field, whose live preview shows
-where it would land (`1st`, `2nd`, ...) against every other Unit of Work binding already in the scan.
+A card whose SObject has a Unit of Work binding can also be reordered directly on the sheet: drag its
+`⣿` handle, or use the Move Up/Down buttons beside it — both stage the same pending move, so keyboard and
+pointer users get the identical result (this is the keyboard-operable equivalent an earlier release
+deliberately deferred, since plain HTML5 drag-and-drop has none). Staged moves show in a bar at the top —
+**Revert** discards them, **Save commit order** writes each one; if a save fails partway through, the bar
+reports how many of the pending moves actually saved and which SObject stopped it, and the rest are left
+unattempted rather than guessed at. Two cards sharing the same sequence show an amber `sequence-collision`
+banner between them — both still register, only their relative order is indeterminate, so it's a warning,
+never something that blocks a drag or a save. A card with no Unit of Work binding at all has nothing to
+reorder — that's what its own **Add** row is for. Field set inclusions are designed in 0017 but not yet
+built.
+
+Commit order can still be set directly, without dragging, via the Unit of Work binding's edit form —
+its Commit Sequence number field's live preview shows where a typed value would land (`1st`, `2nd`, ...)
+against every other Unit of Work binding already in the scan.
 
 Every create/edit form's breadcrumb names its type (Selector/Domain/Unit of Work/Service) and how it was
 opened — free-typed from the toolbar, or fixed from a card's own **Add** link — and a monospace line

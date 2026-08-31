@@ -1,6 +1,6 @@
 # 0017 — AT4DX Bindings Redesign
 
-**Status:** Planned (Stages 1–2 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40); Stage 2 pending PR/review; Stages 3–4 not started)
+**Status:** Planned (Stages 1–3 implemented; Stage 1 merged in [PR #40](https://github.com/SimplySF/simply-vscode/pull/40), Stage 2 in [PR #41](https://github.com/SimplySF/simply-vscode/pull/41); Stage 3 pending PR/review; Stage 4 not started)
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-31
 
@@ -236,6 +236,39 @@ same "no designed recovery" gap 4a flags for band-drag applies here at a smaller
 gesture rather than N — so a partial-failure UI is tractable: show a per-card status in the pending-
 changes list rather than an all-or-nothing dialog).
 
+**Implementation note (Stage 3, landed):**
+
+- **Sequence assignment is fractional/midpoint, not a full renumber per move.** `lib/dragReorder.ts`
+  assigns the *moved* card a sequence strictly between its new neighbors' current values (e.g. dropping
+  between `10` and `20` yields `15`) — so a single drag between two already-spaced cards produces exactly
+  the "1 pending change" the canvas's own 1a footer shows, not a cascade touching every card after it.
+  When there's no integer room (deeply nested drags) or a neighbor is itself unsequenced with nothing on
+  the far side, the whole order rebalances onto a fresh `10, 20, 30, ...` ladder instead — a rarer,
+  honestly-larger diff rather than a silent collision or a value overlapping an existing one.
+- **Only cards with a real Unit of Work binding show drag/Move Up/Down controls.** A card with no Unit of
+  Work binding at all has no sequence to reorder — that's what its own "Add" row is for (Stage 1). A card
+  whose Unit of Work binding exists but has a blank sequence *does* participate, sorted after every
+  sequenced one, exactly per 1b's "a drag onto a numbered row is what assigns it a position."
+- **The partial-failure report is coarse, not a per-card badge list.** After `submitSequenceBatch`
+  stops early, the host's response carries a saved count, a total count, and which SObject failed and
+  why — not a full per-card saved/failed/not-attempted breakdown. Because a fresh rescan-and-render
+  follows every batch (successful or not) and this architecture remounts the whole webview per state
+  change (docs/design/0011), there is nowhere to keep a live per-card status list *anyway* — the
+  freshly-mounted sheet's own re-seeded reorder state has no memory of which specific moves were never
+  attempted, only what the disk/org now actually holds. `lastBatchResult` (a new one-render-only
+  `InitialState` field, never persisted on `PanelState`) is the mechanism this uses to say what happened
+  without inventing a second, no-remount message channel.
+- **"Review N file edits" (1a's footer link) is dropped.** It implied a diff view over the affected
+  `.md-meta.xml` files, which this stage has no read-side support for building.
+- **The pending-changes bar's copy generalizes past 1a's own single-move example.** 1a's mockup only
+  shows the exact copy for exactly one pending change ("1 pending change — SObjectName commits Nth, was
+  Mth"); for more than one, `PendingChangesBar.svelte` keeps that same sentence for the count and adds a
+  compact list, one line per pending card, since the canvas doesn't specify multi-move copy.
+- **The keyboard equivalent is real, not a fallback stub.** Move Up/Down are ordinary buttons with
+  `aria-label`s naming the SObject and direction, wired to the exact same `moveUp`/`moveDown` the drag
+  handle's drop target calls — there is one reorder code path, not two. The drag handle itself is
+  `aria-hidden` (mouse/pointer-only by design) since the buttons already cover the keyboard case.
+
 ### Field set inclusions (Stage 4)
 
 Nested list under a Selector row in the edit drawer (3a section 3), backed by the library's
@@ -308,28 +341,36 @@ Implementation note above)**
 8. `src/webview/BindingForm.svelte` — same restyle; the old separate `.form-scope-strip` ("Scope locked
    while creating:" + two pills) is retired in favor of the unified breadcrumb bar all drawers now share.
 
-**Stage 3 — drag-and-drop**
+**Stage 3 — drag-and-drop (landed)**
 
-9. `src/webview/lib/dragReorder.ts` — new: pure pending-move state machine (stage a move, compute new
-   sequence, revert, commit order) so drag/keyboard/tests all drive the same logic.
-10. `src/webview/SObjectBindingCard.svelte` — add drag handle + Move Up/Down buttons + live region.
-11. `src/webview/PendingChangesBar.svelte` — new (Save/Revert footer bar).
-12. `src/at4dxExplorerPanel.ts` — batch-sequential `updateApplicationFactoryBinding` calls for a commit,
-    partial-failure reporting.
+9. `src/webview/lib/dragReorder.ts` — new: pure pending-move state machine (`initReorder`, `moveTo`/
+   `moveUp`/`moveDown`, `revert`, `pendingChanges`, `positionOf`) so drag/keyboard/tests all drive the
+   same logic. Fractional/midpoint sequence assignment, not a full renumber per move — see the
+   Implementation note above.
+10. `src/webview/SObjectBindingCard.svelte` — drag handle (`aria-hidden`, HTML5 `draggable`) + Move
+    Up/Down buttons (the real keyboard equivalent) + the card-header commit-position caption.
+11. `src/webview/SObjectBindingsSheet.svelte` — owns the `ReorderState`, wires drag/keyboard events, the
+    live region announcing each move, the sequence-collision banner between colliding cards, and the
+    batch-result banner.
+12. `src/webview/PendingChangesBar.svelte` — new (Save/Revert footer bar).
+13. `src/at4dxExplorerPanel.ts` — new `submitSequenceBatch` message: sequential
+    `updateApplicationFactoryBinding` calls, stopping on the first failure/block; one rescan-and-render
+    at the end carrying a one-render-only `lastBatchResult` (saved/total counts, which SObject failed).
+14. `src/webview/types.ts` — `SequenceBatchUpdate`/`SequenceBatchResult`, and `InitialState.lastBatchResult`.
 
 **Stage 4 — field set inclusions**
 
-13. `src/applicationFactoryCli.ts` — add `getFieldSetInclusions`/`createFieldSetInclusion`/
+15. `src/applicationFactoryCli.ts` — add `getFieldSetInclusions`/`createFieldSetInclusion`/
     `updateFieldSetInclusion` wrappers, mirroring the existing binding read/write wrapper pattern.
-14. `src/webview/FieldSetInclusionList.svelte` — new, nested in `BindingDrawer.svelte`'s Selector-only
-    section 3.
-15. `src/at4dxExplorerPanel.ts` — new `submitFieldSetInclusion` message handler.
+16. `src/webview/FieldSetInclusionList.svelte` — new, nested in `ApplicationFactoryForm.svelte`'s
+    Selector-only section 3 (per Stage 2's own "shared library, not a merged component" note above).
+17. `src/at4dxExplorerPanel.ts` — new `submitFieldSetInclusion` message handler.
 
 **Docs, per stage**
 
-16. Update this doc's Status line per stage as it lands (`Planned` after Stage 1, `Implemented (PR #N)`
+18. Update this doc's Status line per stage as it lands (`Planned` after Stage 1, `Implemented (PR #N)`
     once Stage 4 does — matching 0016's own convention for a doc spanning multiple PRs).
-17. `extensions/simply-at4dx/README.md` — rewritten Usage section once Stage 1 lands (tab names change
+19. `extensions/simply-at4dx/README.md` — rewritten Usage section once Stage 1 lands (tab names change
     user-visibly).
 
 ## Testing
@@ -347,9 +388,14 @@ Mirrors 0016's split between derivation unit tests and component tests; new surf
   asserts an `isActive`/delete affordance, since none is ever rendered for an Application Factory type
   (nothing to assert the *absence* of beyond the existing "no such element" component tests already
   covering the form's full field set).
-- **Stage 3**: `dragReorder.test.ts` — stage/commit/revert transitions, sequence recomputation, a
-  collision (two cards sharing a sequence) never blocks staging or saving. Partial-failure path: second
-  of three saves throws, first stays saved, third never attempted, all three states visible in the bar.
+- **Stage 3** (landed): `dragReorder.test.ts` — ordering, midpoint assignment (touches only the moved
+  card when neighbors have room), the full-renumber fallback when they don't, revert, and the
+  round-trip-reports-no-change case. `SObjectBindingsSheet.test.ts` — Move Up/Down only renders for a
+  card with a real Unit of Work binding and is disabled at the boundaries, staging/reverting/saving a
+  move, the sequence-collision banner, and both the successful and partial-failure `lastBatchResult`
+  banners. No dedicated host-side test for `submitSequenceBatch` itself, matching this codebase's
+  existing convention of not unit-testing `at4dxExplorerPanel.ts`'s other write handlers
+  (`submitBinding`/`submitApplicationFactoryBinding` have none either) — covered by the Manual pass below.
 - **Stage 4**: field-set-inclusion create/toggle round trip against `testfixtures/`; org-wide (not
   per-SObject) duplicate-`FieldsetName__c` check.
 - **Manual** (F5), each stage: confirm the tab strip / card sheet / drawer / drag / inclusions against
