@@ -1579,12 +1579,12 @@
     :global(.nbm-button span:first-child) {
         display: flex;
         align-items: center;
-        padding: 0 12px;
+        padding: 6px 12px;
     }
     :global(.nbm-caret) {
         display: flex;
         align-items: center;
-        padding: 0 8px;
+        padding: 6px 8px;
         border-left: 1px solid rgba(255, 255, 255, 0.28);
         font-size: 9px;
     }
