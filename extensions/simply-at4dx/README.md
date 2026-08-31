@@ -95,9 +95,11 @@ one, or several), and lists its bindings: each Selector row's priority and **WIN
 (the same resolution AT4DX itself computes — a higher `Priority__c` wins, a blank sorts lowest), each
 Domain row's bound implementation, and the Unit of Work row's commit position and sequence. A missing
 Domain or Unit of Work binding renders as its own row with an **Add** link, prefilled with the type and
-SObject already fixed. Click **+ New Binding** to create a binding of any type from an empty toolbar
-button, or the pencil icon on any row to edit it — the form picks up the same wiring-problem/**Save
-Anyway** contract the Domain Process form already uses. A Selector, Domain, or Unit of Work binding's
+SObject already fixed. Click **+ New Binding** — its caret opens a menu naming which of Selector, Domain,
+or Unit of Work you're creating (each with a one-line note on how many are allowed per SObject and what
+happens if you add a second) — or the pencil icon on any row to edit an existing one; either opens the
+form with the type already fixed and picks up the same wiring-problem/**Save Anyway** contract the
+Domain Process form already uses. A Selector, Domain, or Unit of Work binding's
 SObject field flags a standard object that can't support a metadata relationship (e.g. `Task`) in red
 with a **"Use … as an alternate name"** action, rather than blocking the save outright — the underlying
 eligibility table is explicitly best-effort.

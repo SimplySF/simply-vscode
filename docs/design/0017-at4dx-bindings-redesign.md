@@ -151,6 +151,15 @@ the type-choice menu (Selector/Domain/Unit of Work, each with 1c's exact multipl
 Stage 2's drawer with SObject empty (free-typed) — the same path that can create a brand-new card for an
 SObject not yet on the sheet.
 
+**Implementation note (1c, landed after Stage 4):** when Stage 1 first shipped, this button stayed a
+plain "+ New Binding" opening the drawer with no type preset (defaulting to whatever the drawer's own
+segmented control defaults to) — a scope cut noted at the time as "Stage 2 work," but Stage 2's own scope
+(the shared drawer copy) never actually included it, and neither did Stage 3 or 4. The real split
+button/menu (`NewBindingMenu.svelte`) landed as its own follow-up once the gap was noticed in review,
+with 1c's exact menu copy verbatim. The **Service Bindings tab keeps the plain (non-split) button**,
+matching 5a's own footer note ("without the caret — since Service is the only binding type on this
+tab") — only the SObject Bindings tab's button is a split button with a menu.
+
 ### Service Bindings tab (Stage 1, table layout — 5a)
 
 `grid-template-columns: 1fr 16px 1fr 100px 88px 128px 30px` (Interface / → / Implementation / Priority /
