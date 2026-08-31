@@ -47,6 +47,19 @@
         onDropOn?: () => void;
     } = $props();
 
+    // WINS/SHADOWED (and the tie chips) only mean something when there's a second Selector on this same
+    // SObject to compete against — canvas 1a's own solo-Selector example (Fish__c's FishSelector) shows
+    // no badge at all, just the priority value. See docs/design/0017.
+    let selectorCount = $derived(card.rows.filter((cardRow) => cardRow.kind === 'selector').length);
+
+    // Every real (non-gap) row's status column: canvas 1a draws a green "Active" dot on every Selector,
+    // Domain, and Unit of Work row. Unlike the write-side Active *checkbox* the design doc's own
+    // deviation 1 already dropped (there's no isActive field to write for any of these types), this is a
+    // read-only, unconditional label — every row here came back from `resolveBindings`, so it exists and
+    // resolves; there's no "inactive" state a scanned record could be in for these three types to
+    // distinguish it from. Showing it isn't a claim about a field that doesn't exist, just that the
+    // record is live, which is always true for anything reaching this component at all.
+
     function dragOver(event: DragEvent): void {
         if (canReorder) {
             event.preventDefault();
@@ -146,15 +159,20 @@
                 <span class="sb-detail">{fieldSetCountLabel(fieldSetCount)}</span>
                 <span class="sb-value-badge">
                     <span class="af-priority" class:af-priority-blank={row.priority === undefined}>{row.priority ?? '—'}</span>
-                    {#if row.resolution.kind === 'effective'}
-                        <span class="sb-badge sb-badge-wins">WINS</span>
-                    {:else if row.resolution.kind === 'shadowed'}
-                        <span class="sb-badge sb-badge-shadowed">SHADOWED</span>
-                    {:else if row.resolution.kind === 'tie-winner'}
-                        <span class="af-resolution-chip resolves-today">Resolves today</span>
-                    {:else if row.resolution.kind === 'tie-other'}
-                        <span class="af-resolution-chip">May win instead</span>
+                    {#if selectorCount > 1}
+                        {#if row.resolution.kind === 'effective'}
+                            <span class="sb-badge sb-badge-wins">WINS</span>
+                        {:else if row.resolution.kind === 'shadowed'}
+                            <span class="sb-badge sb-badge-shadowed">SHADOWED</span>
+                        {:else if row.resolution.kind === 'tie-winner'}
+                            <span class="af-resolution-chip resolves-today">Resolves today</span>
+                        {:else if row.resolution.kind === 'tie-other'}
+                            <span class="af-resolution-chip">May win instead</span>
+                        {/if}
                     {/if}
+                </span>
+                <span class="row-status">
+                    <span class="status-indicator status-active"><span class="status-dot"></span>Active</span>
                 </span>
                 {#if canWrite}
                     <span class="row-edit" title="Edit this binding" role="button" tabindex="0" onclick={(e) => editClick(row, e)} onkeydown={(e) => editKeydown(row, e)}>
@@ -175,6 +193,9 @@
                     {domainProcessBindingCount === undefined ? 'Domain process bindings' : `${domainProcessBindingCount} process binding${domainProcessBindingCount === 1 ? '' : 's'}`}
                 </span>
                 <span class="sb-value-badge"></span>
+                <span class="row-status">
+                    <span class="status-indicator status-active"><span class="status-dot"></span>Active</span>
+                </span>
                 {#if canWrite}
                     <span class="row-edit" title="Edit this binding" role="button" tabindex="0" onclick={(e) => editClick(row, e)} onkeydown={(e) => editKeydown(row, e)}>
                         <Icon name="edit" />
@@ -203,6 +224,9 @@
                 <span class="sb-detail"></span>
                 <span class="sb-value-badge">
                     <span class="af-priority" class:af-priority-blank={row.sequence === undefined}>{row.sequence !== undefined ? `seq ${row.sequence}` : '—'}</span>
+                </span>
+                <span class="row-status">
+                    <span class="status-indicator status-active"><span class="status-dot"></span>Active</span>
                 </span>
                 {#if canWrite}
                     <span class="row-edit" title="Edit this binding" role="button" tabindex="0" onclick={(e) => editClick(row, e)} onkeydown={(e) => editKeydown(row, e)}>

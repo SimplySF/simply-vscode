@@ -11,9 +11,75 @@ function uowRow(developerName: string, sobject: string, sequence: number | undef
     return { bindingType: 'UnitOfWork', developerName, label: developerName, key: sobject, source: 'local', effective: true, sequence } as At4dxBindingRow;
 }
 
+function selectorRow(overrides: Partial<At4dxBindingRow> = {}): At4dxBindingRow {
+    return {
+        bindingType: 'Selector',
+        developerName: 'AccountsSelectorBinding',
+        label: 'Accounts Selector',
+        key: 'Account',
+        to: 'AccountsSelector',
+        source: 'local',
+        effective: true,
+        priority: 20,
+        ...overrides,
+    } as At4dxBindingRow;
+}
+
+function domainRow(overrides: Partial<At4dxBindingRow> = {}): At4dxBindingRow {
+    return { bindingType: 'Domain', developerName: 'AccountsDomainBinding', label: 'Accounts Domain', key: 'Account', to: 'Accounts', source: 'local', effective: true, ...overrides } as At4dxBindingRow;
+}
+
 afterEach(() => {
     cleanup();
     postMessage.mockClear();
+});
+
+describe('SObjectBindingsSheet — row status and priority-competition badges', () => {
+    it('shows a static Active status on every real row, but no WINS/SHADOWED badge for a solo Selector', () => {
+        render(SObjectBindingsSheet, {
+            props: { rows: [selectorRow()], domainProcessRows: undefined, fieldSetInclusions: [], canWrite: true, lastBatchResult: undefined, onEdit: vi.fn(), onAdd: vi.fn() },
+        });
+
+        expect(screen.getByText('20')).toBeTruthy(); // priority still shown
+        expect(screen.queryByText('WINS')).toBeNull();
+        expect(screen.queryByText('SHADOWED')).toBeNull();
+        expect(screen.getByText('Active')).toBeTruthy();
+    });
+
+    it('shows WINS/SHADOWED once a second Selector on the same SObject actually competes', () => {
+        render(SObjectBindingsSheet, {
+            props: {
+                rows: [selectorRow({ developerName: 'A', to: 'AccountsSelector', priority: 20, effective: true }), selectorRow({ developerName: 'B', to: 'PremiumAccountsSelector', priority: undefined, effective: false })],
+                domainProcessRows: undefined,
+                fieldSetInclusions: [],
+                canWrite: true,
+                lastBatchResult: undefined,
+                onEdit: vi.fn(),
+                onAdd: vi.fn(),
+            },
+        });
+
+        expect(screen.getByText('WINS')).toBeTruthy();
+        expect(screen.getByText('SHADOWED')).toBeTruthy();
+        // Still unconditional on both rows, win or lose.
+        expect(screen.getAllByText('Active')).toHaveLength(2);
+    });
+
+    it('shows the Active status on a Domain row and a Unit of Work row', () => {
+        render(SObjectBindingsSheet, {
+            props: {
+                rows: [domainRow(), uowRow('AccountUOW', 'Account', 10)],
+                domainProcessRows: undefined,
+                fieldSetInclusions: [],
+                canWrite: true,
+                lastBatchResult: undefined,
+                onEdit: vi.fn(),
+                onAdd: vi.fn(),
+            },
+        });
+
+        expect(screen.getAllByText('Active')).toHaveLength(2);
+    });
 });
 
 describe('SObjectBindingsSheet — drag-and-drop reordering (Stage 3)', () => {

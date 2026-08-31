@@ -1224,7 +1224,7 @@
     }
     :global(.sb-row) {
         display: grid;
-        grid-template-columns: 104px minmax(0, 1fr) 150px 100px 30px;
+        grid-template-columns: 104px minmax(0, 1fr) 150px 100px 92px 30px;
         align-items: center;
         gap: 12px;
         padding: 0 16px;
