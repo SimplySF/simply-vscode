@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.16.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.15.0...simply-at4dx-v2.16.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** drag-and-drop commit-order reordering on SObject Bindings ([#42](https://github.com/SimplySF/simply-vscode/issues/42)) ([5cae2d5](https://github.com/SimplySF/simply-vscode/commit/5cae2d57bbbed4cb9f8c5eac38a9aaa191a1b1d7))
+
 # [simply-at4dx-v2.15.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.14.0...simply-at4dx-v2.15.0) (2026-08-31)
 
 
