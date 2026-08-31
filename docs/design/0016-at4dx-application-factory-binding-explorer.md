@@ -1,6 +1,6 @@
 # 0016 — AT4DX Application Factory Binding Explorer
 
-**Status:** Planned — stage 1 (read-only list + Problems) implemented; stages 2–3 (create/edit) not yet built
+**Status:** Planned — stages 1–2 (read-only list + Problems; Service/Selector/Domain create/edit) implemented; stage 3 (UnitOfWork write + commit-order reorder) not yet built
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-30
 

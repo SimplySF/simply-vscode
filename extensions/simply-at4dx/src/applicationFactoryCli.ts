@@ -4,24 +4,40 @@ import type { Connection } from '@salesforce/core';
 // and the types need an explicit resolution-mode since they can't be inferred from a (nonexistent)
 // static import. Same pattern `at4dxCli.ts` already uses — see docs/design/0006.
 import type {
+    At4dxBindingCreateResult,
     At4dxBindingRow,
+    At4dxBindingUpdateResult,
     BindingIssue,
     BindingIssueRule,
     BindingRuleInfo,
     BindingType,
+    CreateBindingInput,
+    CreateBindingTarget,
     LocalScanResult,
+    UpdateBindingInput,
+    UpdateBindingTarget,
 } from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
 import { At4dxCliError, resolveConnection, type BindingSource } from './at4dxCli';
 import { truncate, type Logger } from './logger';
 
 export type { At4dxBindingRow, BindingIssue };
-export type { BindingIssueRule, BindingKeyField, BindingRuleInfo, BindingType } from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
+export type {
+    BindingIssueRule,
+    BindingKeyField,
+    BindingRuleInfo,
+    BindingType,
+    CreateBindingInput,
+    UpdateBindingInput,
+    WritableBindingType,
+} from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
 
 export type ApplicationFactoryScan = {
     rows: At4dxBindingRow[];
     issues: BindingIssue[];
     /** `BINDING_RULES`, forwarded so the panel needs no import of an ESM-only package. */
     rules: Record<BindingIssueRule, BindingRuleInfo>;
+    /** `ENTITY_DEFINITION_STANDARD_OBJECTS`, sorted and forwarded for `BindingSObjectField.svelte`'s eligibility check — a `Set` doesn't survive `JSON.stringify`. Fetched alongside the scan since it's only ever needed once the Application Factory tab has already been opened. */
+    standardObjects: string[];
 };
 
 /** Alias for `ApplicationFactoryScan`'s `rules` shape, so callers need no second `resolution-mode` import. */
@@ -49,9 +65,8 @@ const APPLICATION_FACTORY_NOT_DETECTED_MESSAGE =
  * @throws {At4dxCliError} With a message safe to show the user directly.
  */
 export async function getApplicationFactoryBindings(target: BindingSource, logger?: Logger): Promise<ApplicationFactoryScan> {
-    const { scanLocalBindings, scanOrgBindings, resolveBindings, validateBindings, ALL_BINDING_TYPES, BINDING_RULES } = await import(
-        '@simplysf/simply-aep-core'
-    );
+    const { scanLocalBindings, scanOrgBindings, resolveBindings, validateBindings, ALL_BINDING_TYPES, BINDING_RULES, ENTITY_DEFINITION_STANDARD_OBJECTS } =
+        await import('@simplysf/simply-aep-core');
 
     const start = Date.now();
     const label = target.kind === 'org' ? `org ${target.username}` : `source ${target.dirs.join(', ')}`;
@@ -105,7 +120,12 @@ export async function getApplicationFactoryBindings(target: BindingSource, logge
     const issues = validateBindings(scan);
 
     summary(`ok, ${scan.records.length} record(s), ${issues.length} issue(s)`);
-    return { rows: resolveBindings(scan.records), issues, rules: BINDING_RULES };
+    return {
+        rows: resolveBindings(scan.records),
+        issues,
+        rules: BINDING_RULES,
+        standardObjects: [...ENTITY_DEFINITION_STANDARD_OBJECTS].sort((a, b) => a.localeCompare(b)),
+    };
 }
 
 /**
@@ -116,4 +136,119 @@ export async function getApplicationFactoryBindings(target: BindingSource, logge
 export async function applicationFactoryLocalObjectName(bindingType: BindingType): Promise<string> {
     const { AT4DX_BINDING_LOCAL_OBJECT_NAMES } = await import('@simplysf/simply-aep-core');
     return AT4DX_BINDING_LOCAL_OBJECT_NAMES[bindingType];
+}
+
+/**
+ * Outcome of `createApplicationFactoryBinding`/`updateApplicationFactoryBinding`: either the write (and,
+ * for an org target, deploy) went through, or `validateBindings` found an `error`-severity issue and the
+ * library refused to write — not treated as a thrown failure, since the caller can retry with
+ * `force: true` rather than having to recover from an exception. Every other `BindingWriteErrorCode`
+ * still throws {@link At4dxCliError}, matching `at4dxCli.ts`'s `WriteOutcome` contract for Domain
+ * Process bindings — kept as a separate type since the two wrap different library result shapes.
+ */
+export type ApplicationFactoryWriteOutcome =
+    | { kind: 'ok'; result: At4dxBindingCreateResult | At4dxBindingUpdateResult }
+    | { kind: 'blocked'; issues: BindingIssue[] };
+
+/**
+ * `at4dxCli.ts`'s `asWriteConnection` cast, duplicated rather than exported generic: same dual-
+ * `@salesforce/core`-install hazard (see that function's own comment for the full explanation), but a
+ * different target type (`CreateBindingTarget`/`UpdateBindingTarget` instead of
+ * `CreateDomainProcessBindingTarget`/`SetDomainProcessBindingTarget`) makes a shared generic signature
+ * looser than either call site needs.
+ */
+function asWriteConnection(connection: Connection): NonNullable<CreateBindingTarget['connection']> {
+    return connection as unknown as NonNullable<CreateBindingTarget['connection']>;
+}
+
+async function resolveCreateTarget(target: BindingSource): Promise<CreateBindingTarget> {
+    return target.kind === 'org' ? { connection: asWriteConnection(await resolveConnection(target.username)) } : { sourceDir: target.dirs[0] };
+}
+
+async function resolveUpdateTarget(target: BindingSource): Promise<UpdateBindingTarget> {
+    return target.kind === 'org' ? { connection: asWriteConnection(await resolveConnection(target.username)) } : { sourceDirs: target.dirs };
+}
+
+/** `label`/`summary`/`logError` are identical shape across every write function below — shared setup, mirroring `at4dxCli.ts`'s own `callLogging`. */
+function callLogging(logger: Logger | undefined, kind: 'create' | 'update', target: BindingSource) {
+    const start = Date.now();
+    const label = target.kind === 'org' ? `org ${target.username}` : `source ${target.dirs.join(', ')}`;
+    return {
+        summary: (outcome: string): void =>
+            logger?.log(`${new Date().toISOString()} application factory binding ${kind} (${label}) — ${Date.now() - start}ms — ${outcome}`),
+        logError: (error: unknown): void => {
+            const err = error as Error;
+            logger?.log(`error: ${truncate(err.stack ?? err.message ?? String(error))}`, { verbose: true });
+        },
+    };
+}
+
+/**
+ * Creates a new Application Factory binding record (Service/Selector/Domain in stage 2; UnitOfWork in
+ * stage 3) against `target` — a local `.md-meta.xml` file or an org deploy. See docs/design/0016.
+ */
+export async function createApplicationFactoryBinding(input: CreateBindingInput, target: BindingSource, logger?: Logger): Promise<ApplicationFactoryWriteOutcome> {
+    const { createBinding, BindingWriteError } = await import('@simplysf/simply-aep-core');
+    const { summary, logError } = callLogging(logger, 'create', target);
+    logger?.log(`creating ${input.bindingType} binding ${input.developerName}`, { verbose: true });
+
+    try {
+        const result = await createBinding(input, await resolveCreateTarget(target));
+        summary(`ok, ${result.issues.length} issue(s)`);
+        return { kind: 'ok', result };
+    } catch (error) {
+        if (error instanceof BindingWriteError && error.code === 'validation-failed') {
+            summary('blocked by validation');
+            return { kind: 'blocked', issues: error.issues ?? [] };
+        }
+        logError(error);
+        if ((error as Error & { code?: string }).code === 'type-field-mismatch') {
+            logger?.log(`offending input: ${JSON.stringify(input)}`, { verbose: true });
+        }
+        summary('failed');
+        throw new At4dxCliError(writeErrorMessage(error), error);
+    }
+}
+
+/** Updates an existing Application Factory binding record — located by `input.developerName` within `input.bindingType`. Same blocked-vs-thrown contract as {@link createApplicationFactoryBinding}. */
+export async function updateApplicationFactoryBinding(input: UpdateBindingInput, target: BindingSource, logger?: Logger): Promise<ApplicationFactoryWriteOutcome> {
+    const { updateBinding, BindingWriteError } = await import('@simplysf/simply-aep-core');
+    const { summary, logError } = callLogging(logger, 'update', target);
+    logger?.log(`updating ${input.bindingType} binding ${input.developerName}`, { verbose: true });
+
+    try {
+        const result = await updateBinding(input, await resolveUpdateTarget(target));
+        summary(`ok, ${result.issues.length} issue(s)`);
+        return { kind: 'ok', result };
+    } catch (error) {
+        if (error instanceof BindingWriteError && error.code === 'validation-failed') {
+            summary('blocked by validation');
+            return { kind: 'blocked', issues: error.issues ?? [] };
+        }
+        logError(error);
+        if ((error as Error & { code?: string }).code === 'type-field-mismatch') {
+            logger?.log(`offending input: ${JSON.stringify(input)}`, { verbose: true });
+        }
+        summary('failed');
+        throw new At4dxCliError(writeErrorMessage(error), error);
+    }
+}
+
+/**
+ * `BindingWriteError`'s own message is already written to be shown directly, with one exception:
+ * `type-field-mismatch` means the *webview sent a field the binding type doesn't have* — a bug in the
+ * form, not something the user did wrong, so it gets its own generic copy rather than surfacing
+ * validation-speak like "priority cannot be set when bindingType is Domain or UnitOfWork" to the user.
+ * The caller logs the offending input verbosely so the actual mismatch is still recoverable from the
+ * output channel. Also handles `deploy-failed` the same way `at4dxCli.ts`'s `writeErrorMessage` does.
+ */
+function writeErrorMessage(error: unknown): string {
+    const err = error as Error & { code?: string };
+    if (err.code === 'type-field-mismatch') {
+        return "Internal error: the form sent a field this binding type doesn't support. Please report this as a bug.";
+    }
+    if (err.code === 'deploy-failed') {
+        return `${err.message} The binding was not written anywhere durable — nothing was saved to local source or left in the org.`;
+    }
+    return err.message ?? String(error);
 }

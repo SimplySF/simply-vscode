@@ -272,7 +272,7 @@ describe('App — Application Factory explorer', () => {
         expect(screen.getByText('No AT4DX Application Factory bindings found.')).toBeTruthy();
     });
 
-    it('renders a section per binding type present, with the resolved implementation, and no Toolbar', () => {
+    it('renders a section per binding type present, with the resolved implementation, and no SObject/Trigger Event dropdowns', () => {
         render(App, {
             props: {
                 initial: state({
@@ -282,6 +282,7 @@ describe('App — Application Factory explorer', () => {
                         rows: [afRow(), afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
                     },
                 }),
             },
@@ -291,14 +292,15 @@ describe('App — Application Factory explorer', () => {
         expect(screen.getByText('Selector')).toBeTruthy();
         expect(screen.getByText('PricingServiceImpl')).toBeTruthy();
         expect(screen.getByText('AccountsSelector')).toBeTruthy();
-        expect(document.querySelector('.toolbar')).toBeNull();
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
+        expect(document.querySelector('.toolbar select')).toBeNull();
     });
 
     it('shows the binding count as a badge on the Application Factory tab', () => {
         render(App, {
             props: {
                 initial: state({
-                    applicationFactory: { kind: 'data', rows: [afRow(), afRow({ developerName: 'B' })], issues: [], rules: {} as ApplicationFactoryRules },
+                    applicationFactory: { kind: 'data', rows: [afRow(), afRow({ developerName: 'B' })], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [] },
                 }),
             },
         });
@@ -320,6 +322,7 @@ describe('App — Application Factory explorer', () => {
                         ],
                         issues: [],
                         rules: {} as ApplicationFactoryRules,
+                        standardObjects: [],
                     },
                 }),
             },
@@ -328,5 +331,71 @@ describe('App — Application Factory explorer', () => {
         expect(document.querySelectorAll('.af-tie-banner')).toHaveLength(1);
         expect(screen.getByText('Resolves today')).toBeTruthy();
         expect(screen.getByText('May win instead')).toBeTruthy();
+    });
+});
+
+describe('App — Application Factory create/edit form (stage 2)', () => {
+    const initial: InitialState = state({
+        active: 'applicationFactory',
+        applicationFactory: {
+            kind: 'data',
+            rows: [afRow({ bindingType: 'Selector', developerName: 'AccountsSelectorBinding', key: 'Account', to: 'AccountsSelector', priority: 10 })],
+            issues: [],
+            rules: {} as ApplicationFactoryRules,
+            standardObjects: ['Account'],
+        },
+    });
+
+    it('opens the create form, hiding + New Binding, and defaults to the Service segment', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+
+        expect(screen.getByText('New Application Factory binding')).toBeTruthy();
+        expect(screen.queryByText('+ New Binding')).toBeNull();
+        expect(document.getElementById('fBindingInterface')).toBeTruthy();
+    });
+
+    it('opens the edit form prefilled from the clicked row, with the segmented control disabled', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+
+        expect(screen.getByText('Editing')).toBeTruthy();
+        const developerNameInput = document.getElementById('fDeveloperName') as HTMLInputElement;
+        expect(developerNameInput.value).toBe('AccountsSelectorBinding');
+        expect(developerNameInput.disabled).toBe(true);
+        const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
+        expect(sobjectInput.value).toBe('Account');
+        for (const segment of document.querySelectorAll<HTMLButtonElement>('#fBindingType .segmented-option')) {
+            expect(segment.disabled).toBe(true);
+        }
+    });
+
+    it('posts submitApplicationFactoryBinding with a Selector-shaped payload on save', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Selector'));
+        await fireEvent.input(document.getElementById('fDeveloperName') as HTMLInputElement, { target: { value: 'ContactsSelectorBinding' } });
+        await fireEvent.input(document.getElementById('fSobject') as HTMLInputElement, { target: { value: 'Contact' } });
+        await fireEvent.input(document.getElementById('fTo') as HTMLInputElement, { target: { value: 'ContactsSelector' } });
+        await fireEvent.click(screen.getByText('Create binding'));
+
+        expect(postMessage).toHaveBeenCalledWith({
+            command: 'submitApplicationFactoryBinding',
+            mode: 'create',
+            input: { bindingType: 'Selector', developerName: 'ContactsSelectorBinding', label: '', to: 'ContactsSelector', sobject: 'Contact', sobjectAlternate: false, priority: undefined },
+            force: false,
+        });
+    });
+
+    it('returns to the list — with + New Binding restored — after cancelling the create form', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
     });
 });

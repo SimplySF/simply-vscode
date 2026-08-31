@@ -1,8 +1,14 @@
 <script lang="ts">
+    import Icon from './Icon.svelte';
     import type { ApplicationFactoryViewRow } from './lib/applicationFactoryView';
     import { postMessage } from './vscodeApi';
 
-    let { row, showPriority }: { row: ApplicationFactoryViewRow; showPriority: boolean } = $props();
+    let {
+        row,
+        showPriority,
+        canWrite,
+        onEdit,
+    }: { row: ApplicationFactoryViewRow; showPriority: boolean; canWrite: boolean; onEdit: (row: ApplicationFactoryViewRow) => void } = $props();
 
     function openClass(): void {
         if (row.to) {
@@ -14,6 +20,19 @@
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             openClass();
+        }
+    }
+
+    function editClick(event: MouseEvent): void {
+        event.stopPropagation();
+        onEdit(row);
+    }
+
+    function editKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            onEdit(row);
         }
     }
 </script>
@@ -45,5 +64,11 @@
             <span class="af-resolution-chip ambiguous">Ambiguous</span>
         {/if}
     </span>
-    <span></span>
+    {#if canWrite}
+        <span class="row-edit" title="Edit this binding" role="button" tabindex="0" onclick={editClick} onkeydown={editKeydown}>
+            <Icon name="edit" />
+        </span>
+    {:else}
+        <span></span>
+    {/if}
 </div>

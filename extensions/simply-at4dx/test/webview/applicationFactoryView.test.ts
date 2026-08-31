@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+    applicationFactoryRowToFormInitial,
     buildApplicationFactorySections,
     buildUnitOfWorkRows,
     commitPositions,
     groupsByKey,
+    isCustomObjectApiName,
     ordinal,
     partitionBySeverity,
 } from '../../src/webview/lib/applicationFactoryView';
@@ -183,6 +185,37 @@ describe('commitPositions / buildUnitOfWorkRows', () => {
         expect(uowRows).toHaveLength(2);
         expect(uowRows.find((r) => r.developerName === 'A')!.commitPosition).toBe('1st');
         expect(uowRows.find((r) => r.developerName === 'B')!.commitPosition).toBe('2nd');
+    });
+});
+
+describe('isCustomObjectApiName', () => {
+    it('is true for any name containing "__", false otherwise', () => {
+        expect(isCustomObjectApiName('Widget__c')).toBe(true);
+        expect(isCustomObjectApiName('myns__Widget__c')).toBe(true);
+        expect(isCustomObjectApiName('Account')).toBe(false);
+        expect(isCustomObjectApiName('Task')).toBe(false);
+    });
+});
+
+describe('applicationFactoryRowToFormInitial', () => {
+    it('maps a Service row\'s key to bindingInterface', () => {
+        const initial = applicationFactoryRowToFormInitial(row({ bindingType: 'Service', key: 'IPricingService', to: 'PricingServiceImpl', priority: 10 }));
+
+        expect(initial).toMatchObject({ bindingType: 'Service', bindingInterface: 'IPricingService', to: 'PricingServiceImpl', priority: 10 });
+        expect(initial.sobject).toBeUndefined();
+    });
+
+    it('maps a Selector row\'s key/keyField to sobject/sobjectAlternate', () => {
+        const initial = applicationFactoryRowToFormInitial(row({ bindingType: 'Selector', key: 'Task', keyField: 'alternate', to: 'TasksSelector' }));
+
+        expect(initial).toMatchObject({ bindingType: 'Selector', sobject: 'Task', sobjectAlternate: true, to: 'TasksSelector' });
+        expect(initial.bindingInterface).toBeUndefined();
+    });
+
+    it('a primary-field SObject reference maps to sobjectAlternate: false', () => {
+        const initial = applicationFactoryRowToFormInitial(row({ bindingType: 'Domain', key: 'Account', keyField: 'primary', to: 'Accounts' }));
+
+        expect(initial.sobjectAlternate).toBe(false);
     });
 });
 

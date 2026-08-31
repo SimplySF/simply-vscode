@@ -52,7 +52,7 @@ refactors that keep the observable behavior identical.
 | [0013](0013-at4dx-bindings-panel-redesign.md) | AT4DX Bindings Panel List & Form Redesign | Implemented |
 | [0014](0014-at4dx-explorer-tab-strip.md) | AT4DX Explorer Tab Strip | Implemented |
 | [0015](0015-sequence-prefix-grouping.md) | Sequence-Prefix Grouping in the Bindings List | Implemented |
-| [0016](0016-at4dx-application-factory-binding-explorer.md) | AT4DX Application Factory Binding Explorer | Planned (stage 1 implemented) |
+| [0016](0016-at4dx-application-factory-binding-explorer.md) | AT4DX Application Factory Binding Explorer | Planned (stages 1–2 implemented) |
 
 ## Template
 
