@@ -399,3 +399,72 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         expect(screen.getByText('+ New Binding')).toBeTruthy();
     });
 });
+
+describe('App — Application Factory Unit of Work create/edit (stage 3)', () => {
+    const initial: InitialState = state({
+        active: 'applicationFactory',
+        applicationFactory: {
+            kind: 'data',
+            rows: [afRow({ bindingType: 'UnitOfWork', developerName: 'AccountUnitOfWork', key: 'Account', to: undefined, sequence: 10, effective: true })],
+            issues: [],
+            rules: {} as ApplicationFactoryRules,
+            standardObjects: ['Account'],
+        },
+    });
+
+    it('shows no Implementation/Priority field and a Commit Sequence field for the Unit of Work segment', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Unit of Work'));
+
+        expect(document.getElementById('fSequence')).toBeTruthy();
+        expect(document.getElementById('fTo')).toBeNull();
+        expect(document.getElementById('fPriority')).toBeNull();
+    });
+
+    it('opens the edit form from the Unit of Work section\'s pencil icon, prefilled with sequence and no Implementation field', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByTitle('Edit this binding'));
+
+        expect(screen.getByText('Editing')).toBeTruthy();
+        const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
+        expect(sobjectInput.value).toBe('Account');
+        const sequenceInput = document.getElementById('fSequence') as HTMLInputElement;
+        expect(sequenceInput.value).toBe('10');
+        expect(document.getElementById('fTo')).toBeNull();
+    });
+
+    it('posts submitApplicationFactoryBinding with a UnitOfWork-shaped payload — no to/priority, includes sequence', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Unit of Work'));
+        await fireEvent.input(document.getElementById('fDeveloperName') as HTMLInputElement, { target: { value: 'ContactUnitOfWork' } });
+        await fireEvent.input(document.getElementById('fSobject') as HTMLInputElement, { target: { value: 'Contact' } });
+        await fireEvent.input(document.getElementById('fSequence') as HTMLInputElement, { target: { value: '20' } });
+        await fireEvent.click(screen.getByText('Create binding'));
+
+        expect(postMessage).toHaveBeenCalledWith({
+            command: 'submitApplicationFactoryBinding',
+            mode: 'create',
+            input: { bindingType: 'UnitOfWork', developerName: 'ContactUnitOfWork', label: '', sobject: 'Contact', sobjectAlternate: false, sequence: 20 },
+            force: false,
+        });
+    });
+
+    it('shows the live commit-position preview against the other existing Unit of Work rows', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Unit of Work'));
+        await fireEvent.input(document.getElementById('fSobject') as HTMLInputElement, { target: { value: 'Contact' } });
+        await fireEvent.input(document.getElementById('fSequence') as HTMLInputElement, { target: { value: '20' } });
+
+        const previewText = document.querySelector('.form-preview-text')?.textContent?.replace(/\s+/g, ' ');
+        expect(previewText).toContain('joins the shared Unit of Work and commits');
+        expect(previewText).toContain('2nd');
+        expect(previewText).toContain('of 2');
+    });
+});

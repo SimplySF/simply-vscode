@@ -34,21 +34,22 @@ export type ApplicationFactoryViewRow = At4dxBindingRow & { resolution: Resoluti
 
 /**
  * Maps a scanned row (`key`/`keyField`) onto `ApplicationFactoryForm`'s field names (`bindingInterface`
- * for Service, `sobject`/`sobjectAlternate` otherwise) for the edit form's prefill. Only ever called for
- * a Service/Selector/Domain row — stage 2 has no UnitOfWork edit form yet, see docs/design/0016.
+ * for Service, `sobject`/`sobjectAlternate` for Selector/Domain/UnitOfWork) for the edit form's prefill.
+ * See docs/design/0016.
  */
 export function applicationFactoryRowToFormInitial(row: At4dxBindingRow): ApplicationFactoryFormInitial {
     const base = {
-        bindingType: row.bindingType as 'Service' | 'Selector' | 'Domain',
+        bindingType: row.bindingType,
         developerName: row.developerName,
         label: row.label,
-        to: row.to ?? '',
-        priority: row.priority,
     };
     if (row.bindingType === 'Service') {
-        return { ...base, bindingInterface: row.key };
+        return { ...base, bindingInterface: row.key, to: row.to ?? '', priority: row.priority };
     }
-    return { ...base, sobject: row.key, sobjectAlternate: row.keyField === 'alternate' };
+    if (row.bindingType === 'UnitOfWork') {
+        return { ...base, sobject: row.key, sobjectAlternate: row.keyField === 'alternate', sequence: row.sequence };
+    }
+    return { ...base, sobject: row.key, sobjectAlternate: row.keyField === 'alternate', to: row.to ?? '', priority: row.priority };
 }
 
 export type ApplicationFactorySection = {
@@ -202,6 +203,22 @@ export function commitPositions(rows: At4dxBindingRow[]): Map<string, string> {
         index = end + 1;
     }
     return positions;
+}
+
+/**
+ * Live preview of where a Unit of Work binding would land in the commit order if saved with `sequence`
+ * right now — the form's "resulting binding" sentence (stage 3, see docs/design/0016). Reuses
+ * `commitPositions` against `existingRows` (every other UnitOfWork row in the current scan, i.e. not
+ * including the one being edited) plus one synthetic row standing in for the form's current input, so
+ * the preview accounts for ties with real rows the same way the list view does.
+ */
+export function previewCommitPosition(existingRows: At4dxBindingRow[], editingDeveloperName: string | undefined, sequence: number | undefined): { label: string; total: number } {
+    const PREVIEW_KEY = '__preview__';
+    const others = existingRows.filter((row) => row.developerName !== editingDeveloperName);
+    const synthetic = { bindingType: 'UnitOfWork', developerName: PREVIEW_KEY, label: '', key: '', source: PREVIEW_KEY, effective: true, sequence } as At4dxBindingRow;
+    const all = [...others, synthetic];
+    const label = commitPositions(all).get(`${PREVIEW_KEY} ${PREVIEW_KEY}`) ?? 'unordered — no sequence set';
+    return { label, total: all.length };
 }
 
 /** Splits the whole scan's issues into `errors`/`warnings`, index-tagged against the full `issues` array so a click's `openApplicationFactoryIssue` index still resolves against the host's own copy. See docs/design/0016's Problems section — grouped error-then-warning, one row per issue, no other categorization. */

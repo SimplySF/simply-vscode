@@ -82,12 +82,14 @@ The **Application Factory** tab reads the four `ApplicationFactory_{Service,Sele
 UnitOfWork}Binding__mdt` Custom Metadata Types — which Apex class implements which interface, which
 selector/domain handles which SObject, and which SObjects join the shared Unit of Work — grouped into
 one section per binding type, in the order Service, Selector, Domain, Unit of Work. Click **+ New
-Binding** to create a Service, Selector, or Domain binding, or the pencil icon on any of their rows to
-edit one — the form picks up the same wiring-problem/**Save Anyway** contract the Domain Process form
-already uses. A Selector or Domain binding's SObject field flags a standard object that can't support a
+Binding** to create a binding of any of the four types, or the pencil icon on any row to edit one — the
+form picks up the same wiring-problem/**Save Anyway** contract the Domain Process form already uses. A
+Selector, Domain, or Unit of Work binding's SObject field flags a standard object that can't support a
 metadata relationship (e.g. `Task`) in red with a **"Use … as an alternate name"** action, rather than
-blocking the save outright — the underlying eligibility table is explicitly best-effort. Unit of Work
-create/edit and drag-to-reorder are planned for a later update; that section stays read-only for now.
+blocking the save outright — the underlying eligibility table is explicitly best-effort. A Unit of Work
+binding's only extra field is an optional Commit Sequence number; the create/edit form's live preview
+shows where it would land in the commit order (`1st`, `2nd`, ...) against every other Unit of Work
+binding already in the scan, so reordering is editing that number rather than dragging a row.
 
 Each Service/Selector/Domain row shows its resolution — **Effective** (this is the one AT4DX actually
 uses), **Shadowed** (a higher-priority binding for the same key won instead), or, for Domain, which has

@@ -2,7 +2,8 @@
     import { untrack } from 'svelte';
     import BindingSObjectField from './BindingSObjectField.svelte';
     import { developerNameValid, ruleTitle } from './lib/bindingView';
-    import type { ApplicationFactoryFormInitial, ApplicationFactoryFormPayload, ApplicationFactoryRules, BindingIssue } from './types';
+    import { previewCommitPosition } from './lib/applicationFactoryView';
+    import type { ApplicationFactoryFormInitial, ApplicationFactoryFormPayload, ApplicationFactoryRules, At4dxBindingRow, BindingIssue, WritableBindingType } from './types';
     import { postMessage } from './vscodeApi';
 
     let {
@@ -10,12 +11,15 @@
         initial: initialProp,
         rules,
         standardObjects,
+        existingUnitOfWorkRows,
         onCancel,
     }: {
         mode: 'create' | 'edit';
         initial: ApplicationFactoryFormInitial;
         rules: ApplicationFactoryRules;
         standardObjects: string[];
+        /** Every other UnitOfWork row already in the scan — powers the "commits Nth of M" live preview. See docs/design/0016. */
+        existingUnitOfWorkRows: At4dxBindingRow[];
         onCancel: () => void;
     } = $props();
 
@@ -25,7 +29,7 @@
     const initial = untrack(() => initialProp);
     const isEdit = mode === 'edit';
 
-    let bindingType = $state<'Service' | 'Selector' | 'Domain'>(initial.bindingType ?? 'Service');
+    let bindingType = $state<WritableBindingType>(initial.bindingType ?? 'Service');
     let developerName = $state(initial.developerName ?? '');
     let label = $state(initial.label ?? '');
     let to = $state(initial.to ?? '');
@@ -33,8 +37,15 @@
     let sobject = $state(initial.sobject ?? '');
     let sobjectAlternate = $state(Boolean(initial.sobjectAlternate));
     let priority = $state(initial.priority === undefined ? '' : String(initial.priority));
+    let sequence = $state(initial.sequence === undefined ? '' : String(initial.sequence));
 
-    let showPriority = $derived(bindingType !== 'Domain');
+    let showPriority = $derived(bindingType === 'Service' || bindingType === 'Selector');
+    let showTo = $derived(bindingType !== 'UnitOfWork');
+    let commitPreview = $derived(
+        bindingType === 'UnitOfWork'
+            ? previewCommitPosition(existingUnitOfWorkRows, isEdit ? initial.developerName : undefined, sequence.trim() === '' ? undefined : Number(sequence.trim()))
+            : undefined,
+    );
 
     let fieldErrors = $state<Record<string, string>>({});
     let formError = $state<string | undefined>(undefined);
@@ -74,6 +85,8 @@
         const trimmedSobject = sobject.trim();
         const trimmedPriority = priority.trim();
         const priorityValue = trimmedPriority === '' ? undefined : Number(trimmedPriority);
+        const trimmedSequence = sequence.trim();
+        const sequenceValue = trimmedSequence === '' ? undefined : Number(trimmedSequence);
 
         if (!isEdit && !developerNameValid(trimmedDeveloperName)) {
             errors.fDeveloperName =
@@ -82,7 +95,7 @@
         if (trimmedLabel.length > 40) {
             errors.fLabel = 'Must be 40 characters or fewer.';
         }
-        if (!trimmedTo) {
+        if (showTo && !trimmedTo) {
             errors.fTo = 'Required.';
         }
         if (bindingType === 'Service' && !trimmedBindingInterface) {
@@ -93,6 +106,9 @@
         }
         if (trimmedPriority !== '' && Number.isNaN(priorityValue)) {
             errors.fPriority = 'Must be numeric.';
+        }
+        if (trimmedSequence !== '' && Number.isNaN(sequenceValue)) {
+            errors.fSequence = 'Must be numeric.';
         }
 
         fieldErrors = errors;
@@ -108,7 +124,9 @@
                 ? { bindingType, developerName: trimmedDeveloperName, label: trimmedLabel, to: trimmedTo, bindingInterface: trimmedBindingInterface, priority: priorityValue }
                 : bindingType === 'Selector'
                   ? { bindingType, developerName: trimmedDeveloperName, label: trimmedLabel, to: trimmedTo, sobject: trimmedSobject, sobjectAlternate, priority: priorityValue }
-                  : { bindingType, developerName: trimmedDeveloperName, label: trimmedLabel, to: trimmedTo, sobject: trimmedSobject, sobjectAlternate };
+                  : bindingType === 'Domain'
+                    ? { bindingType, developerName: trimmedDeveloperName, label: trimmedLabel, to: trimmedTo, sobject: trimmedSobject, sobjectAlternate }
+                    : { bindingType, developerName: trimmedDeveloperName, label: trimmedLabel, sobject: trimmedSobject, sobjectAlternate, sequence: sequenceValue };
 
         saving = true;
         postMessage({ command: 'submitApplicationFactoryBinding', mode, input: payload, force: pendingForce });
@@ -161,8 +179,11 @@
         {:else if bindingType === 'Selector'}
             Queries against <strong>{sobject.trim() || 'SObject'}</strong> use <span class="mono-link">{to.trim() || '…'}</span>, at priority
             <span class="mono-link">{priority.trim() || '—'}</span>.
-        {:else}
+        {:else if bindingType === 'Domain'}
             <strong>{sobject.trim() || 'SObject'}</strong> domain logic runs through <span class="mono-link">{to.trim() || '…'}</span>.
+        {:else if commitPreview}
+            <strong>{sobject.trim() || 'SObject'}</strong> joins the shared Unit of Work and commits
+            <span class="mono-link">{commitPreview.label}</span> of {commitPreview.total}.
         {/if}
     </span>
 </div>
@@ -185,6 +206,9 @@
                     </button>
                     <button type="button" class="segmented-option" class:selected={bindingType === 'Domain'} disabled={isEdit} onclick={() => (bindingType = 'Domain')}>
                         Domain
+                    </button>
+                    <button type="button" class="segmented-option" class:selected={bindingType === 'UnitOfWork'} disabled={isEdit} onclick={() => (bindingType = 'UnitOfWork')}>
+                        Unit of Work
                     </button>
                 </div>
             </div>
@@ -229,11 +253,13 @@
                 <BindingSObjectField id="fSobject" bind:value={sobject} bind:alternate={sobjectAlternate} {standardObjects} error={fieldError('fSobject')} />
             {/if}
 
-            <div class="form-field">
-                <label for="fTo">Implementation <span class="required-marker">*</span></label>
-                <input type="text" id="fTo" class:field-invalid={fieldError('fTo')} bind:value={to} placeholder="AccountsSelector" />
-                <span class="form-field-error">{fieldError('fTo') ?? ''}</span>
-            </div>
+            {#if showTo}
+                <div class="form-field">
+                    <label for="fTo">Implementation <span class="required-marker">*</span></label>
+                    <input type="text" id="fTo" class:field-invalid={fieldError('fTo')} bind:value={to} placeholder="AccountsSelector" />
+                    <span class="form-field-error">{fieldError('fTo') ?? ''}</span>
+                </div>
+            {/if}
 
             {#if showPriority}
                 <div class="form-field">
@@ -247,6 +273,21 @@
                         oninput={(event) => (priority = (event.currentTarget as HTMLInputElement).value)}
                     />
                     <span class="form-field-error">{fieldError('fPriority') ?? ''}</span>
+                </div>
+            {/if}
+
+            {#if bindingType === 'UnitOfWork'}
+                <div class="form-field">
+                    <label for="fSequence">Commit Sequence <span class="form-hint">optional — lower commits first</span></label>
+                    <input
+                        type="number"
+                        id="fSequence"
+                        step="1"
+                        class:field-invalid={fieldError('fSequence')}
+                        value={sequence}
+                        oninput={(event) => (sequence = (event.currentTarget as HTMLInputElement).value)}
+                    />
+                    <span class="form-field-error">{fieldError('fSequence') ?? ''}</span>
                 </div>
             {/if}
         </div>

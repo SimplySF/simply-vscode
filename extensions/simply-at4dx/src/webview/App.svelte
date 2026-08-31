@@ -11,11 +11,11 @@
     import Toolbar from './Toolbar.svelte';
     import UnitOfWorkSections from './UnitOfWorkSections.svelte';
     import { applicationFactoryRowToFormInitial, buildApplicationFactorySections, buildUnitOfWorkRows, partitionBySeverity } from './lib/applicationFactoryView';
-    import type { ApplicationFactoryViewRow } from './lib/applicationFactoryView';
     import { FAMILY_ITEMS, availableFamilies, buildSections, headerParts, issuesByRecord, partitionIssues } from './lib/bindingView';
     import type {
         ApplicationFactoryFormInitial,
         ApplicationFactoryRules,
+        At4dxBindingRow,
         BindingFormInitial,
         DomainProcessBindingRow,
         DomainProcessBindingRules,
@@ -69,7 +69,7 @@
         afView = 'form';
     }
 
-    function openEditApplicationFactoryForm(row: ApplicationFactoryViewRow): void {
+    function openEditApplicationFactoryForm(row: At4dxBindingRow): void {
         afFormMode = 'edit';
         afFormInitial = applicationFactoryRowToFormInitial(row);
         afView = 'form';
@@ -245,11 +245,12 @@
                 initial={afFormInitial}
                 rules={afRules}
                 standardObjects={afStandardObjects}
+                existingUnitOfWorkRows={applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType === 'UnitOfWork') : []}
                 onCancel={closeApplicationFactoryForm}
             />
         {:else}
             <ApplicationFactorySections sections={afSections} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
-            <UnitOfWorkSections rows={uowRows} />
+            <UnitOfWorkSections rows={uowRows} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
             <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
         {/if}
     {/if}
@@ -1008,7 +1009,7 @@
     }
     :global(.uow-row-grid) {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1.3fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1.3fr) minmax(0, 1fr) 34px;
         align-items: center;
         gap: 12px;
         padding: 0 20px;

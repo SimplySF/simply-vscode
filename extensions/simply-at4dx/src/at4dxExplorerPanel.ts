@@ -52,20 +52,23 @@ type ApplicationFactoryData = {
 };
 
 /**
- * The Application Factory create/edit form's field values as posted on submit (stage 2 — see
- * docs/design/0016). Unlike `BindingFormPayload`, fields vary by `bindingType`: the form builds this
- * from a per-type whitelist itself (see `ApplicationFactoryForm.svelte`), so whichever fields aren't
- * relevant to `bindingType` are simply absent rather than sent as `undefined`.
+ * The Application Factory create/edit form's field values as posted on submit (stage 2
+ * Service/Selector/Domain, stage 3 UnitOfWork — see docs/design/0016). Fields vary by `bindingType`:
+ * the form builds this from a per-type whitelist itself (see `ApplicationFactoryForm.svelte`), so
+ * whichever fields aren't relevant to `bindingType` are simply absent rather than sent as `undefined`.
  */
 type ApplicationFactoryFormPayload = {
-    bindingType: 'Service' | 'Selector' | 'Domain';
+    bindingType: 'Service' | 'Selector' | 'Domain' | 'UnitOfWork';
     developerName: string;
     label?: string;
-    to: string;
+    /** Required for Service/Selector/Domain; never sent for UnitOfWork, which has no `To__c` field. */
+    to?: string;
     bindingInterface?: string;
     sobject?: string;
     sobjectAlternate?: boolean;
     priority?: number;
+    /** UnitOfWork only — commit order. */
+    sequence?: number;
 };
 
 /** One explorer's own slice of panel state. */
