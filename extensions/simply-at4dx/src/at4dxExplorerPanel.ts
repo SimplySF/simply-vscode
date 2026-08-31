@@ -16,10 +16,14 @@ import {
 } from './at4dxCli';
 import {
     applicationFactoryLocalObjectName,
+    createApplicationFactoryBinding,
     getApplicationFactoryBindings,
+    updateApplicationFactoryBinding,
     type ApplicationFactoryRules,
     type At4dxBindingRow,
     type BindingIssue,
+    type CreateBindingInput,
+    type UpdateBindingInput,
 } from './applicationFactoryCli';
 import type { Logger } from './logger';
 
@@ -44,6 +48,24 @@ type ApplicationFactoryData = {
     rows: At4dxBindingRow[];
     issues: BindingIssue[];
     rules: ApplicationFactoryRules;
+    standardObjects: string[];
+};
+
+/**
+ * The Application Factory create/edit form's field values as posted on submit (stage 2 — see
+ * docs/design/0016). Unlike `BindingFormPayload`, fields vary by `bindingType`: the form builds this
+ * from a per-type whitelist itself (see `ApplicationFactoryForm.svelte`), so whichever fields aren't
+ * relevant to `bindingType` are simply absent rather than sent as `undefined`.
+ */
+type ApplicationFactoryFormPayload = {
+    bindingType: 'Service' | 'Selector' | 'Domain';
+    developerName: string;
+    label?: string;
+    to: string;
+    bindingInterface?: string;
+    sobject?: string;
+    sobjectAlternate?: boolean;
+    priority?: number;
 };
 
 /** One explorer's own slice of panel state. */
@@ -242,7 +264,7 @@ export class At4dxExplorerPanel {
                 classToInject?: string;
                 index?: number;
                 mode?: 'create' | 'edit';
-                input?: BindingFormPayload;
+                input?: BindingFormPayload | ApplicationFactoryFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
             }) => {
@@ -253,7 +275,9 @@ export class At4dxExplorerPanel {
                 } else if (message.command === 'openApplicationFactoryIssue' && typeof message.index === 'number') {
                     void this.openApplicationFactoryIssue(message.index);
                 } else if (message.command === 'submitBinding' && message.mode && message.input) {
-                    void this.submitBinding(message.mode, message.input, Boolean(message.force));
+                    void this.submitBinding(message.mode, message.input as BindingFormPayload, Boolean(message.force));
+                } else if (message.command === 'submitApplicationFactoryBinding' && message.mode && message.input) {
+                    void this.submitApplicationFactoryBinding(message.mode, message.input as ApplicationFactoryFormPayload, Boolean(message.force));
                 } else if (message.command === 'selectExplorer' && message.explorer) {
                     void this.selectExplorer(message.explorer);
                 }
@@ -297,8 +321,9 @@ export class At4dxExplorerPanel {
             const target = this.state.target;
             this.render(this.state);
             try {
-                const { rows, issues, rules } = await getApplicationFactoryBindings(target, this.logger);
-                this.state.applicationFactory = rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules };
+                const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
+                this.state.applicationFactory =
+                    rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
             } catch (error) {
                 this.state.applicationFactory = { kind: 'error', message: formatReadError(error, 'reading Application Factory bindings') };
             }
@@ -333,6 +358,37 @@ export class At4dxExplorerPanel {
             const { rows, issues, rules } = await getDomainProcessBindings(target, undefined, this.logger);
             const domainProcess: ExplorerState<DomainProcessData> = rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules };
             this.render({ ...this.state, domainProcess });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
+        }
+    }
+
+    /**
+     * Handles the webview's `submitApplicationFactoryBinding` message (stage 2 — see docs/design/0016).
+     * Same write-then-rescan-the-whole-explorer contract as `submitBinding`, against
+     * `createApplicationFactoryBinding`/`updateApplicationFactoryBinding` instead.
+     */
+    private async submitApplicationFactoryBinding(mode: 'create' | 'edit', input: ApplicationFactoryFormPayload, force: boolean): Promise<void> {
+        if (this.state.applicationFactory.kind !== 'data' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+
+        try {
+            const outcome =
+                mode === 'create'
+                    ? await createApplicationFactoryBinding({ ...(input as CreateBindingInput), force }, target, this.logger)
+                    : await updateApplicationFactoryBinding({ ...(input as UpdateBindingInput), force }, target, this.logger);
+
+            if (outcome.kind === 'blocked') {
+                void this.panel.webview.postMessage({ command: 'writeBlocked', issues: outcome.issues });
+                return;
+            }
+
+            const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
+            const applicationFactory: ExplorerState<ApplicationFactoryData> =
+                rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+            this.render({ ...this.state, applicationFactory });
         } catch (error) {
             void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
         }

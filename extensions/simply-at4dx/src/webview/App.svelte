@@ -1,5 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import ApplicationFactoryForm from './ApplicationFactoryForm.svelte';
     import ApplicationFactoryIssuesSection from './ApplicationFactoryIssuesSection.svelte';
     import ApplicationFactorySections from './ApplicationFactorySections.svelte';
     import BindingForm from './BindingForm.svelte';
@@ -9,9 +10,19 @@
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
     import UnitOfWorkSections from './UnitOfWorkSections.svelte';
-    import { buildApplicationFactorySections, buildUnitOfWorkRows, partitionBySeverity } from './lib/applicationFactoryView';
+    import { applicationFactoryRowToFormInitial, buildApplicationFactorySections, buildUnitOfWorkRows, partitionBySeverity } from './lib/applicationFactoryView';
+    import type { ApplicationFactoryViewRow } from './lib/applicationFactoryView';
     import { FAMILY_ITEMS, availableFamilies, buildSections, headerParts, issuesByRecord, partitionIssues } from './lib/bindingView';
-    import type { ApplicationFactoryRules, BindingFormInitial, DomainProcessBindingRow, DomainProcessBindingRules, ExplorerKey, FamilyKey, InitialState } from './types';
+    import type {
+        ApplicationFactoryFormInitial,
+        ApplicationFactoryRules,
+        BindingFormInitial,
+        DomainProcessBindingRow,
+        DomainProcessBindingRules,
+        ExplorerKey,
+        FamilyKey,
+        InitialState,
+    } from './types';
     import { postMessage } from './vscodeApi';
 
     let { initial: initialProp }: { initial: InitialState } = $props();
@@ -34,6 +45,8 @@
 
     const applicationFactory = initial.applicationFactory;
     const afRules = applicationFactory.kind === 'data' ? applicationFactory.rules : ({} as ApplicationFactoryRules);
+    const afCanWrite = applicationFactory.kind === 'data';
+    const afStandardObjects = applicationFactory.kind === 'data' ? applicationFactory.standardObjects : [];
     let afSections = $derived(applicationFactory.kind === 'data' ? buildApplicationFactorySections(applicationFactory.rows) : []);
     let uowRows = $derived(applicationFactory.kind === 'data' ? buildUnitOfWorkRows(applicationFactory.rows) : []);
     let afProblems = $derived(applicationFactory.kind === 'data' ? partitionBySeverity(applicationFactory.issues) : { errors: [], warnings: [] });
@@ -44,6 +57,26 @@
             return;
         }
         postMessage({ command: 'selectExplorer', explorer });
+    }
+
+    let afView = $state<'list' | 'form'>('list');
+    let afFormMode = $state<'create' | 'edit'>('create');
+    let afFormInitial = $state<ApplicationFactoryFormInitial>({});
+
+    function openCreateApplicationFactoryForm(): void {
+        afFormMode = 'create';
+        afFormInitial = {};
+        afView = 'form';
+    }
+
+    function openEditApplicationFactoryForm(row: ApplicationFactoryViewRow): void {
+        afFormMode = 'edit';
+        afFormInitial = applicationFactoryRowToFormInitial(row);
+        afView = 'form';
+    }
+
+    function closeApplicationFactoryForm(): void {
+        afView = 'list';
     }
 
     let sobjects = $derived([...new Set(rows.map((row) => row.sobject))].sort((a, b) => a.localeCompare(b)));
@@ -119,7 +152,7 @@
     >
         <span class="explorer-tab-icon"><Icon name="applicationFactory" /></span>
         Application Factory
-        {#if afBindingCount !== undefined}
+        {#if afBindingCount !== undefined && afView === 'list'}
             <span class="explorer-tab-badge">{afBindingCount}</span>
         {/if}
     </button>
@@ -147,6 +180,18 @@
                 Trigger Event
                 <select disabled><option>{domainProcess.kind === 'loading' ? 'Loading…' : '—'}</option></select>
             </label>
+            <span class="spacer"></span>
+            <button disabled>+ New Binding</button>
+        </div>
+    {/if}
+{:else if initial.active === 'applicationFactory'}
+    {#if applicationFactory.kind === 'data' && afView === 'list'}
+        <div class="toolbar">
+            <span class="spacer"></span>
+            <button onclick={openCreateApplicationFactoryForm}>+ New Binding</button>
+        </div>
+    {:else if applicationFactory.kind !== 'data'}
+        <div class="toolbar">
             <span class="spacer"></span>
             <button disabled>+ New Binding</button>
         </div>
@@ -194,8 +239,16 @@
             </p>
         {:else if applicationFactory.kind === 'empty'}
             <p class="status">No AT4DX Application Factory bindings found.</p>
+        {:else if afView === 'form'}
+            <ApplicationFactoryForm
+                mode={afFormMode}
+                initial={afFormInitial}
+                rules={afRules}
+                standardObjects={afStandardObjects}
+                onCancel={closeApplicationFactoryForm}
+            />
         {:else}
-            <ApplicationFactorySections sections={afSections} />
+            <ApplicationFactorySections sections={afSections} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
             <UnitOfWorkSections rows={uowRows} />
             <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
         {/if}
@@ -1000,5 +1053,46 @@
         border-top: 1px solid var(--vscode-editorWarning-foreground);
         border-bottom: 1px solid var(--vscode-editorWarning-foreground);
         font-size: 0.9em;
+    }
+
+    /* Application Factory create/edit form (stage 2) — see docs/design/0016. */
+    :global(.af-sobject-chip) {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-start;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-charts-orange);
+        font-size: 0.8em;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+    :global(.af-sobject-chip-clear) {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+    :global(.af-sobject-hint-ok) {
+        color: var(--vscode-charts-green);
+    }
+    :global(.af-sobject-hint-error) {
+        color: var(--vscode-errorForeground);
+    }
+    :global(.af-sobject-alt-action) {
+        background: none;
+        border: 0;
+        padding: 0;
+        margin-left: 6px;
+        color: var(--vscode-textLink-foreground);
+        font: inherit;
+        font-size: 1em;
+        text-decoration: underline;
+        cursor: pointer;
     }
 </style>

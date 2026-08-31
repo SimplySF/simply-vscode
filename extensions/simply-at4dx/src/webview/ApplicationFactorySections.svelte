@@ -3,7 +3,11 @@
     import { groupsByKey } from './lib/applicationFactoryView';
     import type { ApplicationFactorySection, ApplicationFactoryViewRow } from './lib/applicationFactoryView';
 
-    let { sections }: { sections: ApplicationFactorySection[] } = $props();
+    let {
+        sections,
+        canWrite,
+        onEdit,
+    }: { sections: ApplicationFactorySection[]; canWrite: boolean; onEdit: (row: ApplicationFactoryViewRow) => void } = $props();
 
     function isTiedGroup(rows: ApplicationFactoryViewRow[]): boolean {
         return rows.some((row) => row.resolution.kind === 'tie-winner' || row.resolution.kind === 'tie-other');
@@ -37,7 +41,7 @@
                     </div>
                 {/if}
                 {#each group.rows as row (row.developerName + row.source)}
-                    <ApplicationFactoryRow {row} showPriority={section.showPriority} />
+                    <ApplicationFactoryRow {row} showPriority={section.showPriority} {canWrite} {onEdit} />
                 {/each}
             {/each}
         </div>

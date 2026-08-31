@@ -2,10 +2,21 @@
  * Pure, DOM-free logic for the Application Factory explorer — mirrors `bindingView.ts`'s role for the
  * Domain Process explorer. See docs/design/0016.
  */
-import type { At4dxBindingRow, BindingIssue, BindingType, IndexedIssue } from '../types';
+import type { ApplicationFactoryFormInitial, At4dxBindingRow, BindingIssue, BindingType, IndexedIssue } from '../types';
 
 /** AT4DX's own conceptual order — what does the work, what reads, what owns, what commits. Stable across scans, so a section never moves. */
 export const SECTION_ORDER: BindingType[] = ['Service', 'Selector', 'Domain', 'UnitOfWork'];
+
+/**
+ * Duplicated from `simply-aep-core`'s own `isCustomObjectApiName` (the webview can't import the
+ * ESM-only package — see docs/design/0016's Binding SObject field section). Salesforce reserves `__` in
+ * a standard object's API name for exactly this suffix (`__c`, a namespace prefix, `__e`, `__b`/`__x`),
+ * so any name containing it always satisfies EntityDefinition's Metadata Relationship eligibility rule
+ * on its own — this one-line rule is stable enough to duplicate rather than round-trip through the host.
+ */
+export function isCustomObjectApiName(apiName: string): boolean {
+    return apiName.includes('__');
+}
 
 export type ResolutionState =
     | { kind: 'effective' }
@@ -20,6 +31,25 @@ export type ResolutionState =
     | { kind: 'always' };
 
 export type ApplicationFactoryViewRow = At4dxBindingRow & { resolution: ResolutionState };
+
+/**
+ * Maps a scanned row (`key`/`keyField`) onto `ApplicationFactoryForm`'s field names (`bindingInterface`
+ * for Service, `sobject`/`sobjectAlternate` otherwise) for the edit form's prefill. Only ever called for
+ * a Service/Selector/Domain row — stage 2 has no UnitOfWork edit form yet, see docs/design/0016.
+ */
+export function applicationFactoryRowToFormInitial(row: At4dxBindingRow): ApplicationFactoryFormInitial {
+    const base = {
+        bindingType: row.bindingType as 'Service' | 'Selector' | 'Domain',
+        developerName: row.developerName,
+        label: row.label,
+        to: row.to ?? '',
+        priority: row.priority,
+    };
+    if (row.bindingType === 'Service') {
+        return { ...base, bindingInterface: row.key };
+    }
+    return { ...base, sobject: row.key, sobjectAlternate: row.keyField === 'alternate' };
+}
 
 export type ApplicationFactorySection = {
     bindingType: BindingType;
