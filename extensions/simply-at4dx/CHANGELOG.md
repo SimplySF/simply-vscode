@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.0...simply-at4dx-v2.17.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** open the type menu from SObject Bindings' + New Binding ([#44](https://github.com/SimplySF/simply-vscode/issues/44)) ([3ce71f1](https://github.com/SimplySF/simply-vscode/commit/3ce71f1f588f498f9ff3d0da6ebb9cd6de388833))
+
 # [simply-at4dx-v2.17.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.16.0...simply-at4dx-v2.17.0) (2026-08-31)
 
 
