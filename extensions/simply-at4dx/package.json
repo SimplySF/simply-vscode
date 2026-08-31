@@ -4,7 +4,7 @@
     "description": "Explore AT4DX Trigger Action Framework bindings for an SObject — execution order, criteria, and actions — without leaving VS Code.",
     "icon": "images/Simply_Logo.png",
     "publisher": "simplysf",
-    "version": "2.12.0",
+    "version": "2.13.0",
     "engines": {
         "vscode": "^1.119.0"
     },

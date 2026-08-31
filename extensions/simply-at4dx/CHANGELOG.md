@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.13.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.12.0...simply-at4dx-v2.13.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** create/edit Unit of Work bindings ([#38](https://github.com/SimplySF/simply-vscode/issues/38)) ([81dc03c](https://github.com/SimplySF/simply-vscode/commit/81dc03c5b5355886f7825fe71c323086eb5f7826))
+
 # [simply-at4dx-v2.12.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.11.0...simply-at4dx-v2.12.0) (2026-08-31)
 
 
