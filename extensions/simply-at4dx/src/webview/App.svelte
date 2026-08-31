@@ -6,6 +6,7 @@
     import BindingSections from './BindingSections.svelte';
     import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
+    import NewBindingMenu from './NewBindingMenu.svelte';
     import ServiceBindingsSection from './ServiceBindingsSection.svelte';
     import SObjectBindingsSheet from './SObjectBindingsSheet.svelte';
     import SummaryBar from './SummaryBar.svelte';
@@ -83,13 +84,15 @@
     let afFormMode = $state<'create' | 'edit'>('create');
     let afFormInitial = $state<ApplicationFactoryFormInitial>({});
 
-    function openCreateApplicationFactoryForm(): void {
+    /**
+     * Opens the create drawer. `bindingType` comes from `NewBindingMenu`'s own choice on the SObject
+     * Bindings tab (Selector/Domain/Unit of Work — canvas 1c); the Service Bindings tab has no menu to
+     * choose from (Service is the only type there), so it's always omitted and Service is preset instead.
+     * See docs/design/0017's Stage 1 Behavior section.
+     */
+    function openCreateApplicationFactoryForm(bindingType?: 'Selector' | 'Domain' | 'UnitOfWork'): void {
         afFormMode = 'create';
-        // No SObject-keyed type is a natural default on the Service Bindings tab (Service has none), so
-        // Service is only preset there; the SObject Bindings tab leaves the type to whichever the form's
-        // own segmented control defaults to — see docs/design/0017's Stage 1 scoping (the split-button
-        // type menu, 1c, is Stage 2 work).
-        afFormInitial = afTab === 'service' ? { bindingType: 'Service' } : {};
+        afFormInitial = afTab === 'service' ? { bindingType: 'Service' } : bindingType ? { bindingType } : {};
         afView = 'form';
     }
 
@@ -232,12 +235,20 @@
     {#if applicationFactory.kind === 'data' && afView === 'list'}
         <div class="toolbar">
             <span class="spacer"></span>
-            <button onclick={openCreateApplicationFactoryForm}>+ New Binding</button>
+            {#if afTab === 'sobject'}
+                <NewBindingMenu onSelect={(bindingType) => openCreateApplicationFactoryForm(bindingType)} />
+            {:else}
+                <button onclick={() => openCreateApplicationFactoryForm()}>+ New Binding</button>
+            {/if}
         </div>
     {:else if applicationFactory.kind !== 'data'}
         <div class="toolbar">
             <span class="spacer"></span>
-            <button disabled>+ New Binding</button>
+            {#if afTab === 'sobject'}
+                <NewBindingMenu disabled onSelect={() => {}} />
+            {:else}
+                <button disabled>+ New Binding</button>
+            {/if}
         </div>
     {/if}
 {/if}
@@ -1521,5 +1532,92 @@
     }
     :global(.fsi-note) {
         font-weight: 400;
+    }
+
+    /* "+ New Binding" split button and type menu (canvas 1c) — see docs/design/0017. */
+    :global(.nbm) {
+        position: relative;
+        display: inline-flex;
+    }
+    :global(.nbm-button) {
+        display: flex;
+        align-items: stretch;
+        padding: 0;
+        overflow: hidden;
+    }
+    :global(.nbm-button span:first-child) {
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+    }
+    :global(.nbm-caret) {
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        border-left: 1px solid rgba(255, 255, 255, 0.28);
+        font-size: 9px;
+    }
+    :global(.nbm-menu) {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        width: 300px;
+        background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+        border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border));
+        border-radius: 5px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.36);
+        overflow: hidden;
+        z-index: 20;
+    }
+    :global(.nbm-menu-title) {
+        padding: 8px 12px 6px;
+        font-size: 0.68em;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.nbm-item) {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        width: 100%;
+        padding: 9px 12px;
+        background: none;
+        border: 0;
+        border-top: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.05));
+        border-radius: 0;
+        text-align: left;
+        color: var(--vscode-foreground);
+        font: inherit;
+        cursor: pointer;
+    }
+    :global(.nbm-item:first-of-type) {
+        border-top: none;
+    }
+    :global(.nbm-item:hover),
+    :global(.nbm-item:focus-visible) {
+        background: var(--vscode-list-hoverBackground);
+        outline: none;
+    }
+    :global(.nbm-item-name) {
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+    :global(.nbm-item-desc) {
+        font-size: 0.78em;
+        line-height: 1.45;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.nbm-item-desc code) {
+        font-family: var(--vscode-editor-font-family);
+    }
+    :global(.nbm-menu-footer) {
+        padding: 8px 12px;
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        background: var(--vscode-editor-background);
+        font-size: 0.78em;
+        line-height: 1.45;
+        color: var(--vscode-descriptionForeground);
     }
 </style>

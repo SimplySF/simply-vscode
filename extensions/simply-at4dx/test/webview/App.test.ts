@@ -388,17 +388,37 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         },
     });
 
-    it('opens the create form, hiding + New Binding, and defaults to the Service segment', async () => {
+    it('opens a type menu (Selector/Domain/Unit of Work, never Service) and opens the create form pre-set to the chosen type', async () => {
         render(App, { props: { initial } });
 
         await fireEvent.click(screen.getByText('+ New Binding'));
 
-        expect(screen.getByText('New service binding')).toBeTruthy();
+        // The menu itself — canvas 1c — never offers Service, since it keys on an interface, not an
+        // SObject, and is created from its own tab instead.
+        expect(screen.getByRole('menuitem', { name: /^Selector/ })).toBeTruthy();
+        expect(screen.getByRole('menuitem', { name: /^Domain/ })).toBeTruthy();
+        expect(screen.getByRole('menuitem', { name: /^Unit of Work/ })).toBeTruthy();
+        expect(screen.queryByRole('menuitem', { name: /^Service/ })).toBeNull();
+
+        await fireEvent.click(screen.getByRole('menuitem', { name: /^Domain/ }));
+
+        expect(screen.getByText('New domain binding')).toBeTruthy();
         // The breadcrumb legitimately shows its own "+ New Binding" link (the entry point) once the
         // form is open — it's the toolbar's own button that must disappear, so there's only ever one
         // primary "+ New Binding" action on screen at a time. See docs/design/0016's original rule and
         // docs/design/0017's breadcrumb addition.
         expect(document.querySelector('.toolbar')).toBeNull();
+        const domainSegment = document.querySelector<HTMLButtonElement>('#fBindingType .segmented-option.selected');
+        expect(domainSegment?.textContent?.trim()).toBe('Domain');
+    });
+
+    it("Service Bindings tab's + New Binding has no menu — it opens the create form directly, defaulting to Service", async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('Service Bindings'));
+        await fireEvent.click(screen.getByText('+ New Binding'));
+
+        expect(screen.getByText('New service binding')).toBeTruthy();
         expect(document.getElementById('fBindingInterface')).toBeTruthy();
     });
 
@@ -468,8 +488,21 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         render(App, { props: { initial } });
 
         await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByRole('menuitem', { name: /^Selector/ }));
         await fireEvent.click(screen.getByText('Cancel'));
 
+        expect(screen.getByText('+ New Binding')).toBeTruthy();
+    });
+
+    it('closes the type menu without opening the form when clicking outside it', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        expect(screen.getByRole('menu')).toBeTruthy();
+
+        await fireEvent.click(document.body);
+
+        expect(screen.queryByRole('menu')).toBeNull();
         expect(screen.getByText('+ New Binding')).toBeTruthy();
     });
 });
