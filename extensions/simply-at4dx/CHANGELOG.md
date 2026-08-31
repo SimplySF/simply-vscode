@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.16.0...simply-at4dx-v2.17.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** field set inclusions on the Selector edit drawer ([#43](https://github.com/SimplySF/simply-vscode/issues/43)) ([e91c797](https://github.com/SimplySF/simply-vscode/commit/e91c7970a444645bb9227a50346c5734a3ff9683))
+
 # [simply-at4dx-v2.16.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.15.0...simply-at4dx-v2.16.0) (2026-08-31)
 
 
