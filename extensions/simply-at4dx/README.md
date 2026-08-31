@@ -118,8 +118,15 @@ reports how many of the pending moves actually saved and which SObject stopped i
 unattempted rather than guessed at. Two cards sharing the same sequence show an amber `sequence-collision`
 banner between them — both still register, only their relative order is indeterminate, so it's a warning,
 never something that blocks a drag or a save. A card with no Unit of Work binding at all has nothing to
-reorder — that's what its own **Add** row is for. Field set inclusions are designed in 0017 but not yet
-built.
+reorder — that's what its own **Add** row is for.
+
+A Selector row's edit form has its own **Field set inclusions** section: which field sets `Selector`
+queries include on top of the object's base fields, listed by API name with a **✕** to remove one and a
+text field + **Add** to include another. Both write immediately and independently of the binding form's
+own Save button — the drawer stays open either way, so adding a field set never interrupts whatever else
+you were editing. Removing one deactivates rather than deletes it (the underlying metadata has no delete),
+so it's never truly gone, just stops contributing. A SObject's total active count shows right on its
+Selector row on the SObject Bindings sheet, e.g. "2 field sets."
 
 Commit order can still be set directly, without dragging, via the Unit of Work binding's edit form —
 its Commit Sequence number field's live preview shows where a typed value would land (`1st`, `2nd`, ...)

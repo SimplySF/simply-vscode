@@ -4,14 +4,16 @@
     import SObjectBindingCard from './SObjectBindingCard.svelte';
     import { ordinal } from './lib/applicationFactoryView';
     import { initReorder, moveDown, moveTo, moveUp, pendingChanges, revert, type ReorderState } from './lib/dragReorder';
+    import { fieldSetCountBySObject } from './lib/fieldSetInclusionView';
     import { buildSObjectBindingCards, type SObjectBindingCard as SObjectBindingCardData } from './lib/sobjectBindingsView';
     import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
-    import type { At4dxBindingRow, DomainProcessBindingRow, SequenceBatchResult } from './types';
+    import type { At4dxBindingRow, DomainProcessBindingRow, RawFieldSetInclusionRecord, SequenceBatchResult } from './types';
     import { postMessage } from './vscodeApi';
 
     let {
         rows,
         domainProcessRows,
+        fieldSetInclusions,
         canWrite,
         lastBatchResult,
         onEdit,
@@ -20,6 +22,8 @@
         rows: At4dxBindingRow[];
         /** `undefined` while the Domain Process explorer's own (separately-scanned) data hasn't resolved yet. */
         domainProcessRows: DomainProcessBindingRow[] | undefined;
+        /** For the "N field sets" count on each Selector row — see docs/design/0017's Stage 4. */
+        fieldSetInclusions: RawFieldSetInclusionRecord[];
         canWrite: boolean;
         /** The just-finished "Save commit order" batch's outcome, present for this one mount only — see `at4dxExplorerPanel.ts`'s `render`. See docs/design/0017's Stage 3. */
         lastBatchResult: SequenceBatchResult | undefined;
@@ -28,6 +32,7 @@
     } = $props();
 
     let cards = $derived(buildSObjectBindingCards(rows));
+    let fieldSetCounts = $derived(fieldSetCountBySObject(fieldSetInclusions));
 
     let domainProcessCountBySObject = $derived.by(() => {
         const counts = new Map<string, number>();
@@ -208,6 +213,7 @@
                 {card}
                 {canWrite}
                 domainProcessBindingCount={domainProcessRows ? (domainProcessCountBySObject.get(card.sobject) ?? 0) : undefined}
+                fieldSetCount={fieldSetCounts.get(card.sobject) ?? 0}
                 {onEdit}
                 {onAdd}
                 {canReorder}

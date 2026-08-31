@@ -11,9 +11,11 @@ export type {
 } from '../at4dxCli';
 // Same reasoning as above, for the Application Factory explorer's types — see docs/design/0016.
 export type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, BindingIssueRule, BindingType, WritableBindingType } from '../applicationFactoryCli';
+// Same reasoning again, for field set inclusions — see docs/design/0017's Stage 4.
+export type { FieldSetInclusionIssue, FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo, RawFieldSetInclusionRecord } from '../applicationFactoryCli';
 
 import type { DomainProcessBindingIssue, DomainProcessBindingRow, DomainProcessBindingRules, DomainProcessType, ProcessContext, TriggerOperation } from '../at4dxCli';
-import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, WritableBindingType } from '../applicationFactoryCli';
+import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, FieldSetInclusionIssue, FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo, RawFieldSetInclusionRecord, WritableBindingType } from '../applicationFactoryCli';
 
 /** Which explorer the tab strip has active — see docs/design/0016. Part of `PanelState`/`InitialState`, not client-side state, so a write-triggered re-render doesn't bounce the user back to the Domain Process tab. */
 export type ExplorerKey = 'domainProcess' | 'applicationFactory';
@@ -24,6 +26,10 @@ export type ApplicationFactoryData = {
     rules: ApplicationFactoryRules;
     /** `ENTITY_DEFINITION_STANDARD_OBJECTS`, sorted — see `BindingSObjectField.svelte`. */
     standardObjects: string[];
+    /** `SelectorConfig_FieldSetInclusion__mdt` records — see docs/design/0017's Stage 4. */
+    fieldSetInclusions: RawFieldSetInclusionRecord[];
+    fieldSetInclusionIssues: FieldSetInclusionIssue[];
+    fieldSetInclusionRules: Record<FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo>;
 };
 
 /** One explorer's own slice of panel state — mirrors `at4dxExplorerPanel.ts`'s `ExplorerState<T>`. */
@@ -104,6 +110,20 @@ export type ApplicationFactoryFormPayload = {
     priority?: number;
     /** UnitOfWork only — commit order. */
     sequence?: number;
+};
+
+/**
+ * The Selector drawer's "add a field set" / "✕ remove" field values as posted on submit (stage 4 — see
+ * docs/design/0017). Create needs `sobject`/`fieldsetName`; update (the "✕ remove" action, which sets
+ * `isActive: false` rather than deleting — the library has no delete) only ever needs `isActive`. Mirrors
+ * `at4dxExplorerPanel.ts`'s own `FieldSetInclusionFormPayload`.
+ */
+export type FieldSetInclusionFormPayload = {
+    developerName: string;
+    sobject?: string;
+    sobjectAlternate?: boolean;
+    fieldsetName?: string;
+    isActive?: boolean;
 };
 
 /** What `ApplicationFactoryForm` can be opened with — either the toolbar's current selection (create, effectively empty) or a full `At4dxBindingRow` (edit). Every field optional since a create prefill supplies none of them. */

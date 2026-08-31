@@ -291,12 +291,14 @@
                 standardObjects={afStandardObjects}
                 allRows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
                 domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
+                fieldSetInclusions={applicationFactory.kind === 'data' ? applicationFactory.fieldSetInclusions : []}
                 onCancel={closeApplicationFactoryForm}
             />
         {:else if afTab === 'sobject'}
             <SObjectBindingsSheet
                 rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
                 domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
+                fieldSetInclusions={applicationFactory.kind === 'data' ? applicationFactory.fieldSetInclusions : []}
                 canWrite={afCanWrite}
                 lastBatchResult={initial.lastBatchResult}
                 onEdit={openEditApplicationFactoryForm}
@@ -1438,5 +1440,86 @@
         font-size: 1em;
         text-decoration: underline;
         cursor: pointer;
+    }
+
+    /* Field set inclusions (Stage 4) — see docs/design/0017. */
+    :global(.fsi-body) {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 13px 16px;
+    }
+    :global(.fsi-empty) {
+        margin: 0;
+        font-size: 0.85em;
+    }
+    :global(.fsi-list) {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    :global(.fsi-row) {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 10px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+    }
+    :global(.fsi-row + .fsi-row) {
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.fsi-name) {
+        flex: 1;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.9em;
+    }
+    :global(.fsi-source) {
+        font-size: 0.8em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.fsi-remove) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        background: none;
+        border: 0;
+        border-radius: 4px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 0.85em;
+        cursor: pointer;
+    }
+    :global(.fsi-remove:hover:not(:disabled)) {
+        color: var(--vscode-errorForeground);
+        background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    }
+    :global(.fsi-remove:disabled) {
+        opacity: 0.5;
+        cursor: default;
+    }
+    :global(.fsi-add-row) {
+        display: flex;
+        gap: 8px;
+    }
+    :global(.fsi-add-row input) {
+        flex: 1;
+        font-family: inherit;
+        font-size: 1em;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+        border-radius: 4px;
+        padding: 5px 8px;
+    }
+    :global(.fsi-note) {
+        font-weight: 400;
     }
 </style>
