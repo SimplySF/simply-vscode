@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.12.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.11.0...simply-at4dx-v2.12.0) (2026-08-31)
+
+
+### Features
+
+* **simply-at4dx:** create/edit Service, Selector, and Domain bindings ([#37](https://github.com/SimplySF/simply-vscode/issues/37)) ([75e950a](https://github.com/SimplySF/simply-vscode/commit/75e950abddeb2751e157363e4284bcfa5539da3a))
+
 # [simply-at4dx-v2.11.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.10.1...simply-at4dx-v2.11.0) (2026-08-30)
 
 
