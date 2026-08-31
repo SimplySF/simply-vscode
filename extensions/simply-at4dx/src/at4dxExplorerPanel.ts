@@ -74,6 +74,18 @@ type ApplicationFactoryFormPayload = {
 /** One explorer's own slice of panel state. */
 type ExplorerState<T> = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'empty' } | ({ kind: 'data' } & T);
 
+/** One `UnitOfWork` binding's new `BindingSequence__c`, as the SObject Bindings sheet's drag-and-drop posts it — see docs/design/0017's Stage 3 and `lib/dragReorder.ts`'s `PendingChange`. `sobject` isn't part of the write itself (the record is located by `developerName`) — it's echoed back in `SequenceBatchResult` so the sheet can report failures by the name the user actually recognizes on a card. */
+type SequenceBatchUpdate = { developerName: string; sobject: string; sequence: number };
+
+/**
+ * The outcome of a `submitSequenceBatch` — how many of the pending moves actually saved (out of how many
+ * were staged), and, if the batch stopped early, which SObject failed and why; anything past that point
+ * was never attempted. Attached to exactly one render (see `render`'s `extra` parameter) rather than
+ * persisted on `PanelState`, so it surfaces once in the freshly-mounted sheet and is gone on the next
+ * unrelated re-render.
+ */
+type SequenceBatchResult = { savedCount: number; totalCount: number; failed?: { sobject: string; message: string } };
+
 /**
  * The whole panel's state: which tab is active, plus each explorer's own independently-scanned data —
  * see docs/design/0016. `target` is panel-level (both explorers read the same `BindingSource`), known as
@@ -159,14 +171,15 @@ function sourceLabel(target: BindingSource): string {
     return target.dirs.map((dir) => vscode.workspace.asRelativePath(dir, false)).join(', ');
 }
 
-/** The webview-side mirror of `PanelState` — see `src/webview/types.ts`'s `InitialState`, which this must stay in sync with. */
-function toInitialState(state: PanelState): unknown {
+/** The webview-side mirror of `PanelState` — see `src/webview/types.ts`'s `InitialState`, which this must stay in sync with. `extra` carries one-render-only fields (see `render`'s own comment) that never make it into persisted `PanelState`. */
+function toInitialState(state: PanelState, extra?: { lastBatchResult?: SequenceBatchResult }): unknown {
     return {
         active: state.active,
         domainProcess: state.domainProcess,
         applicationFactory: state.applicationFactory,
         isLocalScan: state.target ? state.target.kind === 'source' : undefined,
         sourceLabel: state.target ? sourceLabel(state.target) : undefined,
+        lastBatchResult: extra?.lastBatchResult,
     };
 }
 
@@ -176,7 +189,7 @@ function toInitialState(state: PanelState): unknown {
  * All layout/markup lives in `src/webview/`'s components now; this file only builds the state the
  * webview needs and handles the messages it posts back.
  */
-function buildShellHtml(state: PanelState, nonce: string, webviewJsUri: vscode.Uri): string {
+function buildShellHtml(state: PanelState, nonce: string, webviewJsUri: vscode.Uri, extra?: { lastBatchResult?: SequenceBatchResult }): string {
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -186,7 +199,7 @@ function buildShellHtml(state: PanelState, nonce: string, webviewJsUri: vscode.U
 <body>
   <div id="app"></div>
   <script nonce="${nonce}">
-    window.__INITIAL_STATE__ = ${embedJsonInScript(toInitialState(state))};
+    window.__INITIAL_STATE__ = ${embedJsonInScript(toInitialState(state, extra))};
   </script>
   <script nonce="${nonce}" src="${webviewJsUri}"></script>
 </body>
@@ -270,6 +283,7 @@ export class At4dxExplorerPanel {
                 input?: BindingFormPayload | ApplicationFactoryFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
+                updates?: SequenceBatchUpdate[];
             }) => {
                 if (message.command === 'openClass' && message.classToInject) {
                     void openApexClass(message.classToInject);
@@ -283,6 +297,8 @@ export class At4dxExplorerPanel {
                     void this.submitApplicationFactoryBinding(message.mode, message.input as ApplicationFactoryFormPayload, Boolean(message.force));
                 } else if (message.command === 'selectExplorer' && message.explorer) {
                     void this.selectExplorer(message.explorer);
+                } else if (message.command === 'submitSequenceBatch' && Array.isArray(message.updates)) {
+                    void this.submitSequenceBatch(message.updates);
                 }
             },
             null,
@@ -397,9 +413,51 @@ export class At4dxExplorerPanel {
         }
     }
 
-    private render(state: PanelState): void {
+    /**
+     * Handles the webview's `submitSequenceBatch` message — the SObject Bindings sheet's "Save commit
+     * order" bar (Stage 3, docs/design/0017). Writes each pending Unit of Work sequence change
+     * sequentially, stopping at the first one that fails or is blocked (a batch of independent writes has
+     * no atomic "all or nothing" — see the design doc's own reasoning for why this is a per-card status,
+     * not a single all-or-nothing dialog). Whatever *did* save is reflected by one rescan-and-render at
+     * the end, same as every other write; `lastBatchResult` rides along on that one render only (see
+     * `render`'s `extra` parameter) so the freshly-mounted sheet can report what happened without it
+     * lingering on a later, unrelated re-render.
+     */
+    private async submitSequenceBatch(updates: SequenceBatchUpdate[]): Promise<void> {
+        if (this.state.applicationFactory.kind !== 'data' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+
+        let savedCount = 0;
+        let failed: SequenceBatchResult['failed'];
+        for (const update of updates) {
+            try {
+                const outcome = await updateApplicationFactoryBinding({ bindingType: 'UnitOfWork', developerName: update.developerName, sequence: update.sequence }, target, this.logger);
+                if (outcome.kind === 'blocked') {
+                    failed = { sobject: update.sobject, message: outcome.issues.map((issue) => issue.message).join(' ') || 'Blocked by validation.' };
+                    break;
+                }
+                savedCount++;
+            } catch (error) {
+                failed = { sobject: update.sobject, message: formatWriteError(error) };
+                break;
+            }
+        }
+
+        try {
+            const { rows, issues, rules, standardObjects } = await getApplicationFactoryBindings(target, this.logger);
+            const applicationFactory: ExplorerState<ApplicationFactoryData> =
+                rows.length === 0 && issues.length === 0 ? { kind: 'empty' } : { kind: 'data', rows, issues, rules, standardObjects };
+            this.render({ ...this.state, applicationFactory }, { lastBatchResult: { savedCount, totalCount: updates.length, failed } });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: formatReadError(error, 'reading Application Factory bindings') });
+        }
+    }
+
+    private render(state: PanelState, extra?: { lastBatchResult?: SequenceBatchResult }): void {
         this.state = state;
-        this.panel.webview.html = buildShellHtml(state, getNonce(), this.webviewJsUri);
+        this.panel.webview.html = buildShellHtml(state, getNonce(), this.webviewJsUri, extra);
     }
 
     private dispose(): void {

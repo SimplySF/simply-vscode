@@ -298,6 +298,7 @@
                 rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
                 domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
                 canWrite={afCanWrite}
+                lastBatchResult={initial.lastBatchResult}
                 onEdit={openEditApplicationFactoryForm}
                 onAdd={openAddGapBinding}
             />
@@ -1280,6 +1281,122 @@
     :global(.sb-badge-shadowed) {
         background: rgba(255, 255, 255, 0.09);
         color: var(--vscode-descriptionForeground);
+    }
+
+    /* Drag-and-drop reordering (Stage 3) — see docs/design/0017. */
+    :global(.sb-card-dragging) {
+        border-color: var(--vscode-focusBorder);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    }
+    :global(.sb-drag-handle) {
+        cursor: grab;
+        color: var(--vscode-descriptionForeground);
+        font-size: 12px;
+        line-height: 1;
+    }
+    :global(.sb-drag-handle:active) {
+        cursor: grabbing;
+    }
+    :global(.sb-move-buttons) {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+    :global(.sb-move-btn) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 12px;
+        padding: 0;
+        background: none;
+        border: 0;
+        color: var(--vscode-descriptionForeground);
+        cursor: pointer;
+    }
+    :global(.sb-move-btn:hover:not(:disabled)) {
+        color: var(--vscode-foreground);
+    }
+    :global(.sb-move-btn:disabled) {
+        opacity: 0.35;
+        cursor: default;
+    }
+    :global(.sb-move-btn svg) {
+        width: 10px;
+        height: 10px;
+    }
+    :global(.sb-collision-banner) {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 16px;
+        margin: -1px 0;
+        background: rgba(226, 192, 141, 0.11);
+        border-top: 1px solid var(--vscode-charts-orange);
+        border-bottom: 1px solid var(--vscode-charts-orange);
+        font-size: 0.85em;
+        color: var(--vscode-foreground);
+    }
+    :global(.sr-only) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+    :global(.pcb-bar) {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 20px;
+        margin: 0 0 16px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+        border: 1px solid var(--vscode-focusBorder);
+        border-radius: 6px;
+    }
+    :global(.pcb-summary-row) {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    :global(.pcb-dot) {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--vscode-focusBorder);
+        flex-shrink: 0;
+    }
+    :global(.pcb-summary) {
+        font-size: 0.95em;
+    }
+    :global(.pcb-spacer) {
+        flex: 1;
+    }
+    :global(.pcb-list) {
+        margin: 0;
+        padding: 0 0 0 17px;
+        font-size: 0.88em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pcb-batch-result) {
+        padding: 10px 16px;
+        margin-bottom: 16px;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+    :global(.pcb-batch-result.ok) {
+        background: rgba(137, 209, 133, 0.1);
+        border: 1px solid var(--vscode-charts-green);
+        color: var(--vscode-foreground);
+    }
+    :global(.pcb-batch-result.failed) {
+        background: rgba(244, 135, 113, 0.1);
+        border: 1px solid var(--vscode-errorForeground);
+        color: var(--vscode-foreground);
     }
 
     /* Application Factory create/edit form (stage 2) — see docs/design/0016. */
