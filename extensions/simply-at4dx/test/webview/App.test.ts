@@ -89,6 +89,15 @@ describe('App — explorer tab strip', () => {
 
         expect(postMessage).not.toHaveBeenCalled();
     });
+
+    it('only the active tab carries explorer-tab-active — the inactive live tab is visually distinct, not just underlined', () => {
+        render(App, { props: { initial: state() } });
+
+        const domainProcessTab = screen.getByText('Domain Process Bindings').closest('button');
+        const applicationFactoryTab = screen.getByText('Application Factory').closest('button');
+        expect(domainProcessTab?.classList.contains('explorer-tab-active')).toBe(true);
+        expect(applicationFactoryTab?.classList.contains('explorer-tab-active')).toBe(false);
+    });
 });
 
 describe('App — Domain Process loading/error/empty', () => {

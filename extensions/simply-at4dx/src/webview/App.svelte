@@ -276,14 +276,14 @@
     :global(.explorer-tab) {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 9px;
         padding: 0 14px;
         background: none;
         border: 0;
         border-bottom: 2px solid transparent;
         font: inherit;
         font-size: 0.95em;
-        color: var(--vscode-foreground);
+        color: var(--vscode-descriptionForeground);
         white-space: nowrap;
         cursor: pointer;
     }
@@ -293,6 +293,7 @@
     }
     :global(.explorer-tab-active) {
         border-bottom-color: var(--vscode-focusBorder);
+        color: var(--vscode-foreground);
         font-weight: 500;
     }
     :global(.explorer-tab-inert) {
