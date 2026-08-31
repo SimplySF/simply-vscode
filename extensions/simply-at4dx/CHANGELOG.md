@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.1...simply-at4dx-v2.17.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** drawer no longer switches type or covers the whole panel ([#45](https://github.com/SimplySF/simply-vscode/issues/45)) ([f80a74c](https://github.com/SimplySF/simply-vscode/commit/f80a74cc55a08ebb73200ab4904254170c08c0cb)), closes [#content](https://github.com/SimplySF/simply-vscode/issues/content) [#content](https://github.com/SimplySF/simply-vscode/issues/content)
+
 # [simply-at4dx-v2.17.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.0...simply-at4dx-v2.17.1) (2026-08-31)
 
 
