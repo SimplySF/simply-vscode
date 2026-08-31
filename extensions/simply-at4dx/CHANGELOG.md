@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.3](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.2...simply-at4dx-v2.17.3) (2026-08-31)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** restore Active status, hide WINS/SHADOWED for a solo Selector ([#46](https://github.com/SimplySF/simply-vscode/issues/46)) ([7533674](https://github.com/SimplySF/simply-vscode/commit/7533674735989c009ee1caeb5906e1ec8bf2be89))
+
 # [simply-at4dx-v2.17.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.1...simply-at4dx-v2.17.2) (2026-08-31)
 
 
