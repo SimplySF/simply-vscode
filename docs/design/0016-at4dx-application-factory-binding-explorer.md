@@ -1,6 +1,6 @@
 # 0016 — AT4DX Application Factory Binding Explorer
 
-**Status:** Implemented (PRs [#36](https://github.com/SimplySF/simply-vscode/pull/36), [#37](https://github.com/SimplySF/simply-vscode/pull/37), and the stage-3 PR) — see "Implementation plan" for the one deliberate deviation: commit-order reorder ships as a Sequence field on the standard edit form, not drag-and-drop.
+**Status:** Implemented (PRs [#36](https://github.com/SimplySF/simply-vscode/pull/36), [#37](https://github.com/SimplySF/simply-vscode/pull/37), [#38](https://github.com/SimplySF/simply-vscode/pull/38)) — see "Implementation plan" for the one deliberate deviation: commit-order reorder ships as a Sequence field on the standard edit form, not drag-and-drop.
 **Extension:** `extensions/simply-at4dx`
 **Date:** 2026-08-30
 
