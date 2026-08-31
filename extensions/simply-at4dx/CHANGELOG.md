@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.4](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.3...simply-at4dx-v2.17.4) (2026-08-31)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** move SObject Bindings first, nest field set inclusions as rows ([#47](https://github.com/SimplySF/simply-vscode/issues/47)) ([f0eeba1](https://github.com/SimplySF/simply-vscode/commit/f0eeba19a527658ee695e47fbac47125bf77eec7))
+
 # [simply-at4dx-v2.17.3](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.2...simply-at4dx-v2.17.3) (2026-08-31)
 
 
