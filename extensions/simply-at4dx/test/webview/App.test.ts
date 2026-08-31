@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../../src/webview/App.svelte';
 import type { ApplicationFactoryRules, At4dxBindingRow, DomainProcessBindingRow, DomainProcessBindingRules, InitialState } from '../../src/webview/types';
@@ -591,9 +591,10 @@ describe('App — field set inclusions (stage 4)', () => {
         render(App, { props: { initial } });
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]); // the Selector row
+        const drawer = within(document.querySelector('.drawer-panel') as HTMLElement);
 
-        expect(screen.getByText('Field set inclusions')).toBeTruthy();
-        expect(screen.getByText('AccountTierFields')).toBeTruthy();
+        expect(drawer.getByText('Field set inclusions')).toBeTruthy();
+        expect(drawer.getByText('AccountTierFields')).toBeTruthy();
     });
 
     it('hides the section entirely when editing the Domain binding on the same SObject', async () => {
@@ -641,7 +642,11 @@ describe('App — field set inclusions (stage 4)', () => {
         await Promise.resolve();
 
         expect(screen.getByText('Edit selector binding')).toBeTruthy(); // still open
-        expect(screen.queryByText('AccountTierFields')).toBeNull();
+        // The drawer's own copy is gone; the sheet behind it (never remounted for this targeted write —
+        // see docs/design/0017's Stage 4 implementation note) still shows its now-stale nested row.
+        const drawer = within(document.querySelector('.drawer-panel') as HTMLElement);
+        expect(drawer.queryByText('AccountTierFields')).toBeNull();
+        expect(document.querySelector('.sb-fsi-row .sb-fsi-name')?.textContent).toBe('AccountTierFields');
     });
 
     it('fieldSetInclusionBlocked shows the wiring-problem panel without closing the drawer', async () => {
@@ -675,10 +680,10 @@ describe('App — field set inclusions (stage 4)', () => {
         expect(screen.getByText('Edit selector binding')).toBeTruthy();
     });
 
-    it('shows the real field-set count on the SObject Bindings sheet\'s Selector row', async () => {
+    it('nests the field set inclusion as its own row under the Selector row on the SObject Bindings sheet', async () => {
         render(App, { props: { initial } });
 
-        expect(screen.getByText('1 field set')).toBeTruthy();
+        expect(document.querySelector('.sb-fsi-row .sb-fsi-name')?.textContent).toBe('AccountTierFields');
     });
 });
 

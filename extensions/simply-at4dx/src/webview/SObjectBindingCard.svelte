@@ -1,15 +1,15 @@
 <script lang="ts">
     import Icon from './Icon.svelte';
     import type { SObjectBindingCard } from './lib/sobjectBindingsView';
-    import { fieldSetCountLabel } from './lib/fieldSetInclusionView';
     import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
+    import type { RawFieldSetInclusionRecord } from './types';
     import { postMessage } from './vscodeApi';
 
     let {
         card,
         canWrite,
         domainProcessBindingCount,
-        fieldSetCount,
+        fieldSetInclusions,
         onEdit,
         onAdd,
         canReorder = false,
@@ -27,8 +27,8 @@
         canWrite: boolean;
         /** Count of this SObject's Domain Process bindings, from the other explorer's own scan — `undefined` while that scan hasn't resolved yet. See docs/design/0017. */
         domainProcessBindingCount: number | undefined;
-        /** Active field set inclusions for this SObject (Stage 4) — shared across every Selector row on the card, since inclusions are SObject-scoped rather than tied to one binding. */
-        fieldSetCount: number;
+        /** Active field set inclusions for this SObject (Stage 4) — shared across every Selector row on the card, since inclusions are SObject-scoped rather than tied to one binding. Rendered as nested rows under the card's last Selector row, canvas 3a's own treatment. */
+        fieldSetInclusions: RawFieldSetInclusionRecord[];
         onEdit: (row: ApplicationFactoryViewRow | UnitOfWorkViewRow) => void;
         onAdd: (bindingType: 'Domain' | 'UnitOfWork', sobject: string) => void;
         /** Whether this card has a real Unit of Work binding and so takes part in commit-order drag/keyboard reordering (Stage 3). */
@@ -51,6 +51,11 @@
     // SObject to compete against — canvas 1a's own solo-Selector example (Fish__c's FishSelector) shows
     // no badge at all, just the priority value. See docs/design/0017.
     let selectorCount = $derived(card.rows.filter((cardRow) => cardRow.kind === 'selector').length);
+
+    // Field set inclusions nest under the card's *last* Selector row (canvas 3a) rather than repeating
+    // under every one — they're SObject-scoped, not tied to a specific selector binding, so there's only
+    // ever one list to show per card regardless of `selectorCount`.
+    let lastSelectorIndex = $derived(card.rows.reduce((acc, cardRow, index) => (cardRow.kind === 'selector' ? index : acc), -1));
 
     // Every real (non-gap) row's status column: canvas 1a draws a green "Active" dot on every Selector,
     // Domain, and Unit of Work row. Unlike the write-side Active *checkbox* the design doc's own
@@ -156,7 +161,7 @@
                 <span class="row-class" role="button" tabindex="0" title={row.to} onclick={() => openClass(row.to)} onkeydown={(e) => classKeydown(row.to, e)}>
                     {row.to}
                 </span>
-                <span class="sb-detail">{fieldSetCountLabel(fieldSetCount)}</span>
+                <span class="sb-detail"></span>
                 <span class="sb-value-badge">
                     <span class="af-priority" class:af-priority-blank={row.priority === undefined}>{row.priority ?? '—'}</span>
                     {#if selectorCount > 1}
@@ -182,6 +187,18 @@
                     <span></span>
                 {/if}
             </div>
+            {#if i === lastSelectorIndex}
+                {#each fieldSetInclusions as inclusion (inclusion.developerName + inclusion.source)}
+                    <div class="sb-row sb-fsi-row">
+                        <span class="sb-fsi-connector" aria-hidden="true">↳</span>
+                        <span class="sb-fsi-name">{inclusion.fieldsetName}</span>
+                        <span class="sb-fsi-source">{inclusion.source}</span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                {/each}
+            {/if}
         {:else if cardRow.kind === 'domain'}
             {@const row = cardRow.row}
             <div class="sb-row">
