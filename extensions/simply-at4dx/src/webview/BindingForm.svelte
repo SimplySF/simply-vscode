@@ -1,5 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import { domainProcessDrawerCopy } from './lib/bindingDrawerCopy';
     import { TRIGGER_OPERATIONS, TRIGGER_OPERATION_LABELS, developerNameValid, familyVerbForOperation, ruleTitle } from './lib/bindingView';
     import type {
         BindingFormInitial,
@@ -58,6 +59,21 @@
     let previewArticle = $derived(/^[aeiou]/i.test(sobject.trim()) ? 'an' : 'a');
     let previewSobject = $derived(sobject.trim() || 'SObject');
     let previewProcessLabel = $derived(processContext === 'DomainMethodExecution' ? 'Domain Method Execution' : 'Trigger Execution');
+
+    let copy = $derived(
+        domainProcessDrawerCopy({
+            mode,
+            sobject: scopeSobject,
+            processContext,
+            triggerOperation,
+            domainMethodToken,
+            familyLabel: scopeLabel,
+            type,
+            classToInject,
+            order,
+            developerName: isEdit ? initial.developerName : developerName,
+        }),
+    );
 
     let fieldErrors = $state<Record<string, string>>({});
     let formError = $state<string | undefined>(undefined);
@@ -145,7 +161,10 @@
             classToInject: trimmedClassToInject,
             order: orderValue,
             isActive,
-            executeAsynchronous,
+            // Meaningless on a Criteria row (canvas 4c) — reset rather than send a stale `true` left
+            // over from switching the segmented control away from Action, the same "never send a stale
+            // field" precedent `ApplicationFactoryForm.svelte`'s own payload-building already follows.
+            executeAsynchronous: type === 'Action' && executeAsynchronous,
             logicalInverse,
             preventRecursive,
             description: description.trim(),
@@ -156,24 +175,28 @@
     }
 </script>
 
-{#if isEdit}
-    <div class="form-context-bar">
-        <span>Editing</span>
-        <span class="form-context-devname">{initial.developerName}</span>
-        <span class="form-context-spacer"></span>
+<div class="form-context-bar">
+    <span class="form-title">{copy.title}</span>
+    <span class="form-context-devname">{scopeSobject} · {scopeLabel}</span>
+    <span class="form-context-spacer"></span>
+    {#if isEdit}
         <button class="secondary" disabled={saving} onclick={onCancel}>Discard</button>
         <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Save changes'}</button>
-    </div>
-{:else}
-    <div class="form-context-bar">
-        <span class="form-breadcrumb-link" role="button" tabindex="0" onclick={onCancel} onkeydown={onBreadcrumbKeydown}>{scopeSobject} / {scopeLabel}</span>
-        <span class="form-breadcrumb-sep">›</span>
-        <span class="form-breadcrumb-current">New binding</span>
-        <span class="form-context-spacer"></span>
+    {:else}
         <button class="secondary" disabled={saving} onclick={onCancel}>Cancel</button>
         <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Create binding'}</button>
-    </div>
-{/if}
+    {/if}
+</div>
+<div class="form-breadcrumb-bar">
+    {#if isEdit}
+        <span class="form-breadcrumb-current">{copy.breadcrumbLead}</span>
+    {:else}
+        <span class="form-breadcrumb-link" role="button" tabindex="0" onclick={onCancel} onkeydown={onBreadcrumbKeydown}>{copy.breadcrumbLead}</span>
+    {/if}
+    <span class="form-breadcrumb-sep">›</span>
+    <span class={copy.typePillClass} class:type-pill-dashed={!isEdit}>{copy.typePillLabel}</span>
+    {#if copy.breadcrumbSuffix}<span class="form-breadcrumb-suffix">{copy.breadcrumbSuffix}</span>{/if}
+</div>
 
 {#if formError}
     <div class="form-error">{#each formError.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}</div>
@@ -195,14 +218,6 @@
     </div>
 {/if}
 
-{#if !isEdit}
-    <div class="form-scope-strip">
-        <span class="form-scope-label">Scope locked while creating:</span>
-        <span class="pill">{scopeSobject}</span>
-        <span class="pill">{scopeLabel}</span>
-    </div>
-{/if}
-
 <div class="form-preview">
     <span class="form-preview-eyebrow">RESULTING BINDING</span>
     <span class="form-preview-text">
@@ -217,6 +232,9 @@
         at order <span class="mono-link">{order.trim() || '…'}</span>
         during <strong>{previewProcessLabel}</strong>.
     </span>
+    {#if copy.cliPreview}
+        <span class="form-cli-preview">{copy.cliPreview}</span>
+    {/if}
 </div>
 
 <div class="form-sections">
@@ -341,10 +359,15 @@
                 <label for="fFlags">&nbsp;</label>
                 <div style="display:flex; gap:16px; flex-wrap:wrap;">
                     <label class="form-checkbox"><input type="checkbox" bind:checked={isActive} /> Active</label>
-                    <label class="form-checkbox"><input type="checkbox" bind:checked={executeAsynchronous} /> Execute asynchronously</label>
+                    {#if type === 'Action'}
+                        <label class="form-checkbox"><input type="checkbox" bind:checked={executeAsynchronous} /> Execute asynchronously</label>
+                    {/if}
                     <label class="form-checkbox"><input type="checkbox" bind:checked={logicalInverse} /> Logical inverse</label>
                     <label class="form-checkbox"><input type="checkbox" bind:checked={preventRecursive} /> Prevent recursive</label>
                 </div>
+                {#if type === 'Criteria'}
+                    <span class="form-hint">No Execute asynchronously on a Criteria row — the flag only means something for an Action.</span>
+                {/if}
             </div>
         </div>
     </div>

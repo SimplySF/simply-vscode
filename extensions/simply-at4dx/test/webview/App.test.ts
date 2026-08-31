@@ -205,7 +205,7 @@ describe('App — Domain Process data', () => {
 
         await fireEvent.click(screen.getByText('+ New Binding'));
 
-        expect(screen.getByText('New binding')).toBeTruthy();
+        expect(screen.getByText('New domain process binding')).toBeTruthy();
         const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
         expect(sobjectInput.value).toBe('Account');
     });
@@ -216,7 +216,7 @@ describe('App — Domain Process data', () => {
         const editIcons = screen.getAllByTitle('Edit this binding');
         await fireEvent.click(editIcons[0]);
 
-        expect(screen.getByText('Editing')).toBeTruthy();
+        expect(screen.getByText('Edit domain process binding')).toBeTruthy();
         const developerNameInput = document.getElementById('fDeveloperName') as HTMLInputElement;
         expect(developerNameInput.value).toBe('A');
         expect(developerNameInput.disabled).toBe(true);
@@ -393,8 +393,12 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
 
         await fireEvent.click(screen.getByText('+ New Binding'));
 
-        expect(screen.getByText('New Application Factory binding')).toBeTruthy();
-        expect(screen.queryByText('+ New Binding')).toBeNull();
+        expect(screen.getByText('New service binding')).toBeTruthy();
+        // The breadcrumb legitimately shows its own "+ New Binding" link (the entry point) once the
+        // form is open — it's the toolbar's own button that must disappear, so there's only ever one
+        // primary "+ New Binding" action on screen at a time. See docs/design/0016's original rule and
+        // docs/design/0017's breadcrumb addition.
+        expect(document.querySelector('.toolbar')).toBeNull();
         expect(document.getElementById('fBindingInterface')).toBeTruthy();
     });
 
@@ -403,7 +407,7 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
 
         await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
 
-        expect(screen.getByText('Editing')).toBeTruthy();
+        expect(screen.getByText('Edit selector binding')).toBeTruthy();
         const developerNameInput = document.getElementById('fDeveloperName') as HTMLInputElement;
         expect(developerNameInput.value).toBe('AccountsSelectorBinding');
         expect(developerNameInput.disabled).toBe(true);
@@ -412,6 +416,34 @@ describe('App — Application Factory create/edit form (stage 2)', () => {
         for (const segment of document.querySelectorAll<HTMLButtonElement>('#fBindingType .segmented-option')) {
             expect(segment.disabled).toBe(true);
         }
+    });
+
+    it('renders the entry-point breadcrumb, a solid type pill, and no CLI preview in edit mode', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getAllByTitle('Edit this binding')[0]);
+
+        const breadcrumb = document.querySelector('.form-breadcrumb-bar');
+        expect(breadcrumb?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Account › SELECTOR AccountsSelector');
+        const pill = document.querySelector('.form-breadcrumb-bar .af-type-pill');
+        expect(pill?.classList.contains('af-type-pill-dashed')).toBe(false);
+        expect(document.querySelector('.form-cli-preview')).toBeNull();
+    });
+
+    it('shows a dashed pill and a CLI preview footer while creating', async () => {
+        render(App, { props: { initial } });
+
+        await fireEvent.click(screen.getByText('+ New Binding'));
+        await fireEvent.click(screen.getByText('Selector'));
+        await fireEvent.input(document.getElementById('fDeveloperName') as HTMLInputElement, { target: { value: 'ContactsSelectorBinding' } });
+        await fireEvent.input(document.getElementById('fSobject') as HTMLInputElement, { target: { value: 'Contact' } });
+        await fireEvent.input(document.getElementById('fTo') as HTMLInputElement, { target: { value: 'ContactsSelector' } });
+
+        const pill = document.querySelector('.form-breadcrumb-bar .af-type-pill');
+        expect(pill?.classList.contains('af-type-pill-dashed')).toBe(true);
+        expect(document.querySelector('.form-cli-preview')?.textContent).toBe(
+            'binding create --type selector --developer-name ContactsSelectorBinding --sobject Contact --to ContactsSelector',
+        );
     });
 
     it('posts submitApplicationFactoryBinding with a Selector-shaped payload on save', async () => {
@@ -470,7 +502,7 @@ describe('App — Application Factory Unit of Work create/edit (stage 3)', () =>
 
         await fireEvent.click(screen.getByTitle('Edit this binding'));
 
-        expect(screen.getByText('Editing')).toBeTruthy();
+        expect(screen.getByText('Edit Unit of Work binding')).toBeTruthy();
         const sobjectInput = document.getElementById('fSobject') as HTMLInputElement;
         expect(sobjectInput.value).toBe('Account');
         const sequenceInput = document.getElementById('fSequence') as HTMLInputElement;

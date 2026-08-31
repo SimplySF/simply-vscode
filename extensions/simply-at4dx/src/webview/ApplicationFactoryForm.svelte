@@ -2,8 +2,8 @@
     import { untrack } from 'svelte';
     import BindingSObjectField from './BindingSObjectField.svelte';
     import { developerNameValid, ruleTitle } from './lib/bindingView';
-    import { previewCommitPosition } from './lib/applicationFactoryView';
-    import type { ApplicationFactoryFormInitial, ApplicationFactoryFormPayload, ApplicationFactoryRules, At4dxBindingRow, BindingIssue, WritableBindingType } from './types';
+    import { applicationFactoryDrawerCopy } from './lib/bindingDrawerCopy';
+    import type { ApplicationFactoryFormInitial, ApplicationFactoryFormPayload, ApplicationFactoryRules, At4dxBindingRow, BindingIssue, DomainProcessBindingRow, WritableBindingType } from './types';
     import { postMessage } from './vscodeApi';
 
     let {
@@ -11,15 +11,18 @@
         initial: initialProp,
         rules,
         standardObjects,
-        existingUnitOfWorkRows,
+        allRows,
+        domainProcessRows,
         onCancel,
     }: {
         mode: 'create' | 'edit';
         initial: ApplicationFactoryFormInitial;
         rules: ApplicationFactoryRules;
         standardObjects: string[];
-        /** Every other UnitOfWork row already in the scan — powers the "commits Nth of M" live preview. See docs/design/0016. */
-        existingUnitOfWorkRows: At4dxBindingRow[];
+        /** Every other Application Factory row already in the scan — powers the drawer's RESULTING BINDING preview (priority competition, commit position). See docs/design/0017. */
+        allRows: At4dxBindingRow[];
+        /** The Domain Process explorer's own rows, for the Domain drawer's "N process bindings resolve through it" sentence — `undefined` while that (separately-scanned) explorer hasn't resolved yet. */
+        domainProcessRows: DomainProcessBindingRow[] | undefined;
         onCancel: () => void;
     } = $props();
 
@@ -28,6 +31,10 @@
     const mode = untrack(() => modeProp);
     const initial = untrack(() => initialProp);
     const isEdit = mode === 'edit';
+    // Whether this create opened with the SObject/interface already fixed (a card's own "Add" link —
+    // canvas 2b/2c) rather than free-typed (the sheet/tab-level toolbar button — canvas 2a/5b). Fixed at
+    // open time, same as `mode`/`initial` — which entry point this is doesn't change as the user types.
+    const prefilledFromGap = untrack(() => Boolean(initial.sobject) || Boolean(initial.bindingInterface));
 
     let bindingType = $state<WritableBindingType>(initial.bindingType ?? 'Service');
     let developerName = $state(initial.developerName ?? '');
@@ -41,10 +48,23 @@
 
     let showPriority = $derived(bindingType === 'Service' || bindingType === 'Selector');
     let showTo = $derived(bindingType !== 'UnitOfWork');
-    let commitPreview = $derived(
-        bindingType === 'UnitOfWork'
-            ? previewCommitPosition(existingUnitOfWorkRows, isEdit ? initial.developerName : undefined, sequence.trim() === '' ? undefined : Number(sequence.trim()))
-            : undefined,
+    let key = $derived(bindingType === 'Service' ? bindingInterface : sobject);
+    let priorityValue = $derived(priority.trim() === '' ? undefined : Number(priority.trim()));
+    let sequenceValue = $derived(sequence.trim() === '' ? undefined : Number(sequence.trim()));
+    let domainProcessBindingCount = $derived(domainProcessRows ? domainProcessRows.filter((row) => row.sobject === sobject.trim()).length : undefined);
+    let copy = $derived(
+        applicationFactoryDrawerCopy({
+            mode,
+            bindingType,
+            developerName: isEdit ? initial.developerName : developerName,
+            key,
+            to,
+            priority: priorityValue,
+            sequence: sequenceValue,
+            allRows,
+            domainProcessBindingCount,
+            prefilledFromGap,
+        }),
     );
 
     let fieldErrors = $state<Record<string, string>>({});
@@ -73,6 +93,13 @@
         return fieldErrors[id];
     }
 
+    function onBreadcrumbKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onCancel();
+        }
+    }
+
     function save(): void {
         formError = undefined;
         blockedIssues = undefined;
@@ -84,9 +111,7 @@
         const trimmedBindingInterface = bindingInterface.trim();
         const trimmedSobject = sobject.trim();
         const trimmedPriority = priority.trim();
-        const priorityValue = trimmedPriority === '' ? undefined : Number(trimmedPriority);
         const trimmedSequence = sequence.trim();
-        const sequenceValue = trimmedSequence === '' ? undefined : Number(trimmedSequence);
 
         if (!isEdit && !developerNameValid(trimmedDeveloperName)) {
             errors.fDeveloperName =
@@ -133,22 +158,30 @@
     }
 </script>
 
-{#if isEdit}
-    <div class="form-context-bar">
-        <span>Editing</span>
-        <span class="form-context-devname">{initial.developerName}</span>
-        <span class="form-context-spacer"></span>
+<div class="form-context-bar">
+    <span class="form-title">{copy.title}</span>
+    {#if key.trim()}<span class="form-context-devname">{key.trim()}</span>{/if}
+    <span class="form-context-spacer"></span>
+    {#if isEdit}
         <button class="secondary" disabled={saving} onclick={onCancel}>Discard</button>
         <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Save changes'}</button>
-    </div>
-{:else}
-    <div class="form-context-bar">
-        <span class="form-breadcrumb-current">New Application Factory binding</span>
-        <span class="form-context-spacer"></span>
+    {:else}
         <button class="secondary" disabled={saving} onclick={onCancel}>Cancel</button>
         <button disabled={saving} onclick={save}>{pendingForce ? 'Save Anyway' : 'Create binding'}</button>
-    </div>
-{/if}
+    {/if}
+</div>
+<div class="form-breadcrumb-bar">
+    {#if copy.breadcrumbLead}
+        {#if isEdit}
+            <span class="form-breadcrumb-current">{copy.breadcrumbLead}</span>
+        {:else}
+            <span class="form-breadcrumb-link" role="button" tabindex="0" onclick={onCancel} onkeydown={onBreadcrumbKeydown}>{copy.breadcrumbLead}</span>
+        {/if}
+        <span class="form-breadcrumb-sep">›</span>
+    {/if}
+    <span class="af-type-pill {copy.typePillClass}" class:af-type-pill-dashed={!isEdit}>{copy.typePillLabel}</span>
+    <span class="form-breadcrumb-suffix">{copy.breadcrumbSuffix}</span>
+</div>
 
 {#if formError}
     <div class="form-error">{#each formError.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}</div>
@@ -172,20 +205,14 @@
 
 <div class="form-preview">
     <span class="form-preview-eyebrow">RESULTING BINDING</span>
-    <span class="form-preview-text">
-        {#if bindingType === 'Service'}
-            <span class="mono-link">{bindingInterface.trim() || '…'}</span> resolves to
-            <span class="mono-link">{to.trim() || '…'}</span>{#if showPriority}, at priority <span class="mono-link">{priority.trim() || '—'}</span>{/if}.
-        {:else if bindingType === 'Selector'}
-            Queries against <strong>{sobject.trim() || 'SObject'}</strong> use <span class="mono-link">{to.trim() || '…'}</span>, at priority
-            <span class="mono-link">{priority.trim() || '—'}</span>.
-        {:else if bindingType === 'Domain'}
-            <strong>{sobject.trim() || 'SObject'}</strong> domain logic runs through <span class="mono-link">{to.trim() || '…'}</span>.
-        {:else if commitPreview}
-            <strong>{sobject.trim() || 'SObject'}</strong> joins the shared Unit of Work and commits
-            <span class="mono-link">{commitPreview.label}</span> of {commitPreview.total}.
-        {/if}
-    </span>
+    <span class="form-preview-text"
+        >{#each copy.resultingBinding as segment, i (i)}{#if segment.emphasis === 'bold'}<strong>{segment.text}</strong>{:else if segment.emphasis === 'mono'}<span
+                    class="mono-link">{segment.text}</span
+                >{:else}{segment.text}{/if}{/each}</span
+    >
+    {#if copy.cliPreview}
+        <span class="form-cli-preview">{copy.cliPreview}</span>
+    {/if}
 </div>
 
 <div class="form-sections">

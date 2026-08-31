@@ -289,7 +289,8 @@
                 initial={afFormInitial}
                 rules={afRules}
                 standardObjects={afStandardObjects}
-                existingUnitOfWorkRows={applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType === 'UnitOfWork') : []}
+                allRows={applicationFactory.kind === 'data' ? applicationFactory.rows : []}
+                domainProcessRows={domainProcess.kind === 'data' ? domainProcess.rows : undefined}
                 onCancel={closeApplicationFactoryForm}
             />
         {:else if afTab === 'sobject'}
@@ -576,6 +577,9 @@
         border-color: var(--vscode-descriptionForeground);
         color: var(--vscode-descriptionForeground);
     }
+    :global(.type-pill.type-pill-dashed) {
+        border-style: dashed;
+    }
     :global(.row-class) {
         font-family: var(--vscode-editor-font-family);
         color: var(--vscode-textLink-foreground);
@@ -818,6 +822,29 @@
     }
     :global(.form-context-spacer) {
         flex: 1;
+    }
+    :global(.form-title) {
+        font-weight: 600;
+    }
+    :global(.form-breadcrumb-bar) {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 20px;
+        margin: -16px -16px 16px;
+        background: var(--vscode-editor-background, var(--vscode-sideBar-background));
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.form-breadcrumb-suffix) {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.form-cli-preview) {
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.8em;
+        color: var(--vscode-descriptionForeground);
+        white-space: pre-wrap;
+        word-break: break-word;
     }
     :global(.form-scope-strip) {
         display: flex;

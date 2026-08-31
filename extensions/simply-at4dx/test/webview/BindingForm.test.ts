@@ -169,6 +169,23 @@ describe('BindingForm — create mode', () => {
         expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ type: 'Criteria' }) }));
     });
 
+    it('hides Execute asynchronously for a Criteria row and never sends a stale true for it', async () => {
+        await fireEvent.click(screen.getByText('Execute asynchronously').closest('label')!.querySelector('input')!);
+        const segmented = document.getElementById('fType') as HTMLElement;
+        await fireEvent.click(segmented.querySelectorAll<HTMLButtonElement>('.segmented-option')[1]!);
+
+        expect(screen.queryByText('Execute asynchronously')).toBeNull();
+        expect(screen.getByText('No Execute asynchronously on a Criteria row — the flag only means something for an Action.')).toBeTruthy();
+
+        await fireEvent.input(field('fDeveloperName'), { target: { value: 'Account_Before_Insert_Test' } });
+        await fireEvent.input(field('fClassToInject'), { target: { value: 'MyCriteria' } });
+        await fireEvent.input(field('fOrder'), { target: { value: '10' } });
+        await fireEvent.change(field('fTriggerOperation'), { target: { value: 'Before_Insert' } });
+        await fireEvent.click(screen.getByText('Create binding'));
+
+        expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ executeAsynchronous: false }) }));
+    });
+
     it('keeps the alternate-SObject toggle a real checkbox bound to sobjectAlternate', async () => {
         const toggle = document.getElementById('fSobjectAlternateInput') as HTMLInputElement;
         expect(toggle.type).toBe('checkbox');
@@ -232,7 +249,10 @@ describe('BindingForm — edit mode', () => {
         expect(developerNameInput.disabled).toBe(true);
         expect(developerNameInput.value).toBe('Account_After_Update_Notify');
 
-        expect(screen.getByText('Editing')).toBeTruthy();
+        expect(screen.getByText('Edit domain process binding')).toBeTruthy();
+        const breadcrumb = document.querySelector('.form-breadcrumb-bar');
+        expect(breadcrumb?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Account / Updated › CRITERIA');
+        expect(document.querySelector('.form-breadcrumb-bar .type-pill')?.classList.contains('type-pill-dashed')).toBe(false);
 
         await fireEvent.click(screen.getByText('Save changes'));
 
@@ -251,7 +271,10 @@ describe('BindingForm — edit mode', () => {
                 classToInject: 'NotifyCriteria',
                 order: 5,
                 isActive: false,
-                executeAsynchronous: true,
+                // Normalized to false on save — this fixture's own `true` is a pre-existing Criteria
+                // record the field never should've been set on; the checkbox is hidden for Criteria (see
+                // docs/design/0017), so nothing lets the user reintroduce it once cleared here.
+                executeAsynchronous: false,
                 logicalInverse: false,
                 preventRecursive: true,
                 description: 'Existing description',
