@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.6](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.5...simply-at4dx-v2.17.6) (2026-09-01)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** persist the Application Factory sub-tab host-side, drop tab-strip icons ([#49](https://github.com/SimplySF/simply-vscode/issues/49)) ([aac5b6f](https://github.com/SimplySF/simply-vscode/commit/aac5b6f2b23f092c732fb6c062a24412fb5f68c8))
+
 # [simply-at4dx-v2.17.5](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.4...simply-at4dx-v2.17.5) (2026-09-01)
 
 
