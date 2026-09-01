@@ -6,12 +6,17 @@
     import BindingSections from './BindingSections.svelte';
     import IssuesSection from './IssuesSection.svelte';
     import NewBindingMenu from './NewBindingMenu.svelte';
+    import PlatformEventForm from './PlatformEventForm.svelte';
+    import PlatformEventIssuesSection from './PlatformEventIssuesSection.svelte';
+    import PlatformEventSimulateDrawer from './PlatformEventSimulateDrawer.svelte';
+    import PlatformEventsSheet from './PlatformEventsSheet.svelte';
     import ServiceBindingsSection from './ServiceBindingsSection.svelte';
     import SObjectBindingsSheet from './SObjectBindingsSheet.svelte';
     import SummaryBar from './SummaryBar.svelte';
     import Toolbar from './Toolbar.svelte';
     import { applicationFactoryRowToFormInitial, partitionBySeverity } from './lib/applicationFactoryView';
     import { FAMILY_ITEMS, availableFamilies, buildSections, headerParts, issuesByRecord, partitionIssues } from './lib/bindingView';
+    import { partitionPlatformEventIssuesBySeverity } from './lib/platformEventView';
     import type { ApplicationFactoryViewRow, UnitOfWorkViewRow } from './lib/applicationFactoryView';
     import type {
         ApplicationFactoryFormInitial,
@@ -22,6 +27,10 @@
         ExplorerKey,
         FamilyKey,
         InitialState,
+        PlatformEventFormInitial,
+        PlatformEventSubscriptionIssueRule,
+        PlatformEventSubscriptionRuleInfo,
+        RawPlatformEventSubscriptionRecord,
         WritableBindingType,
     } from './types';
     import { postMessage } from './vscodeApi';
@@ -114,6 +123,44 @@
         afView = 'list';
     }
 
+    // Platform Events tab — see docs/design/0018. Its own three-state view (list/form/simulate) mirrors
+    // Application Factory's list/form split, with `'simulate'` added for the match-simulator drawer (7b),
+    // which isn't a create/edit form at all.
+    const platformEvents = initial.platformEvents;
+    const peRules = platformEvents.kind === 'data' ? platformEvents.rules : ({} as Record<PlatformEventSubscriptionIssueRule, PlatformEventSubscriptionRuleInfo>);
+    const peCanWrite = platformEvents.kind === 'data';
+    const peRecords = $derived(platformEvents.kind === 'data' ? platformEvents.records : []);
+    let peProblems = $derived(platformEvents.kind === 'data' ? partitionPlatformEventIssuesBySeverity(platformEvents.issues) : { errors: [], warnings: [] });
+    let peBusCount = $derived(new Set(peRecords.map((record) => record.eventBus)).size);
+
+    let peView = $state<'list' | 'form' | 'simulate'>('list');
+    let peFormMode = $state<'create' | 'edit'>('create');
+    let peFormInitial = $state<PlatformEventFormInitial>({});
+
+    function openCreatePlatformEvent(): void {
+        peFormMode = 'create';
+        peFormInitial = {};
+        peView = 'form';
+    }
+
+    function openEditPlatformEvent(record: RawPlatformEventSubscriptionRecord): void {
+        peFormMode = 'edit';
+        peFormInitial = { ...record };
+        peView = 'form';
+    }
+
+    function closePlatformEventForm(): void {
+        peView = 'list';
+    }
+
+    function openSimulate(): void {
+        peView = 'simulate';
+    }
+
+    function closeSimulate(): void {
+        peView = 'list';
+    }
+
     let sobjects = $derived([...new Set(rows.map((row) => row.sobject))].sort((a, b) => a.localeCompare(b)));
     let sobject = $state(untrack(() => sobjects[0]) ?? '');
 
@@ -202,10 +249,19 @@
             <span class="explorer-tab-badge">{serviceBindingCount}</span>
         {/if}
     </button>
-    <span class="explorer-tab explorer-tab-inert" role="tab" aria-disabled="true" title="Platform Event Distributor is not available yet.">
+    <button
+        type="button"
+        role="tab"
+        class="explorer-tab"
+        class:explorer-tab-active={initial.active === 'platformEvents'}
+        aria-selected={initial.active === 'platformEvents'}
+        onclick={() => selectExplorer('platformEvents')}
+    >
         Platform Events
-        <span class="explorer-tab-soon">Coming soon</span>
-    </span>
+        {#if platformEvents.kind === 'data' && peView === 'list'}
+            <span class="explorer-tab-badge">{platformEvents.records.length}</span>
+        {/if}
+    </button>
     <span class="explorer-tabs-spacer"></span>
     {#if initial.sourceLabel}
         <span class="explorer-tabs-source" title={initial.sourceLabel}>{initial.sourceLabel}</span>
@@ -249,9 +305,28 @@
             {/if}
         </div>
     {/if}
+{:else if initial.active === 'platformEvents'}
+    {#if platformEvents.kind === 'data' && peView === 'list'}
+        <div class="toolbar">
+            <span class="spacer"></span>
+            <button class="secondary" onclick={openSimulate} disabled={platformEvents.records.length === 0}>Simulate a match…</button>
+            <button onclick={openCreatePlatformEvent}>+ New Subscription</button>
+        </div>
+    {:else if platformEvents.kind !== 'data'}
+        <div class="toolbar">
+            <span class="spacer"></span>
+            <button class="secondary" disabled>Simulate a match…</button>
+            <button disabled>+ New Subscription</button>
+        </div>
+    {/if}
 {/if}
 
-<div id="content" inert={(initial.active === 'domainProcess' && view === 'form') || (initial.active === 'applicationFactory' && afView === 'form')}>
+<div
+    id="content"
+    inert={(initial.active === 'domainProcess' && view === 'form') ||
+        (initial.active === 'applicationFactory' && afView === 'form') ||
+        (initial.active === 'platformEvents' && peView !== 'list')}
+>
     {#if initial.active === 'domainProcess'}
         {#if domainProcess.kind === 'loading'}
             <p class="status">Scanning workspace for AT4DX bindings…</p>
@@ -305,17 +380,42 @@
             <ServiceBindingsSection rows={applicationFactory.kind === 'data' ? applicationFactory.rows : []} canWrite={afCanWrite} onEdit={openEditApplicationFactoryForm} />
             <ApplicationFactoryIssuesSection errors={afProblems.errors} warnings={afProblems.warnings} clickable={isLocalScan} rules={afRules} />
         {/if}
+    {:else if initial.active === 'platformEvents'}
+        {#if platformEvents.kind === 'loading'}
+            <p class="status">Scanning workspace for platform event subscriptions…</p>
+        {:else if platformEvents.kind === 'error'}
+            <p class="status error">
+                {#each platformEvents.message.split('\n') as line, i (i)}{#if i > 0}<br />{/if}{line}{/each}
+            </p>
+        {:else if platformEvents.kind === 'empty'}
+            <p class="status">No AT4DX Platform Event Distributor subscriptions found.</p>
+        {:else}
+            <div class="header">
+                <div class="header-text">
+                    {peRecords.length} subscription{peRecords.length === 1 ? '' : 's'} across {peBusCount} event bus{peBusCount === 1 ? '' : 'es'}. Each consumer subscribes
+                    once — <strong>Consumer__c</strong> is unique.
+                </div>
+                {#if peProblems.errors.length + peProblems.warnings.length > 0}
+                    <span class="pe-problems-chip">⚠ {peProblems.errors.length + peProblems.warnings.length} problem{peProblems.errors.length + peProblems.warnings.length === 1 ? '' : 's'}</span>
+                {/if}
+            </div>
+            <PlatformEventsSheet records={peRecords} issues={platformEvents.kind === 'data' ? platformEvents.issues : []} canWrite={peCanWrite} onEdit={openEditPlatformEvent} />
+            <PlatformEventIssuesSection errors={peProblems.errors} warnings={peProblems.warnings} clickable={isLocalScan} rules={peRules} />
+        {/if}
     {/if}
 </div>
 
-{#if (initial.active === 'domainProcess' && view === 'form') || (initial.active === 'applicationFactory' && afView === 'form')}
+{#if (initial.active === 'domainProcess' && view === 'form') || (initial.active === 'applicationFactory' && afView === 'form') || (initial.active === 'platformEvents' && peView !== 'list')}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div class="drawer-backdrop" onclick={initial.active === 'domainProcess' ? closeForm : closeApplicationFactoryForm}></div>
+    <div
+        class="drawer-backdrop"
+        onclick={initial.active === 'domainProcess' ? closeForm : initial.active === 'applicationFactory' ? closeApplicationFactoryForm : peView === 'simulate' ? closeSimulate : closePlatformEventForm}
+    ></div>
     <div class="drawer-panel" role="dialog" aria-modal="true">
         {#if initial.active === 'domainProcess'}
             <BindingForm mode={formMode} initial={formInitial} {rules} scopeSobject={sobject} scopeLabel={familyLabel} onCancel={closeForm} />
-        {:else}
+        {:else if initial.active === 'applicationFactory'}
             <ApplicationFactoryForm
                 mode={afFormMode}
                 initial={afFormInitial}
@@ -326,6 +426,10 @@
                 fieldSetInclusions={applicationFactory.kind === 'data' ? applicationFactory.fieldSetInclusions : []}
                 onCancel={closeApplicationFactoryForm}
             />
+        {:else if peView === 'simulate'}
+            <PlatformEventSimulateDrawer records={peRecords} onCancel={closeSimulate} />
+        {:else}
+            <PlatformEventForm mode={peFormMode} initial={peFormInitial} rules={peRules} onCancel={closePlatformEventForm} />
         {/if}
     </div>
 {/if}
@@ -1661,6 +1765,273 @@
         background: var(--vscode-editor-background);
         font-size: 0.78em;
         line-height: 1.45;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    /* Platform Events tab (7a-7d) — see docs/design/0018. */
+    :global(.pe-problems-chip) {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        font-size: 0.9em;
+        color: var(--vscode-charts-red);
+    }
+    :global(.pe-sheet) {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+    :global(.pe-bus) {
+        background: var(--vscode-sideBar-background);
+        border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    :global(.pe-bus-header) {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.pe-bus-name) {
+        font-family: var(--vscode-editor-font-family);
+        font-weight: 700;
+    }
+    :global(.pe-bus-spacer) {
+        flex: 1;
+    }
+    :global(.pe-bus-count) {
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-category-header) {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 16px 0 30px;
+        height: 29px;
+        background: rgba(255, 255, 255, 0.028);
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.pe-category-label) {
+        font-family: var(--vscode-editor-font-family);
+        font-weight: 500;
+        font-size: 0.9em;
+        /* Periwinkle — the type hue turn 7 assigns to Platform Events, since the four hues from 1a's
+           binding types were already taken. See SPEC-CONVENTIONS.md's derived-color rule. */
+        color: #c8c8ff;
+    }
+    :global(.pe-category-label.pe-category-none) {
+        color: var(--vscode-descriptionForeground);
+        text-transform: uppercase;
+        font-size: 0.78em;
+        letter-spacing: 0.05em;
+    }
+    :global(.pe-category-count) {
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-row) {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr) 168px 124px 66px 84px 26px;
+        align-items: center;
+        gap: 11px;
+        padding: 0 16px;
+        height: 38px;
+        border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.pe-col-header) {
+        height: 24px;
+        font-size: 0.78em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-row-throws) {
+        background: rgba(241, 76, 76, 0.07);
+        border-left: 2px solid var(--vscode-charts-red);
+    }
+    :global(.pe-row-never-fires) {
+        background: rgba(226, 192, 141, 0.07);
+        border-left: 2px solid var(--vscode-charts-orange);
+    }
+    :global(.pe-row-inactive) {
+        opacity: 0.5;
+    }
+    :global(.pe-type-pill) {
+        display: inline-flex;
+        align-items: center;
+        justify-self: start;
+        padding: 3px 8px;
+        border: 1px solid #c8c8ff;
+        border-radius: 4px;
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.75em;
+        letter-spacing: 0.05em;
+        color: #c8c8ff;
+        white-space: nowrap;
+    }
+    :global(.pe-event-value) {
+        font-family: var(--vscode-editor-font-family);
+        color: var(--vscode-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.pe-event-any) {
+        font-family: var(--vscode-editor-font-family);
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-event-blank) {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.9em;
+        color: var(--vscode-charts-red);
+    }
+    :global(.pe-mode) {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-mode-async) {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--vscode-charts-blue);
+    }
+    :global(.status-indicator.pe-status-throws) {
+        color: var(--vscode-charts-red);
+    }
+    :global(.status-indicator.pe-status-throws .status-dot) {
+        background: var(--vscode-charts-red);
+        border-color: var(--vscode-charts-red);
+    }
+    :global(.status-indicator.pe-status-never-fires) {
+        color: var(--vscode-charts-orange);
+    }
+    :global(.status-indicator.pe-status-never-fires .status-dot) {
+        background: var(--vscode-charts-orange);
+        border-color: var(--vscode-charts-orange);
+    }
+    :global(.pe-hazard-note) {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+        padding: 7px 16px 8px 40px;
+        font-size: 0.85em;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.72);
+    }
+    :global(.pe-hazard-error) {
+        background: rgba(241, 76, 76, 0.07);
+        border-left: 2px solid var(--vscode-charts-red);
+    }
+    :global(.pe-hazard-error strong) {
+        color: var(--vscode-charts-red);
+    }
+    :global(.pe-hazard-warning) {
+        background: rgba(226, 192, 141, 0.07);
+        border-left: 2px solid var(--vscode-charts-orange);
+    }
+    :global(.pe-hazard-warning strong) {
+        color: var(--vscode-charts-orange);
+    }
+
+    /* Platform Events match simulator (7b) and create/edit drawer footer (7c) — see docs/design/0018. */
+    :global(.pe-sim-fields) {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    :global(.pe-sim-fields-row) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 11px;
+    }
+    :global(.pe-sim-results) {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+    :global(.pe-sim-summary) {
+        font-weight: 600;
+    }
+    :global(.pe-sim-matches) {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+    :global(.pe-sim-match) {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 11px;
+        background: rgba(137, 209, 133, 0.09);
+        border-left: 2px solid var(--vscode-charts-green);
+        border-radius: 3px;
+    }
+    :global(.pe-sim-match-index) {
+        font-family: var(--vscode-editor-font-family);
+        font-size: 0.8em;
+        color: var(--vscode-charts-green);
+    }
+    :global(.pe-sim-match-consumer) {
+        flex: 1;
+        font-family: var(--vscode-editor-font-family);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.pe-sim-match-mode) {
+        flex-shrink: 0;
+        font-size: 0.85em;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-sim-match-mode.pe-mode-async) {
+        color: var(--vscode-charts-blue);
+    }
+    :global(.pe-sim-section-label) {
+        font-size: 0.8em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--vscode-descriptionForeground);
+    }
+    :global(.pe-sim-misses) {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    :global(.pe-sim-miss) {
+        display: flex;
+        align-items: baseline;
+        gap: 9px;
+        font-size: 0.9em;
+    }
+    :global(.pe-sim-miss-consumer) {
+        flex-shrink: 0;
+        width: 168px;
+        font-family: var(--vscode-editor-font-family);
+        color: var(--vscode-descriptionForeground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    :global(.pe-sim-miss-reason) {
+        flex: 1;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    :global(.pe-form-footer) {
+        padding: 12px 20px;
+        margin-top: 4px;
+        font-size: 0.85em;
         color: var(--vscode-descriptionForeground);
     }
 </style>

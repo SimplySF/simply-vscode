@@ -43,6 +43,7 @@ function state(overrides: Partial<InitialState> = {}): InitialState {
         active: 'domainProcess',
         domainProcess: { kind: 'loading' },
         applicationFactory: { kind: 'loading' },
+        platformEvents: { kind: 'loading' },
         ...overrides,
     };
 }
@@ -53,14 +54,22 @@ afterEach(() => {
 });
 
 describe('App — explorer tab strip', () => {
-    it('renders all four explorers, with only Platform Events inert', () => {
+    it('renders all four explorers, all of them clickable — see docs/design/0018', () => {
         render(App, { props: { initial: state() } });
 
         expect(screen.getByText('Domain Process Bindings')).toBeTruthy();
         expect(screen.getByText('SObject Bindings')).toBeTruthy();
         expect(screen.getByText('Service Bindings')).toBeTruthy();
-        expect(screen.getByText('Platform Events')).toBeTruthy();
-        expect(screen.getAllByText('Coming soon')).toHaveLength(1);
+        const platformEventsTab = screen.getByText('Platform Events').closest('button');
+        expect(platformEventsTab).toBeTruthy();
+        expect(platformEventsTab?.getAttribute('aria-disabled')).toBeNull();
+        expect(screen.queryByText('Coming soon')).toBeNull();
+    });
+
+    it('posts selectExplorer when the Platform Events tab is clicked', async () => {
+        render(App, { props: { initial: state() } });
+        await fireEvent.click(screen.getByText('Platform Events'));
+        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'platformEvents' });
     });
 
     it('shows the tab strip even while loading, in error, or empty — not just in the data view', () => {

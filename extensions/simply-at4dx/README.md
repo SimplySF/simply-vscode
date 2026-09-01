@@ -8,12 +8,12 @@ Explore [AT4DX](https://github.com/apex-enterprise-patterns/at4dx) framework bin
 
 ## Usage
 
-The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's
-different explorers — **Domain Process Bindings**, **SObject Bindings**, and **Service Bindings** are
-all live; **Platform Events** still shows as an inert `Coming soon` tab, reserved for a later addition.
-SObject Bindings and Service Bindings share one lazily-triggered Application Factory scan: switching to
-either the first time triggers it against whatever source you picked, and switching between the two
-afterward never re-scans.
+The panel is titled **AT4DX Explorer** and carries a tab strip across the top for the framework's four
+explorers — **Domain Process Bindings**, **SObject Bindings**, **Service Bindings**, and
+**Platform Events**. SObject Bindings and Service Bindings share one lazily-triggered Application
+Factory scan: switching to either the first time triggers it against whatever source you picked, and
+switching between the two afterward never re-scans. Platform Events scans lazily the same way, on its
+own first visit.
 
 Run **AT4DX: Open Explorer** from the Command Palette. You'll be prompted to:
 
@@ -146,6 +146,34 @@ binding types — a missing or ambiguous SObject reference, a standard object th
 metadata relationship (e.g. `Task`), a duplicate `To__c`/SObject/sequence, and so on — grouped
 errors-then-warnings, with the same click-to-open-the-file behavior as the Domain Process explorer's own
 Issues section.
+
+### Platform Events
+
+This tab reads `PlatformEvents_Subscription__mdt` — the AT4DX Platform Event Distributor's registration
+table. It matters more than it might look: the distributor swallows every consumer construction/execution
+failure into a debug log and nothing else, so a dead subscription is otherwise invisible in the org. See
+[0018](../../docs/design/0018-at4dx-platform-event-subscription-tab.md) for the full design.
+
+Subscriptions are grouped **Event Bus → Category → subscription**, since `EventCategory__c` is the axis
+the distributor's own matcher rules branch on. Each row shows its consumer class, which fields its
+Matcher Rule compares (`Bus only`, `Bus + Category`, `Bus + Event`, or `Bus + Category + Event`), its
+event value (or `any` when the rule doesn't use it, or a red `blank` warning when it does and the field
+is empty), sync/async, and a status: **Active**, **Inactive** (excluded by the distributor's own `WHERE
+IsActive__c = TRUE`), **Throws** (the matcher rule needs a field that's blank — a real
+`NullPointerException` at distribution), or **Never fires** (registered and legal, but the distributor's
+own pre-filter can never admit it). Throws/Never-fires rows carry an inline explanation of exactly why,
+right under the row.
+
+**Simulate a match…** opens a drawer where you pick an Event Bus and type a `Category__c`/`EventName__c`,
+and it shows the exact consumer set the distributor would build for that event — in order, sync/async —
+plus every subscription on that bus that *wouldn't* match and why. This runs entirely against the
+already-scanned metadata; it never touches your org.
+
+**+ New Subscription** opens a create form (or click a row's pencil icon to edit): Matcher Rule is chosen
+first, since it decides which of Event Category/Event become required — the form's hint text updates
+live as you switch it. Saving writes one `.md-meta.xml` file (or deploys the equivalent record to a
+connected org), with `IsActive__c` defaulting to `true`. Same wiring-problem/**Save Anyway** contract as
+every other binding form in this panel.
 
 ## Troubleshooting
 
