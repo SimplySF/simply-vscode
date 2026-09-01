@@ -1,3 +1,10 @@
+# [simply-extension-pack-v1.2.0](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.1.0...simply-extension-pack-v1.2.0) (2026-09-01)
+
+
+### Features
+
+* **simply-extension-pack:** add Simply AT4DX to the extension pack ([#50](https://github.com/SimplySF/simply-vscode/issues/50)) ([bdbfeb7](https://github.com/SimplySF/simply-vscode/commit/bdbfeb73469f64ac9b6a259a51ce64ac80fee166))
+
 # [simply-extension-pack-v1.1.0](https://github.com/SimplySF/simply-vscode/compare/simply-extension-pack-v1.0.1...simply-extension-pack-v1.1.0) (2026-08-24)
 
 
