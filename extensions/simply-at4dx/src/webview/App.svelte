@@ -4,7 +4,6 @@
     import ApplicationFactoryIssuesSection from './ApplicationFactoryIssuesSection.svelte';
     import BindingForm from './BindingForm.svelte';
     import BindingSections from './BindingSections.svelte';
-    import Icon from './Icon.svelte';
     import IssuesSection from './IssuesSection.svelte';
     import NewBindingMenu from './NewBindingMenu.svelte';
     import ServiceBindingsSection from './ServiceBindingsSection.svelte';
@@ -52,9 +51,11 @@
 
     // The "Application Factory" tab from docs/design/0016 is now two tabs — SObject Bindings and Service
     // Bindings — sharing the one lazily-triggered scan (`initial.active` stays 'applicationFactory' on
-    // the host side; `afTab` is purely a client-side rendering choice, reset on every full re-render the
-    // same way `afView` already is). See docs/design/0017.
-    let afTab = $state<'sobject' | 'service'>('sobject');
+    // the host side). Which sub-tab is showing is host-side state too (`initial.applicationFactoryTab`),
+    // not purely client-side like `afView` — a full re-render remounts the whole webview (docs/design/0011),
+    // so a client-only default would otherwise snap back to SObject Bindings any time a write or rescan
+    // re-renders the panel while Service Bindings is showing.
+    let afTab = $state<'sobject' | 'service'>(initial.applicationFactoryTab ?? 'sobject');
     let sobjectBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType !== 'Service').length : undefined);
     let serviceBindingCount = $derived(applicationFactory.kind === 'data' ? applicationFactory.rows.filter((row) => row.bindingType === 'Service').length : undefined);
     let afIssuesForTab = $derived(
@@ -64,21 +65,21 @@
     );
     let afProblems = $derived(partitionBySeverity(afIssuesForTab));
 
-    function selectExplorer(explorer: ExplorerKey): void {
+    function selectExplorer(explorer: ExplorerKey, afTabArg?: 'sobject' | 'service'): void {
         if (explorer === initial.active) {
             return;
         }
-        postMessage({ command: 'selectExplorer', explorer });
+        postMessage(explorer === 'applicationFactory' ? { command: 'selectExplorer', explorer, afTab: afTabArg } : { command: 'selectExplorer', explorer });
     }
 
     function selectSObjectBindingsTab(): void {
         afTab = 'sobject';
-        selectExplorer('applicationFactory');
+        selectExplorer('applicationFactory', 'sobject');
     }
 
     function selectServiceBindingsTab(): void {
         afTab = 'service';
-        selectExplorer('applicationFactory');
+        selectExplorer('applicationFactory', 'service');
     }
 
     let afView = $state<'list' | 'form'>('list');
@@ -170,7 +171,6 @@
         aria-selected={initial.active === 'applicationFactory' && afTab === 'sobject'}
         onclick={selectSObjectBindingsTab}
     >
-        <span class="explorer-tab-icon"><Icon name="sobjectBindings" /></span>
         SObject Bindings
         {#if sobjectBindingCount !== undefined && afView === 'list'}
             <span class="explorer-tab-badge">{sobjectBindingCount}</span>
@@ -184,7 +184,6 @@
         aria-selected={initial.active === 'domainProcess'}
         onclick={() => selectExplorer('domainProcess')}
     >
-        <span class="explorer-tab-icon"><Icon name="domainProcess" /></span>
         Domain Process Bindings
         {#if domainProcess.kind === 'data' && view === 'list'}
             <span class="explorer-tab-badge">{bindingCount}</span>
@@ -198,14 +197,12 @@
         aria-selected={initial.active === 'applicationFactory' && afTab === 'service'}
         onclick={selectServiceBindingsTab}
     >
-        <span class="explorer-tab-icon"><Icon name="applicationFactory" /></span>
         Service Bindings
         {#if serviceBindingCount !== undefined && afView === 'list'}
             <span class="explorer-tab-badge">{serviceBindingCount}</span>
         {/if}
     </button>
     <span class="explorer-tab explorer-tab-inert" role="tab" aria-disabled="true" title="Platform Event Distributor is not available yet.">
-        <span class="explorer-tab-icon"><Icon name="platformEvent" /></span>
         Platform Events
         <span class="explorer-tab-soon">Coming soon</span>
     </span>
@@ -396,16 +393,6 @@
     :global(.explorer-tab-inert) {
         color: var(--vscode-descriptionForeground);
         cursor: default;
-    }
-    :global(.explorer-tab-icon) {
-        display: inline-flex;
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-    }
-    :global(.explorer-tab-icon svg) {
-        width: 14px;
-        height: 14px;
     }
     :global(.explorer-tab-badge) {
         padding: 1px 7px;
