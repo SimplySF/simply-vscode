@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.17.5](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.4...simply-at4dx-v2.17.5) (2026-09-01)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** default to the SObject Bindings tab, lighten field set rows ([#48](https://github.com/SimplySF/simply-vscode/issues/48)) ([8e70bc9](https://github.com/SimplySF/simply-vscode/commit/8e70bc9a04cdb0abfad043668b5085335eef1b03))
+
 # [simply-at4dx-v2.17.4](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.3...simply-at4dx-v2.17.4) (2026-08-31)
 
 
