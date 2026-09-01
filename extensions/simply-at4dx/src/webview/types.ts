@@ -20,6 +20,9 @@ import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, FieldSetIn
 /** Which explorer the tab strip has active — see docs/design/0016. Part of `PanelState`/`InitialState`, not client-side state, so a write-triggered re-render doesn't bounce the user back to the Domain Process tab. */
 export type ExplorerKey = 'domainProcess' | 'applicationFactory';
 
+/** Which Application Factory sub-tab (SObject Bindings vs. Service Bindings) is showing — see docs/design/0017. Part of `PanelState`/`InitialState` for the same reason `ExplorerKey` is: a host-triggered re-render fully remounts the webview (docs/design/0011), so a purely client-side `$state` default would silently reset to SObject Bindings on every rescan/write instead of staying on whichever sub-tab the user actually picked. */
+export type ApplicationFactoryTab = 'sobject' | 'service';
+
 export type ApplicationFactoryData = {
     rows: At4dxBindingRow[];
     issues: BindingIssue[];
@@ -44,6 +47,8 @@ export type InitialState = {
         rules: DomainProcessBindingRules;
     }>;
     applicationFactory: ExplorerViewState<ApplicationFactoryData>;
+    /** Which Application Factory sub-tab was last selected — defaults to `'sobject'` when absent (a fresh panel, before either sub-tab has ever been explicitly chosen). See `ApplicationFactoryTab`. */
+    applicationFactoryTab?: ApplicationFactoryTab;
     /**
      * Both explorers read the same `BindingSource` (see docs/design/0016's "one panel, not two"
      * decision), known as soon as `extension.ts`'s `pickBindingSource` resolves — before either

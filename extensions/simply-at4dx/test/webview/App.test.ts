@@ -75,20 +75,20 @@ describe('App — explorer tab strip', () => {
         expect(document.querySelector('.explorer-tab-badge')).toBeNull();
     });
 
-    it('posts selectExplorer (applicationFactory) when the SObject Bindings tab is clicked', async () => {
+    it('posts selectExplorer (applicationFactory, afTab: sobject) when the SObject Bindings tab is clicked', async () => {
         render(App, { props: { initial: state() } });
 
         await fireEvent.click(screen.getByText('SObject Bindings'));
 
-        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory' });
+        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory', afTab: 'sobject' });
     });
 
-    it('posts selectExplorer (applicationFactory) when the Service Bindings tab is clicked', async () => {
+    it('posts selectExplorer (applicationFactory, afTab: service) when the Service Bindings tab is clicked', async () => {
         render(App, { props: { initial: state() } });
 
         await fireEvent.click(screen.getByText('Service Bindings'));
 
-        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory' });
+        expect(postMessage).toHaveBeenCalledWith({ command: 'selectExplorer', explorer: 'applicationFactory', afTab: 'service' });
     });
 
     it('does not post selectExplorer when clicking the already-active tab', async () => {
@@ -105,6 +105,22 @@ describe('App — explorer tab strip', () => {
         await fireEvent.click(screen.getByText('Service Bindings'));
 
         expect(postMessage).not.toHaveBeenCalled();
+    });
+
+    it('opens on the Service Bindings tab, not SObject Bindings, when initial.applicationFactoryTab is service — regression test for a full re-render (e.g. after a write) losing track of which sub-tab was showing', () => {
+        render(App, {
+            props: {
+                initial: state({
+                    active: 'applicationFactory',
+                    applicationFactoryTab: 'service',
+                    applicationFactory: { kind: 'data', rows: [afRow()], issues: [], rules: {} as ApplicationFactoryRules, standardObjects: [], fieldSetInclusions: [], fieldSetInclusionIssues: [], fieldSetInclusionRules: {} as ApplicationFactoryRules },
+                }),
+            },
+        });
+
+        expect(screen.getByText('PricingServiceImpl')).toBeTruthy();
+        const serviceTab = screen.getByText('Service Bindings').closest('button');
+        expect(serviceTab?.getAttribute('aria-selected')).toBe('true');
     });
 });
 

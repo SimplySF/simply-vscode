@@ -47,6 +47,9 @@ function getNonce(): string {
 
 type ExplorerKey = 'domainProcess' | 'applicationFactory';
 
+/** Which Application Factory sub-tab (SObject Bindings vs. Service Bindings) is showing — mirrors `src/webview/types.ts`'s own `ApplicationFactoryTab`. Kept host-side (not just the webview's client `$state`) for the same reason `active` is: `render()` fully remounts the webview, which would otherwise silently reset the sub-tab back to SObject Bindings on every rescan or write. */
+type ApplicationFactoryTab = 'sobject' | 'service';
+
 type DomainProcessData = {
     rows: DomainProcessBindingRow[];
     issues: DomainProcessBindingIssue[];
@@ -120,6 +123,7 @@ type SequenceBatchResult = { savedCount: number; totalCount: number; failed?: { 
  */
 type PanelState = {
     active: ExplorerKey;
+    applicationFactoryTab: ApplicationFactoryTab;
     domainProcess: ExplorerState<DomainProcessData>;
     applicationFactory: ExplorerState<ApplicationFactoryData>;
     target?: BindingSource;
@@ -127,7 +131,7 @@ type PanelState = {
 
 /** SObject Bindings (the `applicationFactory` explorer's own default sub-tab — see `App.svelte`'s `afTab`) is the panel's default view — see docs/design/0017. Domain Process Bindings still scans eagerly regardless (`extension.ts`'s `showExplorer`), so switching to it never re-triggers a scan; Application Factory scans lazily once `setData` hands over the `target` it needs — see `triggerApplicationFactoryScanIfNeeded`. */
 function initialPanelState(): PanelState {
-    return { active: 'applicationFactory', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
+    return { active: 'applicationFactory', applicationFactoryTab: 'sobject', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
 }
 
 /**
@@ -202,6 +206,7 @@ function sourceLabel(target: BindingSource): string {
 function toInitialState(state: PanelState, extra?: { lastBatchResult?: SequenceBatchResult }): unknown {
     return {
         active: state.active,
+        applicationFactoryTab: state.applicationFactoryTab,
         domainProcess: state.domainProcess,
         applicationFactory: state.applicationFactory,
         isLocalScan: state.target ? state.target.kind === 'source' : undefined,
@@ -317,6 +322,7 @@ export class At4dxExplorerPanel {
                 input?: BindingFormPayload | ApplicationFactoryFormPayload | FieldSetInclusionFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
+                afTab?: ApplicationFactoryTab;
                 updates?: SequenceBatchUpdate[];
             }) => {
                 if (message.command === 'openClass' && message.classToInject) {
@@ -330,7 +336,7 @@ export class At4dxExplorerPanel {
                 } else if (message.command === 'submitApplicationFactoryBinding' && message.mode && message.input) {
                     void this.submitApplicationFactoryBinding(message.mode as 'create' | 'edit', message.input as ApplicationFactoryFormPayload, Boolean(message.force));
                 } else if (message.command === 'selectExplorer' && message.explorer) {
-                    void this.selectExplorer(message.explorer);
+                    void this.selectExplorer(message.explorer, message.afTab);
                 } else if (message.command === 'submitSequenceBatch' && Array.isArray(message.updates)) {
                     void this.submitSequenceBatch(message.updates);
                 } else if (message.command === 'submitFieldSetInclusion' && (message.mode === 'create' || message.mode === 'update') && message.input) {
@@ -369,8 +375,11 @@ export class At4dxExplorerPanel {
      * afterward just flips `active` against already-scanned data, no repeat org round trip. See
      * docs/design/0016.
      */
-    private async selectExplorer(explorer: ExplorerKey): Promise<void> {
+    private async selectExplorer(explorer: ExplorerKey, afTab?: ApplicationFactoryTab): Promise<void> {
         this.state.active = explorer;
+        if (explorer === 'applicationFactory' && afTab) {
+            this.state.applicationFactoryTab = afTab;
+        }
         this.render(this.state);
         await this.triggerApplicationFactoryScanIfNeeded();
     }
