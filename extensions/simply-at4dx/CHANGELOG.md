@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.19.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.18.1...simply-at4dx-v2.19.0) (2026-09-02)
+
+
+### Features
+
+* **simply-at4dx:** add column titles to the SObject Bindings cards ([#53](https://github.com/SimplySF/simply-vscode/issues/53)) ([d6d21b3](https://github.com/SimplySF/simply-vscode/commit/d6d21b39b1b28f2defac664ee084c2c78e256ef9))
+
 # [simply-at4dx-v2.18.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.18.0...simply-at4dx-v2.18.1) (2026-09-02)
 
 
