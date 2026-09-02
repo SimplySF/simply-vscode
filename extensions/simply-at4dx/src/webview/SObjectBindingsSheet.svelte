@@ -212,6 +212,15 @@
 
     <div class="sr-only" aria-live="polite">{liveMessage}</div>
 
+    <div class="sb-row sb-col-header">
+        <span>Type</span>
+        <span>Class</span>
+        <span></span>
+        <span>Priority</span>
+        <span>Status</span>
+        <span></span>
+    </div>
+
     <div class="sb-sheet">
         {#each orderedCards as card (card.sobject)}
             {@const uow = unitOfWorkRow(card)}
