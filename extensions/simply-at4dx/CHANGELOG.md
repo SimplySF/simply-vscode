@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.19.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.19.0...simply-at4dx-v2.19.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** repeat SObject Bindings column titles on every card ([#54](https://github.com/SimplySF/simply-vscode/issues/54)) ([c23bd4e](https://github.com/SimplySF/simply-vscode/commit/c23bd4ea96b9b962e077616e2d42f79c83046cdc)), closes [#53](https://github.com/SimplySF/simply-vscode/issues/53)
+
 # [simply-at4dx-v2.19.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.18.1...simply-at4dx-v2.19.0) (2026-09-02)
 
 
