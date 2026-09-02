@@ -54,6 +54,7 @@ refactors that keep the observable behavior identical.
 | [0015](0015-sequence-prefix-grouping.md) | Sequence-Prefix Grouping in the Bindings List | Implemented |
 | [0016](0016-at4dx-application-factory-binding-explorer.md) | AT4DX Application Factory Binding Explorer | Implemented |
 | [0017](0017-at4dx-bindings-redesign.md) | AT4DX Bindings Redesign | Planned (Stage 4 of 4, pending PR) |
+| [0018](0018-at4dx-platform-event-subscription-tab.md) | AT4DX Platform Events Tab | Implemented (automated tests only, manual pass pending) |
 
 ## Template
 

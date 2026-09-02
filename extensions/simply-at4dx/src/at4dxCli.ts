@@ -12,8 +12,13 @@ import type {
     DomainProcessBindingRow,
     DomainProcessBindingRuleInfo,
     DomainProcessLocalScanResult,
-    SetDomainProcessBindingInput,
-    SetDomainProcessBindingTarget,
+    // Renamed upstream (`simply-aep-core` v0.10: "rename domain-process-binding set to update", for
+    // consistency with the other three families' `update*` naming) — aliased back to this file's own
+    // pre-existing `SetDomainProcessBindingInput`/`Target` names rather than renaming every call site,
+    // since "set" is this extension's own established verb for a Domain Process binding edit
+    // (`setBinding`, `submitBinding`'s `'edit'` mode) and isn't part of this doc's own scope.
+    UpdateDomainProcessBindingInput as SetDomainProcessBindingInput,
+    UpdateDomainProcessBindingTarget as SetDomainProcessBindingTarget,
 } from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
 import { redactProxyUrl, truncate, type Logger } from './logger';
 
@@ -23,7 +28,7 @@ export type {
     DomainProcessBindingSObjectField,
     DomainProcessType,
     ProcessContext,
-    SetDomainProcessBindingInput,
+    UpdateDomainProcessBindingInput as SetDomainProcessBindingInput,
     TriggerOperation,
 } from '@simplysf/simply-aep-core' with { 'resolution-mode': 'import' };
 
@@ -242,7 +247,8 @@ export async function createBinding(input: CreateDomainProcessBindingInput, targ
  * `target`. Same blocked-vs-thrown contract as {@link createBinding}.
  */
 export async function setBinding(input: SetDomainProcessBindingInput, target: BindingSource, logger?: Logger): Promise<WriteOutcome> {
-    const { setDomainProcessBinding, DomainProcessBindingWriteError } = await import('@simplysf/simply-aep-core');
+    // Renamed upstream to `updateDomainProcessBinding` — aliased locally, see this file's own import comment above.
+    const { updateDomainProcessBinding: setDomainProcessBinding, DomainProcessBindingWriteError } = await import('@simplysf/simply-aep-core');
     const { summary, logError } = callLogging(logger, 'set', target);
     logger?.log(`updating binding ${input.developerName}`, { verbose: true });
 

@@ -35,6 +35,19 @@ import {
     type UpdateFieldSetInclusionInput,
 } from './applicationFactoryCli';
 import type { Logger } from './logger';
+import {
+    createSubscription,
+    getPlatformEventSubscriptions,
+    simulatePlatformEventDistribution,
+    updateSubscription,
+    type MalformedPlatformEventSubscriptionRecord,
+    type MatcherRule,
+    type PlatformEventDistributionInput,
+    type PlatformEventSubscriptionIssue,
+    type PlatformEventSubscriptionIssueRule,
+    type PlatformEventSubscriptionRuleInfo,
+    type RawPlatformEventSubscriptionRecord,
+} from './platformEventCli';
 
 function getNonce(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -45,7 +58,7 @@ function getNonce(): string {
     return text;
 }
 
-type ExplorerKey = 'domainProcess' | 'applicationFactory';
+type ExplorerKey = 'domainProcess' | 'applicationFactory' | 'platformEvents';
 
 /** Which Application Factory sub-tab (SObject Bindings vs. Service Bindings) is showing — mirrors `src/webview/types.ts`'s own `ApplicationFactoryTab`. Kept host-side (not just the webview's client `$state`) for the same reason `active` is: `render()` fully remounts the webview, which would otherwise silently reset the sub-tab back to SObject Bindings on every rescan or write. */
 type ApplicationFactoryTab = 'sobject' | 'service';
@@ -100,6 +113,31 @@ type ApplicationFactoryFormPayload = {
     sequence?: number;
 };
 
+/** Platform Event Distributor subscriptions (`PlatformEvents_Subscription__mdt`) — see docs/design/0018. */
+type PlatformEventsData = {
+    records: RawPlatformEventSubscriptionRecord[];
+    malformed: MalformedPlatformEventSubscriptionRecord[];
+    issues: PlatformEventSubscriptionIssue[];
+    rules: Record<PlatformEventSubscriptionIssueRule, PlatformEventSubscriptionRuleInfo>;
+};
+
+/**
+ * `PlatformEventForm`'s field values as posted on submit (docs/design/0018). `eventCategory`/`event` are
+ * only ever present when the selected `matcherRule` dereferences them — the form builds this as a
+ * whitelist, same reasoning `ApplicationFactoryFormPayload` already documents for its own per-type
+ * fields.
+ */
+type PlatformEventFormPayload = {
+    developerName: string;
+    label?: string;
+    eventBus: string;
+    consumer: string;
+    matcherRule: MatcherRule;
+    eventCategory?: string;
+    event?: string;
+    executeSynchronous?: boolean;
+};
+
 /** One explorer's own slice of panel state. */
 type ExplorerState<T> = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'empty' } | ({ kind: 'data' } & T);
 
@@ -126,12 +164,19 @@ type PanelState = {
     applicationFactoryTab: ApplicationFactoryTab;
     domainProcess: ExplorerState<DomainProcessData>;
     applicationFactory: ExplorerState<ApplicationFactoryData>;
+    platformEvents: ExplorerState<PlatformEventsData>;
     target?: BindingSource;
 };
 
-/** SObject Bindings (the `applicationFactory` explorer's own default sub-tab — see `App.svelte`'s `afTab`) is the panel's default view — see docs/design/0017. Domain Process Bindings still scans eagerly regardless (`extension.ts`'s `showExplorer`), so switching to it never re-triggers a scan; Application Factory scans lazily once `setData` hands over the `target` it needs — see `triggerApplicationFactoryScanIfNeeded`. */
+/** SObject Bindings (the `applicationFactory` explorer's own default sub-tab — see `App.svelte`'s `afTab`) is the panel's default view — see docs/design/0017. Domain Process Bindings still scans eagerly regardless (`extension.ts`'s `showExplorer`), so switching to it never re-triggers a scan; Application Factory and Platform Events both scan lazily once `setData` hands over the `target` they need — see `triggerApplicationFactoryScanIfNeeded`/`triggerPlatformEventsScanIfNeeded`. */
 function initialPanelState(): PanelState {
-    return { active: 'applicationFactory', applicationFactoryTab: 'sobject', domainProcess: { kind: 'loading' }, applicationFactory: { kind: 'loading' } };
+    return {
+        active: 'applicationFactory',
+        applicationFactoryTab: 'sobject',
+        domainProcess: { kind: 'loading' },
+        applicationFactory: { kind: 'loading' },
+        platformEvents: { kind: 'loading' },
+    };
 }
 
 /**
@@ -209,6 +254,7 @@ function toInitialState(state: PanelState, extra?: { lastBatchResult?: SequenceB
         applicationFactoryTab: state.applicationFactoryTab,
         domainProcess: state.domainProcess,
         applicationFactory: state.applicationFactory,
+        platformEvents: state.platformEvents,
         isLocalScan: state.target ? state.target.kind === 'source' : undefined,
         sourceLabel: state.target ? sourceLabel(state.target) : undefined,
         lastBatchResult: extra?.lastBatchResult,
@@ -319,11 +365,12 @@ export class At4dxExplorerPanel {
                 classToInject?: string;
                 index?: number;
                 mode?: 'create' | 'edit' | 'update';
-                input?: BindingFormPayload | ApplicationFactoryFormPayload | FieldSetInclusionFormPayload;
+                input?: BindingFormPayload | ApplicationFactoryFormPayload | FieldSetInclusionFormPayload | PlatformEventFormPayload;
                 force?: boolean;
                 explorer?: ExplorerKey;
                 afTab?: ApplicationFactoryTab;
                 updates?: SequenceBatchUpdate[];
+                event?: PlatformEventDistributionInput;
             }) => {
                 if (message.command === 'openClass' && message.classToInject) {
                     void openApexClass(message.classToInject);
@@ -341,6 +388,12 @@ export class At4dxExplorerPanel {
                     void this.submitSequenceBatch(message.updates);
                 } else if (message.command === 'submitFieldSetInclusion' && (message.mode === 'create' || message.mode === 'update') && message.input) {
                     void this.submitFieldSetInclusion(message.mode, message.input as FieldSetInclusionFormPayload, Boolean(message.force));
+                } else if (message.command === 'openPlatformEventIssue' && typeof message.index === 'number') {
+                    void this.openPlatformEventIssue(message.index);
+                } else if (message.command === 'submitPlatformEvent' && message.mode && message.input) {
+                    void this.submitPlatformEvent(message.mode as 'create' | 'edit', message.input as PlatformEventFormPayload, Boolean(message.force));
+                } else if (message.command === 'simulatePlatformEvent' && message.event) {
+                    void this.simulatePlatformEvent(message.event);
                 }
             },
             null,
@@ -382,6 +435,7 @@ export class At4dxExplorerPanel {
         }
         this.render(this.state);
         await this.triggerApplicationFactoryScanIfNeeded();
+        await this.triggerPlatformEventsScanIfNeeded();
     }
 
     /**
@@ -433,6 +487,32 @@ export class At4dxExplorerPanel {
         return rows.length === 0 && issues.length === 0 && fieldSetInclusions.length === 0
             ? { kind: 'empty' }
             : { kind: 'data', rows, issues, rules, standardObjects, fieldSetInclusions, fieldSetInclusionIssues, fieldSetInclusionRules };
+    }
+
+    /**
+     * Starts the Platform Events scan the first time it's needed — the user's first switch to that tab.
+     * Unlike Application Factory, Platform Events isn't the panel's default tab (see `initialPanelState`),
+     * so this is only ever kicked off from `selectExplorer`; a no-op once the scan has started or
+     * finished, or before `target` is known — same shape as `triggerApplicationFactoryScanIfNeeded`. See
+     * docs/design/0018.
+     */
+    private async triggerPlatformEventsScanIfNeeded(): Promise<void> {
+        if (this.state.active !== 'platformEvents' || this.state.platformEvents.kind !== 'loading' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+        try {
+            this.state.platformEvents = await this.scanPlatformEvents(target);
+        } catch (error) {
+            this.state.platformEvents = { kind: 'error', message: formatReadError(error, 'reading platform event subscriptions') };
+        }
+        this.render(this.state);
+    }
+
+    /** The one scan every Platform Events write handler below re-runs after a successful write, and `triggerPlatformEventsScanIfNeeded` runs once on the tab's first visit. See docs/design/0018. */
+    private async scanPlatformEvents(target: BindingSource): Promise<ExplorerState<PlatformEventsData>> {
+        const { records, malformed, issues, rules } = await getPlatformEventSubscriptions(target, this.logger);
+        return records.length === 0 && malformed.length === 0 ? { kind: 'empty' } : { kind: 'data', records, malformed, issues, rules };
     }
 
     /**
@@ -575,6 +655,64 @@ export class At4dxExplorerPanel {
         }
     }
 
+    /**
+     * Handles the webview's `submitPlatformEvent` message (docs/design/0018). Same write-then-rescan
+     * contract as `submitApplicationFactoryBinding`, against `createSubscription`/`updateSubscription`.
+     */
+    private async submitPlatformEvent(mode: 'create' | 'edit', input: PlatformEventFormPayload, force: boolean): Promise<void> {
+        if (this.state.platformEvents.kind !== 'data' || !this.state.target) {
+            return;
+        }
+        const target = this.state.target;
+
+        try {
+            const outcome =
+                mode === 'create'
+                    ? await createSubscription({ ...input, force }, target, this.logger)
+                    : await updateSubscription({ ...input, force }, target, this.logger);
+
+            if (outcome.kind === 'blocked') {
+                void this.panel.webview.postMessage({ command: 'writeBlocked', issues: outcome.issues });
+                return;
+            }
+
+            const platformEvents = await this.scanPlatformEvents(target);
+            this.render({ ...this.state, platformEvents });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: formatWriteError(error) });
+        }
+    }
+
+    /**
+     * Handles the webview's `simulatePlatformEvent` message (the match simulator, 7b — docs/design/0018).
+     * Unlike every write above, this is read-only and needs no rescan: `resolvePlatformEventDistribution`
+     * is a pure function over the records already in `this.state.platformEvents`, so this posts the
+     * result straight back without ever calling `render()` — the same "targeted message, still-mounted
+     * view" pattern `submitFieldSetInclusion` established for a write that shouldn't remount the panel,
+     * applying even more directly here since there's nothing to write at all.
+     */
+    private async simulatePlatformEvent(input: PlatformEventDistributionInput): Promise<void> {
+        if (this.state.platformEvents.kind !== 'data') {
+            return;
+        }
+        try {
+            const result = await simulatePlatformEventDistribution(input, this.state.platformEvents.records);
+            void this.panel.webview.postMessage({ command: 'simulateResult', result });
+        } catch (error) {
+            void this.panel.webview.postMessage({ command: 'writeError', message: formatReadError(error, 'simulating platform event distribution') });
+        }
+    }
+
+    private async openPlatformEventIssue(index: number): Promise<void> {
+        if (this.state.platformEvents.kind !== 'data') {
+            return;
+        }
+        const issue = this.state.platformEvents.issues[index];
+        if (issue) {
+            await openPlatformEventSubscriptionFile(issue);
+        }
+    }
+
     private render(state: PanelState, extra?: { lastBatchResult?: SequenceBatchResult }): void {
         this.state = state;
         this.panel.webview.html = buildShellHtml(state, getNonce(), this.webviewJsUri, extra);
@@ -651,6 +789,23 @@ async function openApplicationFactoryBindingFile(issue: BindingIssue): Promise<v
     } else if (issue.developerName) {
         const localObjectName = await applicationFactoryLocalObjectName(issue.bindingType);
         const files = await vscode.workspace.findFiles(`**/${localObjectName}.${issue.developerName}.md-meta.xml`, '**/node_modules/**', 1);
+        uri = files[0];
+    }
+    if (!uri) {
+        void vscode.window.showWarningMessage(`Could not find the metadata file for ${issue.developerName ?? 'this issue'}.`);
+        return;
+    }
+    const document = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+}
+
+/** Same shape as `openBindingFile`, for a `PlatformEventSubscriptionIssue` — a single fixed local object name (`PlatformEvents_Subscription`), unlike Application Factory's per-`bindingType` one. See docs/design/0018. */
+async function openPlatformEventSubscriptionFile(issue: PlatformEventSubscriptionIssue): Promise<void> {
+    let uri: vscode.Uri | undefined;
+    if (issue.filePath) {
+        uri = vscode.Uri.file(issue.filePath);
+    } else if (issue.developerName) {
+        const files = await vscode.workspace.findFiles(`**/PlatformEvents_Subscription.${issue.developerName}.md-meta.xml`, '**/node_modules/**', 1);
         uri = files[0];
     }
     if (!uri) {

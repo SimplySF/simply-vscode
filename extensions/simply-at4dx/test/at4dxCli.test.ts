@@ -48,7 +48,9 @@ vi.mock('@simplysf/simply-aep-core', () => ({
     validateDomainProcessBindings: validateDomainProcessBindingsMock,
     DOMAIN_PROCESS_BINDING_RULES,
     createDomainProcessBinding: createDomainProcessBindingMock,
-    setDomainProcessBinding: setDomainProcessBindingMock,
+    // Renamed upstream from `setDomainProcessBinding` (`simply-aep-core` v0.10) — `at4dxCli.ts`'s own
+    // `setBinding` wrapper aliases it back locally, see that file's import comment.
+    updateDomainProcessBinding: setDomainProcessBindingMock,
     DomainProcessBindingWriteError,
 }));
 

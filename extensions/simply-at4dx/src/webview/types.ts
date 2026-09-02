@@ -13,12 +13,34 @@ export type {
 export type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, BindingIssueRule, BindingType, WritableBindingType } from '../applicationFactoryCli';
 // Same reasoning again, for field set inclusions — see docs/design/0017's Stage 4.
 export type { FieldSetInclusionIssue, FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo, RawFieldSetInclusionRecord } from '../applicationFactoryCli';
+// Same reasoning again, for Platform Event Distributor subscriptions — see docs/design/0018.
+export type {
+    MalformedPlatformEventSubscriptionRecord,
+    MatcherRule,
+    PlatformEventDistributionInput,
+    PlatformEventDistributionMatch,
+    PlatformEventDistributionMiss,
+    PlatformEventDistributionMissReason,
+    PlatformEventDistributionResult,
+    PlatformEventSubscriptionIssue,
+    PlatformEventSubscriptionIssueRule,
+    PlatformEventSubscriptionRuleInfo,
+    RawPlatformEventSubscriptionRecord,
+} from '../platformEventCli';
 
 import type { DomainProcessBindingIssue, DomainProcessBindingRow, DomainProcessBindingRules, DomainProcessType, ProcessContext, TriggerOperation } from '../at4dxCli';
 import type { ApplicationFactoryRules, At4dxBindingRow, BindingIssue, FieldSetInclusionIssue, FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo, RawFieldSetInclusionRecord, WritableBindingType } from '../applicationFactoryCli';
+import type {
+    MalformedPlatformEventSubscriptionRecord,
+    MatcherRule,
+    PlatformEventSubscriptionIssue,
+    PlatformEventSubscriptionIssueRule,
+    PlatformEventSubscriptionRuleInfo,
+    RawPlatformEventSubscriptionRecord,
+} from '../platformEventCli';
 
-/** Which explorer the tab strip has active — see docs/design/0016. Part of `PanelState`/`InitialState`, not client-side state, so a write-triggered re-render doesn't bounce the user back to the Domain Process tab. */
-export type ExplorerKey = 'domainProcess' | 'applicationFactory';
+/** Which explorer the tab strip has active — see docs/design/0016 and, for `'platformEvents'`, docs/design/0018. Part of `PanelState`/`InitialState`, not client-side state, so a write-triggered re-render doesn't bounce the user back to the Domain Process tab. */
+export type ExplorerKey = 'domainProcess' | 'applicationFactory' | 'platformEvents';
 
 /** Which Application Factory sub-tab (SObject Bindings vs. Service Bindings) is showing — see docs/design/0017. Part of `PanelState`/`InitialState` for the same reason `ExplorerKey` is: a host-triggered re-render fully remounts the webview (docs/design/0011), so a purely client-side `$state` default would silently reset to SObject Bindings on every rescan/write instead of staying on whichever sub-tab the user actually picked. */
 export type ApplicationFactoryTab = 'sobject' | 'service';
@@ -35,6 +57,14 @@ export type ApplicationFactoryData = {
     fieldSetInclusionRules: Record<FieldSetInclusionIssueRule, FieldSetInclusionRuleInfo>;
 };
 
+/** Platform Event Distributor subscriptions (`PlatformEvents_Subscription__mdt`) — see docs/design/0018. */
+export type PlatformEventsData = {
+    records: RawPlatformEventSubscriptionRecord[];
+    malformed: MalformedPlatformEventSubscriptionRecord[];
+    issues: PlatformEventSubscriptionIssue[];
+    rules: Record<PlatformEventSubscriptionIssueRule, PlatformEventSubscriptionRuleInfo>;
+};
+
 /** One explorer's own slice of panel state — mirrors `at4dxExplorerPanel.ts`'s `ExplorerState<T>`. */
 export type ExplorerViewState<T> = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'empty' } | ({ kind: 'data' } & T);
 
@@ -47,6 +77,8 @@ export type InitialState = {
         rules: DomainProcessBindingRules;
     }>;
     applicationFactory: ExplorerViewState<ApplicationFactoryData>;
+    /** Platform Event Distributor subscriptions — see docs/design/0018. */
+    platformEvents: ExplorerViewState<PlatformEventsData>;
     /** Which Application Factory sub-tab was last selected — defaults to `'sobject'` when absent (a fresh panel, before either sub-tab has ever been explicitly chosen). See `ApplicationFactoryTab`. */
     applicationFactoryTab?: ApplicationFactoryTab;
     /**
@@ -144,6 +176,34 @@ export type ApplicationFactoryFormInitial = Partial<{
     sequence: number;
 }>;
 
+/**
+ * `PlatformEventForm`'s field values as posted on submit (docs/design/0018) — `developerName`/`eventBus`/
+ * `consumer`/`matcherRule` are always sent; `eventCategory`/`event` are sent only when the selected
+ * matcher rule dereferences them (see `lib/platformEventView.ts`'s `MATCHER_RULE_REQUIRED_FIELDS`).
+ */
+export type PlatformEventFormPayload = {
+    developerName: string;
+    label?: string;
+    eventBus: string;
+    consumer: string;
+    matcherRule: MatcherRule;
+    eventCategory?: string;
+    event?: string;
+    executeSynchronous?: boolean;
+};
+
+/** What `PlatformEventForm` can be opened with — either the toolbar's "+ New Subscription" (create, empty) or a full `RawPlatformEventSubscriptionRecord` (edit). Every field optional since a create prefill supplies none of them. */
+export type PlatformEventFormInitial = Partial<{
+    developerName: string;
+    label: string;
+    eventBus: string;
+    consumer: string;
+    matcherRule: MatcherRule;
+    eventCategory: string;
+    event: string;
+    executeSynchronous: boolean;
+}>;
+
 export type FamilyKey = 'Created' | 'Updated' | 'Deleted' | 'Undeleted' | 'DomainMethod';
 
 /** What `BindingForm` can be opened with — either the toolbar's current selection (create) or a full `DomainProcessBindingRow` (edit). Every field optional since a create prefill only ever supplies a subset. */
@@ -175,9 +235,10 @@ export type BindingFormInitial = Partial<{
 export type IndexedIssue<I = DomainProcessBindingIssue> = { issue: I; index: number };
 
 /**
- * The minimal shape `IssueEntry.svelte` needs to render an issue, satisfied structurally by both
- * `DomainProcessBindingIssue` (`sobject`) and `BindingIssue` (`key`) without either one needing to
- * change — see docs/design/0016's note on generalizing `bindingView.ts`'s issue helpers.
+ * The minimal shape `IssueEntry.svelte` needs to render an issue, satisfied structurally by
+ * `DomainProcessBindingIssue` (`sobject`), `BindingIssue` (`key`), and `PlatformEventSubscriptionIssue`
+ * (`eventBus`) without any of them needing to change — see docs/design/0016's note on generalizing
+ * `bindingView.ts`'s issue helpers, extended for docs/design/0018.
  */
 export type IssueLike = {
     severity: 'error' | 'warning';
@@ -186,6 +247,7 @@ export type IssueLike = {
     developerName?: string;
     sobject?: string;
     key?: string;
+    eventBus?: string;
     source: string;
     filePath?: string;
 };

@@ -9,7 +9,7 @@
     }: { entry: IndexedIssue<IssueLike>; title: string; clickable: boolean; onOpen: (index: number) => void } = $props();
 
     let issue = $derived(entry.issue);
-    let meta = $derived([issue.source, issue.sobject ?? issue.key].filter((part): part is string => Boolean(part)));
+    let meta = $derived([issue.source, issue.sobject ?? issue.key ?? issue.eventBus].filter((part): part is string => Boolean(part)));
 
     function open(): void {
         onOpen(entry.index);
