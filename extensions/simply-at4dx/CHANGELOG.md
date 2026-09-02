@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.18.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.18.0...simply-at4dx-v2.18.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** flatten the explorer tab active indicator ([#52](https://github.com/SimplySF/simply-vscode/issues/52)) ([a1b7a7d](https://github.com/SimplySF/simply-vscode/commit/a1b7a7db21364d978209b6c2922ea34131ba6c32))
+
 # [simply-at4dx-v2.18.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.6...simply-at4dx-v2.18.0) (2026-09-02)
 
 
