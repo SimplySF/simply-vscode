@@ -24,8 +24,7 @@
             ],
             "outFiles": [
                 "${workspaceFolder}/extensions/simply-at4dx/dist/**/*.js"
-            ],
-            "preLaunchTask": "npm: watch - extensions/simply-at4dx"
+            ]
         }
     ]
 }
