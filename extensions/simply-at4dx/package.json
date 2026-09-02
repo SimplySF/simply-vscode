@@ -74,6 +74,6 @@
     },
     "dependencies": {
         "@salesforce/core": "^9.1.7",
-        "@simplysf/simply-aep-core": "^0.13.0"
+        "@simplysf/simply-aep-core": "^0.13.1"
     }
 }
