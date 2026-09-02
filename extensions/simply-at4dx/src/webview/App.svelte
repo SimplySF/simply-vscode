@@ -1325,6 +1325,15 @@
         height: 38px;
         border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
     }
+    :global(.sb-col-header) {
+        height: 24px;
+        border-top: none;
+        font-size: 0.78em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--vscode-descriptionForeground);
+    }
     :global(.sb-row-gap) {
         display: grid;
         grid-template-columns: 104px minmax(0, 1fr) 30px;
