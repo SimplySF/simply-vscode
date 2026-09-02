@@ -153,6 +153,14 @@
             {#if commitPosition}commits {commitPosition} · {/if}{card.bindingCount} binding{card.bindingCount === 1 ? '' : 's'}
         </span>
     </div>
+    <div class="sb-row sb-col-header">
+        <span>Type</span>
+        <span>Class</span>
+        <span></span>
+        <span>Priority</span>
+        <span>Status</span>
+        <span></span>
+    </div>
     {#each card.rows as cardRow, i (i)}
         {#if cardRow.kind === 'selector'}
             {@const row = cardRow.row}
