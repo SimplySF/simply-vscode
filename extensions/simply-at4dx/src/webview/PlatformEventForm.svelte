@@ -26,7 +26,7 @@
     let developerName = $state(initial.developerName ?? '');
     let label = $state(initial.label ?? '');
     let eventBus = $state(initial.eventBus ?? '');
-    let matcherRule = $state<MatcherRule>(initial.matcherRule ?? 'MatchCategoryAndEvent');
+    let matcherRule = $state<MatcherRule>(initial.matcherRule ?? 'MatchEventBusAndCategoryAndEventName');
     let eventCategory = $state(initial.eventCategory ?? '');
     let event = $state(initial.event ?? '');
     let consumer = $state(initial.consumer ?? '');

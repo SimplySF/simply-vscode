@@ -21,7 +21,7 @@ function record(overrides: Partial<RawPlatformEventSubscriptionRecord> = {}): Ra
         label: 'Account Tier Recalc',
         eventBus: 'Sales_Event__e',
         consumer: 'AccountTierRecalcConsumer',
-        matcherRule: 'MatchCategoryAndEvent',
+        matcherRule: 'MatchEventBusAndCategoryAndEventName',
         eventCategory: 'Account',
         event: 'TierChanged',
         isActive: true,
@@ -37,35 +37,35 @@ describe('MATCHER_RULE_REQUIRED_FIELDS / missingMatchField', () => {
         expect(missingMatchField(record({ matcherRule: 'MatchEventBus', eventCategory: undefined, event: undefined }))).toBeUndefined();
     });
 
-    it('MatchCategory needs only eventCategory', () => {
-        expect(missingMatchField(record({ matcherRule: 'MatchCategory', eventCategory: undefined }))).toBe('eventCategory');
-        expect(missingMatchField(record({ matcherRule: 'MatchCategory', eventCategory: 'Account', event: undefined }))).toBeUndefined();
+    it('MatchEventBusAndCategory needs only eventCategory', () => {
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndCategory', eventCategory: undefined }))).toBe('eventCategory');
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndCategory', eventCategory: 'Account', event: undefined }))).toBeUndefined();
     });
 
-    it('MatchEvent needs only event', () => {
-        expect(missingMatchField(record({ matcherRule: 'MatchEvent', event: undefined }))).toBe('event');
-        expect(missingMatchField(record({ matcherRule: 'MatchEvent', event: 'TierChanged', eventCategory: undefined }))).toBeUndefined();
+    it('MatchEventBusAndEventName needs only event', () => {
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndEventName', event: undefined }))).toBe('event');
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndEventName', event: 'TierChanged', eventCategory: undefined }))).toBeUndefined();
     });
 
-    it('MatchCategoryAndEvent needs both — reports the first missing one', () => {
-        expect(missingMatchField(record({ matcherRule: 'MatchCategoryAndEvent', eventCategory: undefined, event: 'TierChanged' }))).toBe('eventCategory');
-        expect(missingMatchField(record({ matcherRule: 'MatchCategoryAndEvent', eventCategory: 'Account', event: undefined }))).toBe('event');
-        expect(missingMatchField(record({ matcherRule: 'MatchCategoryAndEvent', eventCategory: 'Account', event: 'TierChanged' }))).toBeUndefined();
+    it('MatchEventBusAndCategoryAndEventName needs both — reports the first missing one', () => {
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: undefined, event: 'TierChanged' }))).toBe('eventCategory');
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: 'Account', event: undefined }))).toBe('event');
+        expect(missingMatchField(record({ matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: 'Account', event: 'TierChanged' }))).toBeUndefined();
     });
 });
 
 describe('eventColumnState', () => {
     it('shows the real value when the rule dereferences event and it is present', () => {
-        expect(eventColumnState(record({ matcherRule: 'MatchEvent', event: 'TierChanged' }))).toEqual({ kind: 'value', text: 'TierChanged' });
+        expect(eventColumnState(record({ matcherRule: 'MatchEventBusAndEventName', event: 'TierChanged' }))).toEqual({ kind: 'value', text: 'TierChanged' });
     });
 
     it('shows "any" when the rule does not dereference event', () => {
-        expect(eventColumnState(record({ matcherRule: 'MatchCategory', event: undefined }))).toEqual({ kind: 'any' });
+        expect(eventColumnState(record({ matcherRule: 'MatchEventBusAndCategory', event: undefined }))).toEqual({ kind: 'any' });
         expect(eventColumnState(record({ matcherRule: 'MatchEventBus', event: undefined }))).toEqual({ kind: 'any' });
     });
 
     it('shows the blank hazard when the rule dereferences event and it is empty', () => {
-        expect(eventColumnState(record({ matcherRule: 'MatchCategoryAndEvent', event: undefined }))).toEqual({ kind: 'blank' });
+        expect(eventColumnState(record({ matcherRule: 'MatchEventBusAndCategoryAndEventName', event: undefined }))).toEqual({ kind: 'blank' });
     });
 });
 
@@ -90,14 +90,14 @@ describe('rowStatus', () => {
 
 describe('throwsHazardNote', () => {
     it('names the blank field and suggests dropping it from the rule', () => {
-        const note = throwsHazardNote(record({ matcherRule: 'MatchCategoryAndEvent', eventCategory: 'Opportunity', event: undefined }));
+        const note = throwsHazardNote(record({ matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: 'Opportunity', event: undefined }));
         expect(note?.body).toContain('Event__c');
         expect(note?.body).toContain('Set an event name');
         expect(note?.body).toContain('Bus + Category');
     });
 
     it('suggests MatchEventBus when the only required field is the one that is blank', () => {
-        const note = throwsHazardNote(record({ matcherRule: 'MatchCategory', eventCategory: undefined }));
+        const note = throwsHazardNote(record({ matcherRule: 'MatchEventBusAndCategory', eventCategory: undefined }));
         expect(note?.body).toContain('EventCategory__c');
         expect(note?.body).toContain('Bus only');
     });
@@ -141,7 +141,7 @@ describe('groupPlatformEventSubscriptions', () => {
 describe('issuesByRecordKey / problemCount', () => {
     it('groups issues by developerName + source, and problemCount counts throws/never-fires rows only', () => {
         const records = [
-            record({ developerName: 'Throws', source: 's1', matcherRule: 'MatchEvent', event: undefined }),
+            record({ developerName: 'Throws', source: 's1', matcherRule: 'MatchEventBusAndEventName', event: undefined }),
             record({ developerName: 'NeverFires', source: 's1', matcherRule: 'MatchEventBus', eventCategory: undefined, event: undefined }),
             record({ developerName: 'Fine', source: 's1' }),
         ];
@@ -169,7 +169,7 @@ describe('partitionPlatformEventIssuesBySeverity', () => {
 });
 
 describe('missReasonClause', () => {
-    const records = [record({ developerName: 'X', source: 's1', matcherRule: 'MatchCategoryAndEvent', eventCategory: 'Opportunity', event: undefined })];
+    const records = [record({ developerName: 'X', source: 's1', matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: 'Opportunity', event: undefined })];
 
     function miss(overrides: Partial<PlatformEventDistributionMiss> = {}): PlatformEventDistributionMiss {
         return { developerName: 'X', consumer: 'XConsumer', eventBus: 'Sales_Event__e', reason: 'inactive', source: 's1', ...overrides };
@@ -188,12 +188,12 @@ describe('missReasonClause', () => {
     });
 
     it('no-match — states the record’s own configured match field(s)', () => {
-        const noMatchRecords = [record({ developerName: 'Y', source: 's1', matcherRule: 'MatchCategory', eventCategory: 'Opportunity' })];
+        const noMatchRecords = [record({ developerName: 'Y', source: 's1', matcherRule: 'MatchEventBusAndCategory', eventCategory: 'Opportunity' })];
         expect(missReasonClause(miss({ developerName: 'Y', reason: 'no-match' }), noMatchRecords)).toBe('Category is Opportunity');
     });
 
     it('no-match — both fields when the rule requires both', () => {
-        const both = [record({ developerName: 'Z', source: 's1', matcherRule: 'MatchCategoryAndEvent', eventCategory: 'Opportunity', event: 'Whatever' })];
+        const both = [record({ developerName: 'Z', source: 's1', matcherRule: 'MatchEventBusAndCategoryAndEventName', eventCategory: 'Opportunity', event: 'Whatever' })];
         expect(missReasonClause(miss({ developerName: 'Z', reason: 'no-match' }), both)).toBe('Category is Opportunity, event is Whatever');
     });
 });

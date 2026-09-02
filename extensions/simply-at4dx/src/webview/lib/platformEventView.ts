@@ -5,22 +5,22 @@
  */
 import type { IndexedIssue, MatcherRule, PlatformEventDistributionMiss, PlatformEventSubscriptionIssue, RawPlatformEventSubscriptionRecord } from '../types';
 
-export const ALL_MATCHER_RULES: MatcherRule[] = ['MatchEventBus', 'MatchCategory', 'MatchEvent', 'MatchCategoryAndEvent'];
+export const ALL_MATCHER_RULES: MatcherRule[] = ['MatchEventBus', 'MatchEventBusAndCategory', 'MatchEventBusAndEventName', 'MatchEventBusAndCategoryAndEventName'];
 
 /** The create/edit drawer's dropdown copy — canvas 7c's exact wording, mapped onto the library's real enum values. See docs/design/0018's deviation 1. */
 export const MATCHER_RULE_LABEL: Record<MatcherRule, string> = {
     MatchEventBus: 'Match Event Bus',
-    MatchCategory: 'Match Event Bus and Category',
-    MatchEvent: 'Match Event Bus and Event Name',
-    MatchCategoryAndEvent: 'Match Event Bus and Category and Event Name',
+    MatchEventBusAndCategory: 'Match Event Bus and Category',
+    MatchEventBusAndEventName: 'Match Event Bus and Event Name',
+    MatchEventBusAndCategoryAndEventName: 'Match Event Bus and Category and Event Name',
 };
 
 /** The explorer row's rule-label column — canvas 7a's exact wording ("Bus + Category + Event", etc.). */
 export const MATCHER_RULE_SHORT_LABEL: Record<MatcherRule, string> = {
     MatchEventBus: 'Bus only',
-    MatchCategory: 'Bus + Category',
-    MatchEvent: 'Bus + Event',
-    MatchCategoryAndEvent: 'Bus + Category + Event',
+    MatchEventBusAndCategory: 'Bus + Category',
+    MatchEventBusAndEventName: 'Bus + Event',
+    MatchEventBusAndCategoryAndEventName: 'Bus + Category + Event',
 };
 
 export type MatchField = 'eventCategory' | 'event';
@@ -28,9 +28,9 @@ export type MatchField = 'eventCategory' | 'event';
 /** Which of `eventCategory`/`event` each matcher rule dereferences without a null guard — mirrors `simply-aep-core`'s own `MATCHER_RULE_REQUIRED_FIELDS`-shaped table (not exported by the library, so duplicated here the same way `applicationFactoryView.ts` duplicates `isCustomObjectApiName`). The single source of truth for which drawer fields are required and for the row/miss hazard copy below. */
 export const MATCHER_RULE_REQUIRED_FIELDS: Record<MatcherRule, MatchField[]> = {
     MatchEventBus: [],
-    MatchCategory: ['eventCategory'],
-    MatchEvent: ['event'],
-    MatchCategoryAndEvent: ['eventCategory', 'event'],
+    MatchEventBusAndCategory: ['eventCategory'],
+    MatchEventBusAndEventName: ['event'],
+    MatchEventBusAndCategoryAndEventName: ['eventCategory', 'event'],
 };
 
 const MATCH_FIELD_API_NAME: Record<MatchField, string> = { eventCategory: 'EventCategory__c', event: 'Event__c' };

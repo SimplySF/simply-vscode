@@ -65,7 +65,7 @@ beforeEach(async () => {
 
 describe('getPlatformEventSubscriptions — local source', () => {
     it('scans, validates with no eventBusFields, and returns records/malformed/issues/rules', async () => {
-        const records = [{ developerName: 'AccountTierRecalc', eventBus: 'Sales_Event__e', consumer: 'AccountTierRecalcConsumer', matcherRule: 'MatchCategory', isActive: true, executeSynchronous: false, source: 'force-app' }];
+        const records = [{ developerName: 'AccountTierRecalc', eventBus: 'Sales_Event__e', consumer: 'AccountTierRecalcConsumer', matcherRule: 'MatchEventBusAndCategory', isActive: true, executeSynchronous: false, source: 'force-app' }];
         scanLocalPlatformEventSubscriptionsMock.mockReturnValue({ records, malformed: [] });
         validatePlatformEventSubscriptionsMock.mockReturnValue([{ severity: 'error', rule: 'duplicate-consumer' }]);
 
@@ -146,7 +146,7 @@ describe('simulatePlatformEventDistribution', () => {
 });
 
 describe('createSubscription', () => {
-    const input = { developerName: 'AccountTierRecalc', eventBus: 'Sales_Event__e', consumer: 'AccountTierRecalcConsumer', matcherRule: 'MatchCategory' as const };
+    const input = { developerName: 'AccountTierRecalc', eventBus: 'Sales_Event__e', consumer: 'AccountTierRecalcConsumer', matcherRule: 'MatchEventBusAndCategory' as const };
 
     it('resolves sourceDir from a source target and returns an ok outcome', async () => {
         const writeResult = { developerName: 'AccountTierRecalc', eventBus: 'Sales_Event__e', consumer: 'AccountTierRecalcConsumer', issues: [] };
