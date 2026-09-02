@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.18.0](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.6...simply-at4dx-v2.18.0) (2026-09-02)
+
+
+### Features
+
+* **simply-at4dx:** add the Platform Events tab ([#51](https://github.com/SimplySF/simply-vscode/issues/51)) ([9cc0c89](https://github.com/SimplySF/simply-vscode/commit/9cc0c897fa00a5ddd3a4684276a155f979ff9397))
+
 # [simply-at4dx-v2.17.6](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.17.5...simply-at4dx-v2.17.6) (2026-09-01)
 
 
