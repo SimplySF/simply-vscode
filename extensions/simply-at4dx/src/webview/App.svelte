@@ -480,6 +480,9 @@
         background: none;
         border: 0;
         border-bottom: 2px solid transparent;
+        border-radius: 0;
+        appearance: none;
+        -webkit-appearance: none;
         font: inherit;
         font-size: 0.95em;
         color: var(--vscode-foreground);
