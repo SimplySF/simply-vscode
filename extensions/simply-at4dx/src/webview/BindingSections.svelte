@@ -45,9 +45,10 @@
 {#if sections.length === 0}
     <p class="empty">No bindings found for this selection.</p>
 {:else}
+    <div class="binding-tables">
     {#each sections as section (section.title)}
         {@const groups = buildSequenceGroups(section.rows)}
-        <div class="section">
+        <div class="section binding-table">
             <div class="section-header">
                 <span class="section-title">{section.title}</span>
                 <span class="section-count">
@@ -57,7 +58,7 @@
                 </span>
             </div>
             {#if section.rows.length > 0}
-                <div class="col-header row-grid" class:col-header-banded={groups.length > 1}>
+                <div class="col-header row-grid">
                     <span>Order</span><span>Type</span><span>Class to Inject</span><span>Async</span><span>Recursion</span><span>Logical Inverse</span><span></span><span>Status</span><span></span>
                 </div>
             {/if}
@@ -91,4 +92,5 @@
             {/if}
         </div>
     {/each}
+    </div>
 {/if}

@@ -123,6 +123,27 @@ describe('BindingRow', () => {
         expect(document.querySelector('.row-status .status-indicator')).toBeTruthy();
     });
 
+    it('collapses several issues on one row into a single count badge that lists them in its tooltip', () => {
+        const theRow = row();
+        render(BindingRow, {
+            props: {
+                row: theRow,
+                badges: [
+                    { index: 0, issue: { rule: 'order-collision', severity: 'warning', message: 'Collides.', developerName: theRow.developerName, source: theRow.source } },
+                    { index: 1, issue: { rule: 'missing-context-field', severity: 'error', message: 'Blank.', developerName: theRow.developerName, source: theRow.source } },
+                ],
+                rules: { 'order-collision': { title: 'Order collision', summary: '' }, 'missing-context-field': { title: 'Missing context field', summary: '' } } as unknown as DomainProcessBindingRules,
+                onEdit: vi.fn(),
+            },
+        });
+
+        const badges = document.querySelectorAll('.row-badges .badge');
+        expect(badges).toHaveLength(1);
+        expect(badges[0].textContent?.trim()).toBe('⚠ 2 issues');
+        expect(badges[0].classList.contains('error')).toBe(true);
+        expect(badges[0].getAttribute('title')).toBe('Order collision: Collides.\nMissing context field: Blank.');
+    });
+
     it('carries the developer name as the row tooltip', () => {
         render(BindingRow, { props: { row: row({ developerName: 'Account_Before_Insert_Test' }), badges: [], rules, onEdit: vi.fn() } });
 

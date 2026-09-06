@@ -18,6 +18,16 @@
 
     let typeLabel = $derived(row.type === 'Criteria' ? 'Criteria' : 'Action');
 
+    // One badge per row, never a run of them: the Issues column is a shared table track (see
+    // `.binding-table` in App.svelte), so a row carrying three rule titles side by side would widen
+    // that column for every row and squeeze Class to Inject. A single issue shows its rule title; more
+    // than one collapses to a count whose tooltip lists each rule and message on its own line.
+    let badgeHasError = $derived(badges.some((entry) => entry.issue.severity === 'error'));
+    let badgeLabel = $derived(badges.length === 1 ? ruleTitle(rules, badges[0].issue.rule) : `${badges.length} issues`);
+    let badgeTitle = $derived(
+        badges.length === 1 ? badges[0].issue.message : badges.map((entry) => `${ruleTitle(rules, entry.issue.rule)}: ${entry.issue.message}`).join('\n'),
+    );
+
     function openClass(): void {
         postMessage({ command: 'openClass', classToInject: row.classToInject });
     }
@@ -69,11 +79,9 @@
     <span class="row-flag" class:row-flag-off={!row.preventRecursive} title={row.preventRecursive ? 'Recursion prevented' : 'Recursion allowed'}>{row.preventRecursive ? 'Disabled' : '—'}</span>
     <span class="row-flag" class:row-flag-off={!row.logicalInverse} title={row.logicalInverse ? 'Logical inverse enabled' : 'Logical inverse disabled'}>{row.logicalInverse ? 'Yes' : '—'}</span>
     <span class="row-badges">
-        {#each badges as entry (entry.index)}
-            <span class="badge" class:error={entry.issue.severity === 'error'} class:warning={entry.issue.severity !== 'error'} title={entry.issue.message}>
-                ⚠ {ruleTitle(rules, entry.issue.rule)}
-            </span>
-        {/each}
+        {#if badges.length > 0}
+            <span class="badge" class:error={badgeHasError} class:warning={!badgeHasError} title={badgeTitle}>⚠ <span class="badge-label">{badgeLabel}</span></span>
+        {/if}
     </span>
     <span class="row-status">
         <span class="status-indicator" class:status-active={row.isActive}>

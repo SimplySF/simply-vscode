@@ -61,7 +61,15 @@ Each section card gains a column header row, and each binding renders as a fixed
   get their own auto-width column between Logical Inverse and Status — a 9-column grid, not 8 —
   rather than sharing the Status cell; a badge is roughly 200px wide and wrapping it into the fixed
   78px Status track would grow that row past 40px and break alignment for every row below it. The
-  badge column collapses to zero width on badge-free rows.
+  badge column collapses to zero width on a badge-free *tab*, not per row: the column tracks are
+  defined once around all the sections (`.binding-tables`) and each section, its column header, each
+  sequence band, and each row pick them up via nested CSS `subgrid`, so the Issues track is exactly
+  as wide as the widest badge on the tab and every row's Class/Async/Recursion/Logical Inverse cells
+  share the same edges — across Record Before Save and Record After Save too. A row with more than
+  one issue shows a single `⚠ N issues` badge (error color if any is an error) whose tooltip lists
+  each rule and message, rather than a run of badges that would widen the shared track for every
+  row. Below 700px the badge drops its label and shows only the `⚠` icon (tooltip unchanged), since
+  a ~230px rule title in the shared track would otherwise leave Class to Inject no room at all.
 - The type pill hugs its label (`justify-self: start`) rather than stretching to the grid track, so
   `Action` and `Criteria` stay visually distinct by width. Action's pill uses
   `--vscode-charts-yellow`, Criteria `--vscode-charts-blue`.
@@ -184,6 +192,15 @@ column over). That fix did not land with the original implementation, was briefl
 [0015](0015-sequence-prefix-grouping.md)'s implementation as a carry-over, and was then explicitly
 reverted back to yellow — yellow is the intended color, not an unfixed bug. **Do not "fix" this to
 orange again**; REVIEW-01 §4's reasoning stands as a rejected alternative, not an outstanding TODO.
+
+A later correction (2026-09-05): the auto-width Issues column was implemented per row — every
+`.row-grid` was an independent grid — so the track was zero wide on clean rows and ~200px on badged
+ones, and the moment a scan reported a problem the Class/Async/Recursion/Logical Inverse columns of
+the badged rows shifted left of their neighbours'. Every section's header, bands, and rows now share
+one set of tracks through nested `subgrid` (see "Behavior"), the banded header's compensating right
+padding is gone since alignment is by grid line rather than by matching padding, multiple issues on
+one row collapse to a count badge, and below 700px the badge is icon-only. Zero-width-on-clean and
+40px rows are unchanged.
 
 One thing not in the original handoff: the "next free order" hint for the Order field (mentioned as
 optional/deferred there) was not built — it would need the current section's rows threaded into
