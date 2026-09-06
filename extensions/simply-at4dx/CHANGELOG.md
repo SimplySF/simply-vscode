@@ -1,3 +1,10 @@
+# [simply-at4dx-v2.19.2](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.19.1...simply-at4dx-v2.19.2) (2026-09-06)
+
+
+### Bug Fixes
+
+* **simply-at4dx:** keep Domain Process Bindings columns aligned when rows carry issue badges ([#57](https://github.com/SimplySF/simply-vscode/issues/57)) ([a692a29](https://github.com/SimplySF/simply-vscode/commit/a692a29f9ecafc3ae6317f76c7a381d2ce2f9370))
+
 # [simply-at4dx-v2.19.1](https://github.com/SimplySF/simply-vscode/compare/simply-at4dx-v2.19.0...simply-at4dx-v2.19.1) (2026-09-02)
 
 
