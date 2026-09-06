@@ -658,11 +658,41 @@
         font-size: 0.85em;
         color: var(--vscode-descriptionForeground);
     }
+    /*
+        The Domain Process Bindings tab shares one set of column tracks across every section (Record
+        Before Save / Record After Save), each section's column header, every sequence band, and every
+        row via nested CSS subgrids. Each `.row-grid` used to be its own grid,
+        so the auto-width Issues track (7th) collapsed to zero on badge-free rows and grew on badged
+        ones, shifting the Class/Async/Recursion/Logical Inverse columns row by row the moment a scan
+        reported a problem. Sizing the tracks once on the tab fixes the alignment while keeping
+        the doc'd intent (docs/design/0013): the Issues track is still zero-width on a clean table and
+        only as wide as the widest badge otherwise.
+
+        The outer tracks are 20px wider than their cells (56 → 76, 34 → 54) because a subgrid's own
+        padding is carved out of its first and last tracks — that 20px is the rows' horizontal padding,
+        and a section's 1px border plus its sequence bands (14px margin + 1px border + their rows'
+        6px/12px padding) fit inside it too.
+    */
+    :global(.binding-tables) {
+        display: grid;
+        grid-template-columns: 76px 84px minmax(0, 1fr) 68px 100px 108px minmax(0, max-content) 78px 54px;
+        column-gap: 12px;
+    }
+    :global(.binding-table),
+    :global(.binding-table .seq-group) {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+    }
+    :global(.binding-table > .section-header),
+    :global(.binding-table .seq-caption) {
+        grid-column: 1 / -1;
+    }
     :global(.row-grid) {
         display: grid;
-        grid-template-columns: 56px 84px minmax(0, 1fr) 68px 100px 108px minmax(0, auto) 78px 34px;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
         align-items: center;
-        gap: 12px;
         padding: 0 20px;
     }
     :global(.col-header) {
@@ -672,6 +702,12 @@
         text-transform: uppercase;
         letter-spacing: 0.07em;
         color: var(--vscode-descriptionForeground);
+    }
+    :global(.col-header > *) {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     :global(.col-header > :nth-child(4)),
     :global(.col-header > :nth-child(5)),
@@ -758,9 +794,7 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 6px;
         min-width: 0;
-        overflow: hidden;
     }
     :global(.row-status) {
         display: flex;
@@ -789,12 +823,20 @@
         border-color: var(--vscode-charts-green);
     }
     @media (max-width: 700px) {
-        :global(.row-grid) {
-            grid-template-columns: 56px 84px minmax(0, 1fr) 68px minmax(0, auto) 78px 34px;
+        :global(.binding-tables) {
+            grid-template-columns: 76px 84px minmax(0, 1fr) 68px minmax(0, max-content) 78px 54px;
         }
         :global(.row-grid > :nth-child(5)),
         :global(.row-grid > :nth-child(6)) {
             display: none;
+        }
+        /* A rule title is up to ~230px wide — at half-width that shared Issues track would starve
+           Class to Inject entirely, so the badge drops to its icon; its tooltip still carries the title and message. */
+        :global(.row-badges .badge-label) {
+            display: none;
+        }
+        :global(.row-badges .badge) {
+            padding: 2px 7px;
         }
     }
     :global(.seq-group) {
@@ -856,9 +898,6 @@
     }
     :global(.seq-group .row-grid) {
         padding: 0 12px 0 6px;
-    }
-    :global(.col-header-banded) {
-        padding: 0 34px 0 20px;
     }
     :global(.seq-group .row:first-of-type) {
         border-top-color: var(--vscode-widget-border, var(--vscode-panel-border));
