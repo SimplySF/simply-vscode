@@ -31,9 +31,9 @@ in a themed webview panel grouped and ordered like the mockup.
 The extension does not read or parse Salesforce metadata itself. At the time this doc was written, it
 shelled out to `sf simply aep at4dx domain-process-binding list --json` — a new command built in the
 companion `simply` CLI repo specifically as this extension's data layer (see
-[SimplySF/simply-node's docs/design/0008-at4dx-domain-process-binding-list.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/0008-at4dx-domain-process-binding-list.md),
+[SimplySF/simply-plugins-core's docs/design/0008-at4dx-domain-process-binding-list.md](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0008-at4dx-domain-process-binding-list.md),
 which documents the CMDT scan/resolve logic, and its sibling
-[0007-at4dx-binding-list.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/0007-at4dx-binding-list.md)
+[0007-at4dx-binding-list.md](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0007-at4dx-binding-list.md)
 for the Application Factory binding command that came first). Keeping the metadata-reading logic in
 `simply-aep` — not duplicated here — means both the CLI and this extension stay correct against the
 same, single implementation of AT4DX's resolution rules; this extension's only job is presentation.

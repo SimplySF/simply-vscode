@@ -12,7 +12,7 @@ The panel already knows about exactly one binding problem: `⚠ order collision`
 
 Since then the companion CLI repo grew a real validator —
 `validateDomainProcessBindings` in `@simplysf/simply-aep-core`, designed in
-[SimplySF/simply-node's 0010](https://github.com/SimplySF/simply-node/blob/main/docs/design/0010-at4dx-domain-process-binding-validate.md)
+[SimplySF/simply-plugins-core's 0010](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0010-at4dx-domain-process-binding-validate.md)
 — that checks five rules. Order collision is one of them. The panel shows none of the other four, and
 [0006](0006-at4dx-direct-library-imports.md) means the function is already in this extension's process,
 one call away from data we've already scanned.
@@ -52,7 +52,7 @@ The projection has to be done correctly, and that correctness lives in the libra
 `duplicate-developer-name` and `missing-sobject-reference` are **scan-scoped** — filtering to one
 SObject before validating gives wrong answers for the first and drops the second entirely. The
 companion repo's
-[0011](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+[0011](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
 adds the `scope` field and the `filterDomainProcessBindingIssues` partition that make this expressible;
 this doc consumes them and depends on that version shipping first. This extension does not encode
 which rules are scan-scoped — that knowledge stays in one repo.
@@ -94,7 +94,7 @@ because no row exists for them.
 
 **The section and the summary counts partition on `scope`,** because they answer "is what I'm looking
 at complete?" A record-scoped issue is guaranteed to be fully visible when its SObject is selected —
-that's what [0011's round-trip test](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+that's what [0011's round-trip test](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
 pins down. A scan-scoped issue carries no such guarantee, so it is always listed, in full, under
 `Elsewhere in this scan` — never filtered away, never split across selections.
 
@@ -121,7 +121,7 @@ const elsewhere = ALL_ISSUES.filter((i) => !(i.scope === 'record' && i.sobject =
 ```
 
 That two-line filter is why
-[0011](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+[0011](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
 stamps `scope` onto each issue rather than leaving it only in a lookup table: the webview is a
 separate JS context that cannot import the library, and the alternative is a copy of the five-rule
 scope mapping maintained by hand in plain JS in this file.
@@ -180,7 +180,7 @@ for now on two counts. First, a `Diagnostic` needs a `Range`, and nothing upstre
 `simply-aep-core` parses CMDT XML with SDR's `parseXmlSync`, which returns a plain object with no
 positional information, so every issue would land on line 1 of the file — a squiggle that points at a
 file rather than at the field that's wrong.
-[0011's Alternatives](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+[0011's Alternatives](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
 records the position-aware second parse this would need as explicitly out of scope. Second, an
 org-sourced scan has no files at all, so half of this extension's data path could never populate the
 Problems panel and the feature would appear and vanish depending on which source the user picked.
@@ -190,7 +190,7 @@ panel is the surface that works for both sources today.
 **Re-run `validateDomainProcessBindings` against the visible slice on every dropdown change.** The
 literal reading of "validate what I'm viewing," and wrong: scan-scoped rules give different answers on
 a slice, which is the entire subject of
-[0011](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md).
+[0011](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md).
 It would also require the library inside the webview, which it can't be, or a round trip to the host
 per dropdown change, which 0003 deliberately designed away.
 
@@ -216,7 +216,7 @@ behaviour-neutral; the feature becomes visible in Stage 2.
 ### Stage 0 — The upstream prerequisite, and what to do if it slips
 
 Stages 2–4 need `@simplysf/simply-aep-core` at the version
-[0011](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+[0011](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
 ships in — expected `0.4.0`, for `scope`, `DOMAIN_PROCESS_BINDING_RULES`, and `filePath`. Stage 1 needs
 only `0.3.0`, which is already published.
 
@@ -445,7 +445,7 @@ cross-directory cases are reachable:
   toolbar is two dropdowns wide already.
 - **What happens when 0011's deferred rules land** (verifying `ClassToInject__c` and the SObject
   actually exist, from
-  [0010's v2 list](https://github.com/SimplySF/simply-node/blob/main/docs/design/0010-at4dx-domain-process-binding-validate.md)).
+  [0010's v2 list](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0010-at4dx-domain-process-binding-validate.md)).
   Those need I/O — a describe call or an Apex-class cross-reference — so validation stops being free
   and this doc's "always validate, no setting" reasoning stops holding automatically. Whoever adds them
   should revisit that decision here rather than inherit it.

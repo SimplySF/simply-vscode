@@ -153,7 +153,7 @@ export async function getDomainProcessBindings(
     }
 
     // Validate before filtering — a scan-scoped rule (e.g. duplicate-developer-name) gives wrong
-    // answers if computed from an already-filtered slice. See simply-node's docs/design/0011
+    // answers if computed from an already-filtered slice. See simply-plugins-core's docs/design/0011
     // (domain-process-binding-issue-scoping) — not this repo's own 0011, which is unrelated.
     const issues = validateDomainProcessBindings(scan);
 

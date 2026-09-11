@@ -29,9 +29,9 @@ extension already imports directly (see [0006](0006-at4dx-direct-library-imports
 
 Two upstream design docs landed after the panel design work started and materially change what the
 UI is allowed to claim — simply-node's
-[0015](https://github.com/SimplySF/simply-node/blob/main/docs/design/0015-at4dx-binding-validate-create-set.md)
+[0015](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0015-at4dx-binding-validate-create-set.md)
 (`validate`/`create`/`update` for Service/Selector/Domain) and
-[0017](https://github.com/SimplySF/simply-node/blob/main/docs/design/0017-at4dx-binding-unit-of-work-write-support.md)
+[0017](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0017-at4dx-binding-unit-of-work-write-support.md)
 (the same three commands extended to UnitOfWork, plus two new rules). This doc is written against
 both as shipped, not against the earlier assumption that UnitOfWork was read-only.
 
@@ -288,7 +288,7 @@ risk is:
 - `sequence-collision` is derived from issues, not recomputed — two records with no sequence produce
   no collision.
 - Issue partitioning keeps `scan`-scoped issues visible under any section filter (the
-  [0011](https://github.com/SimplySF/simply-node/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
+  [0011](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0011-domain-process-binding-issue-scoping.md)
   rule).
 
 **Component** (`test/webview/ApplicationFactorySections.test.ts`, `UnitOfWorkSections.test.ts`,

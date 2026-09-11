@@ -120,7 +120,7 @@ export async function getPlatformEventSubscriptions(target: BindingSource, logge
     }
 
     // Validate before any filtering — a scan-scoped rule (e.g. duplicate-consumer) gives wrong answers
-    // if computed from an already-filtered slice. See simply-node's docs/design/0011.
+    // if computed from an already-filtered slice. See simply-plugins-core's docs/design/0011.
     const issues = validatePlatformEventSubscriptions({ records, malformed });
 
     summary(`ok, ${records.length} record(s), ${issues.length} issue(s)`);
