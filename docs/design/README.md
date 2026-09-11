@@ -6,7 +6,7 @@ document here **before** it gets code. The point isn't ceremony — it's that a 
 reimplementing, what we rejected) is recoverable without archaeology through git history and PR
 threads. This mirrors the process the companion `simply` CLI repo already uses for its own
 `docs/design/` — see
-[SimplySF/simply-node's docs/design/README.md](https://github.com/SimplySF/simply-node/blob/main/docs/design/README.md) —
+[SimplySF/simply-plugins-core's docs/design/README.md](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/README.md) —
 adapted here for `extensions/*` instead of `packages/*`.
 
 ## Process

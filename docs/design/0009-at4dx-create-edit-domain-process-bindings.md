@@ -10,7 +10,7 @@
 [0007](0007-at4dx-validate-viewed-bindings.md)), but there's no way to act on what it shows. Adding a
 binding, or fixing one the panel just flagged, still means hand-writing a
 `DomainProcessBinding.<Name>.md-meta.xml` file from memory or clicking through Setup — the exact gap
-[0012 in `simply-node`](https://github.com/SimplySF/simply-node/blob/main/docs/design/0012-at4dx-domain-process-binding-create-set.md)
+[0012 in `simply-plugins-core`](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0012-at4dx-domain-process-binding-create-set.md)
 closed at the library level, naming this extension as the reason it did: `@simplysf/simply-aep-core@0.5.0`
 now exports `createDomainProcessBinding`/`setDomainProcessBinding`, `buildDomainProcessBindingXml`, and
 `deployMetadataFile` — the write-side counterpart to the scan/resolve/validate functions this extension

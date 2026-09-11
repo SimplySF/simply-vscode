@@ -14,7 +14,7 @@ command that "already exists."
 
 That reasoning no longer holds. The companion `simply` (CLI) repo has since split that exact logic out
 into `@simplysf/simply-aep-core` — a plain npm library, published standalone, whose own design doc
-([0009 in `simply-node`](https://github.com/SimplySF/simply-node/blob/main/docs/design/0009-aep-library-consumption.md))
+([0009 in `simply-plugins-core`](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0009-aep-library-consumption.md))
 names *this extension* as the reason it exists: "a companion VS Code extension
 (`simply-vscode/extensions/simply-at4dx`) could import the AT4DX scan/resolve functions and row types
 directly instead of shelling out." There is now exactly one implementation of the resolution rules
